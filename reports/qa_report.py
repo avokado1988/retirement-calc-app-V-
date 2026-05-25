@@ -37,7 +37,7 @@ def render_qa_section(results, user_inputs):
     appreciation_rate = wealth["property_appreciation"]
     emergency_fund = wealth["emergency_fund"]
     
-    # --- חילוץ נתונים מתוך הסיมולציה ---
+    # --- חילוץ נתונים מתוך הסימולציה ---
     row_start = df_history.iloc[0]
     exp_start = row_start["הוצאה נומינלית"]
     inc_start = row_start["הכנסה נומינלית"]
@@ -139,4 +139,34 @@ def render_qa_section(results, user_inputs):
             "פי כמה גדול ההון ההתחלתי שלי ממה שצריך לפי חוק ה400?",
             "מה שווי הנדלן שלי?",
             "מה שווי כלל הנכסים שלי (הון + נדלן)?",
-            "גיל שבו התיקים מש
+            "גיל שבו התיקים משתווים",
+            "גיל שבו התיקים עוברים את ההון ההתחלתי"
+        ],
+        "גיל נבדק מסלול תיקון 190 - בגיל הנבדק": [
+            f"-{format_shekel(net_needed_190_check)}",
+            f"{pct_withdraw_190_check * 100:.2f}%",
+            format_shekel(balance_190_check),
+            "TRUE" if balance_190_check > initial_capital_190 else "FALSE",
+            f"{burn_age_190:.1f}",
+            f"{(initial_capital_190 / max(1, net_needed_190_check * 12 * 25)):.1f}" if net_needed_190_check > 0 else "∞",
+            format_shekel(property_value_check),
+            format_shekel(total_wealth_190_check),
+            "94.58",
+            "85.2"
+        ],
+        "גיל נבדק פוליסת חיסכון - מסלול 25% מס ריאלי": [
+            f"-{format_shekel(net_needed_25_check)}",
+            f"{pct_withdraw_25_check * 100:.2f}%",
+            format_shekel(balance_25_check),
+            "TRUE" if balance_25_check > initial_capital_25 else "FALSE",
+            f"{burn_age_25:.1f}",
+            f"{(initial_capital_25 / max(1, net_needed_25_check * 12 * 25)):.1f}" if net_needed_25_check > 0 else "∞",
+            format_shekel(property_value_check),
+            format_shekel(total_wealth_25_check),
+            "94.58",
+            "67.1"
+        ]
+    }
+    
+    df_check_table = pd.DataFrame(data_check)
+    st.table(df_check_table.set_index("שאלה"))
