@@ -3,45 +3,32 @@ import pandas as pd
 from inputs.ui_components import format_shekel
 
 def render_qa_section(results, user_inputs):
-    # הזרקת קוד עיצוב (CSS) משופר: טקסט שחור מוחלט, RTL, ועיצוב כותרות נפרד לכל טור
+    # CSS בטוח שחל אך ורק על המחלקה custom-table ולא שובר את האתר
     st.markdown(
         """
         <style>
-        .stTable, table {
+        .custom-table {
             direction: rtl !important;
-            text-align: right !important;
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
-            color: #000000 !important; /* אילוץ טקסט שחור בכל הטבלה */
+            margin-bottom: 25px;
+            font-size: 16px;
         }
-        th, td {
+        .custom-table th, .custom-table td {
+            border: 1px solid #C0C0C0 !important;
+            padding: 10px !important;
             text-align: right !important;
             direction: rtl !important;
-            padding: 12px 10px !important;
-            border: 1px solid #D9D9D9;
-            color: #000000 !important; /* אילוץ טקסט שחור בתאים */
+            color: #000000 !important; /* טקסט שחור מובטח */
         }
-        th {
+        .custom-table th {
             font-weight: bold;
             text-align: center !important;
         }
-        /* צבעי רקע מותאמים אישית לכותרות הטורים לפי התמונה */
-        .col-question {
-            background-color: #F2F2F2;
-        }
-        .col-190 {
-            background-color: #FFF2CC !important; /* צהבהב עדין */
-            text-align: center !important;
-        }
-        .col-real {
-            background-color: #FCE4D6 !important; /* כתמתם-אפרסק בהיר */
-            text-align: center !important;
-        }
-        .section-header {
-            background-color: #ECE6F6;
-            font-weight: bold;
-        }
+        /* צבעי הטורים */
+        .bg-question { background-color: #F2F2F2 !important; }
+        .bg-190 { background-color: #FFF2CC !important; text-align: center !important; }
+        .bg-real { background-color: #FCE4D6 !important; text-align: center !important; }
         </style>
         """,
         unsafe_allow_html=True
@@ -69,38 +56,5 @@ def render_qa_section(results, user_inputs):
     inc_start = row_start["הכנסה נומינלית"]
     pension_190_start = user_inputs["amendment_190"]["desired_pension"]
     
-    # התיקון שלנו: "גיל" במקום "גily"
-    row_check = df_history[df_history["גיל"] >= check_age].iloc[0] if not df_history[df_history["גיל"] >= check_age].empty else df_history.iloc[-1]
-    
-    exp_check = row_check["הוצאה נומינלית"]
-    inc_check = row_check["הכנסה נומינלית"]
-    inflation_factor_check = row_check["inflation_factor"]
-    balance_190_check = row_check["צבירה תיקון 190"]
-    balance_25_check = row_check["צבירה מסלול ריאלי"]
-    
-    years_passed = check_age - start_age
-    property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed)
-    
-    burn_age_190, burn_age_25 = 99.0, 83.0
-    empty_age_190, empty_age_25 = 120.0, 120.0
-    
-    for idx in range(1, len(df_full)):
-        if df_full.iloc[idx]["צבירה תיקון 190"] < df_full.iloc[idx-1]["צבירה תיקון 190"]:
-            burn_age_190 = df_full.iloc[idx]["גיל"]
-            break
-    for idx in range(1, len(df_full)):
-        if df_full.iloc[idx]["צבירה מסלול ריאלי"] < df_full.iloc[idx-1]["צבירה מסלול ריאלי"]:
-            burn_age_25 = df_full.iloc[idx]["גיל"]
-            break
-            
-    for idx in range(len(df_full)):
-        if df_full.iloc[idx]["צבירה תיקון 190"] <= 0:
-            empty_age_190 = df_full.iloc[idx]["גיל"]
-            break
-    for idx in range(len(df_full)):
-        if df_full.iloc[idx]["צבירה מסלול ריאלי"] <= 0:
-            empty_age_25 = df_full.iloc[idx]["גיל"]
-            break
-
-    ratio_190_97 = results.get("ratio_190_97", 0.0)
-    ratio_25_97 = results.get("ratio_25_97", 0.0)
+    # חיפוש בטוח של השורה לגיל הנבדק
+    filtered_df = df_
