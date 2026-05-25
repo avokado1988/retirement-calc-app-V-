@@ -3,6 +3,7 @@ import pandas as pd
 from inputs.ui_components import format_shekel
 
 def render_qa_section(results, user_inputs):
+    # שאיבת נתוני הסימולציה מהמוח
     df_history = results["df"]
     df_full = results.get("df_full", df_history)
     
@@ -20,6 +21,7 @@ def render_qa_section(results, user_inputs):
     appreciation_rate = wealth["property_appreciation"]
     emergency_fund = wealth["emergency_fund"]
     
+    # חיפוש נתונים בזמנים רלוונטיים
     row_start = df_history.iloc[0]
     exp_start = row_start["הוצאה נומינלית"]
     inc_start = row_start["הכנסה נומינלית"]
@@ -30,7 +32,7 @@ def render_qa_section(results, user_inputs):
         row_check = filtered_df.iloc[0]
     else:
         row_check = df_history.iloc[-1]
-    
+        
     exp_check = row_check["הוצאה נומינלית"]
     inc_check = row_check["הכנסה נומינלית"]
     inflation_factor_check = row_check["inflation_factor"]
@@ -40,6 +42,7 @@ def render_qa_section(results, user_inputs):
     years_passed = check_age - start_age
     property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed)
     
+    # מציאת גילאי שחיקה (Burn Age) והתרוקנות
     burn_age_190 = 99.0
     burn_age_25 = 83.0
     empty_age_190 = 120.0
@@ -60,34 +63,4 @@ def render_qa_section(results, user_inputs):
             break
     for idx in range(len(df_full)):
         if df_full.iloc[idx]["צבירה מסלול ריאלי"] <= 0:
-            empty_age_25 = float(df_full.iloc[idx]["גיל"])
-            break
-
-    ratio_190_97 = float(results.get("ratio_190_97", 0.0))
-    ratio_25_97 = float(results.get("ratio_25_97", 0.0))
-
-    # ==========================================
-    # הכנת משתנים נקיים לחלוטין למניעת שגיאות Syntax
-    # ==========================================
-    
-    # טבלה 1
-    net_needed_190_start = max(0, exp_start - inc_start - pension_190_start)
-    net_needed_25_start = max(0, exp_start - inc_start)
-    
-    val_w_190_start = (net_needed_190_start * 12) / max(1, initial_capital_190) * 100
-    val_w_25_start = (net_needed_25_start * 12) / max(1, initial_capital_25) * 100
-    pct_w_190_start = f"{val_w_190_start:.2f}%"
-    pct_w_25_start = f"{val_w_25_start:.2f}%"
-    
-    if net_needed_190_start > 0:
-        rule400_190_start = f"{(initial_capital_190 / max(1, net_needed_190_start * 12 * 25)):.1f}"
-        emer_190 = f"{(emergency_fund / max(1, net_needed_190_start * 12)):.1f}"
-    else:
-        rule400_190_start = "∞"
-        emer_190 = "∞"
-        
-    if net_needed_25_start > 0:
-        rule400_25_start = f"{(initial_capital_25 / max(1, net_needed_25_start * 12 * 25)):.1f}"
-        emer_25 = f"{(emergency_fund / max(1, net_needed_25_start * 12)):.1f}"
-    else:
-        rule400_2
+            empty_age_25 = float(df_full.iloc[idx]["גיל
