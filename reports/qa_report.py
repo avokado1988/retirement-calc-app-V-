@@ -3,7 +3,7 @@ import pandas as pd
 from inputs.ui_components import format_shekel
 
 def render_qa_section(results, user_inputs):
-    # CSS בטוח שחל אך ורק על המחלקה custom-table ולא שובר את האתר
+    # CSS בטוח שחל אך ורק על המחלקה custom-table
     st.markdown(
         """
         <style>
@@ -57,4 +57,22 @@ def render_qa_section(results, user_inputs):
     pension_190_start = user_inputs["amendment_190"]["desired_pension"]
     
     # חיפוש בטוח של השורה לגיל הנבדק
-    filtered_df = df_
+    filtered_df = df_history[df_history["גיל"] >= check_age]
+    row_check = filtered_df.iloc[0] if not filtered_df.empty else df_history.iloc[-1]
+    
+    exp_check = row_check["הוצאה נומינלית"]
+    inc_check = row_check["הכנסה נומינלית"]
+    inflation_factor_check = row_check["inflation_factor"]
+    balance_190_check = row_check["צבירה תיקון 190"]
+    balance_25_check = row_check["צבירה מסלול ריאלי"]
+    
+    years_passed = check_age - start_age
+    property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed)
+    
+    # מציאת גיל שחיקה
+    burn_age_190, burn_age_25 = 99.0, 83.0
+    empty_age_190, empty_age_25 = 120.0, 120.0
+    
+    for idx in range(1, len(df_full)):
+        if df_full.iloc[idx]["צבירה תיקון 190"] < df_full.iloc[idx-1]["צבירה תיקון 190"]:
+            burn_age_190 = df_full.iloc
