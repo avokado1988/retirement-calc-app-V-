@@ -57,6 +57,32 @@ def render_qa_section(results, user_inputs):
     ratio_190_97 = float(results.get("ratio_190_97", 0.0)) * 100
     ratio_25_97 = float(results.get("ratio_25_97", 0.0)) * 100
 
+    # --- חישוב אקטוארי: מציאת הגיל המדויק שבו התיק מתרוקן ל-0 ---
+    df_full = results["df_full"] if "df_full" in results else df_history
+    empty_age_190 = 120.0
+    empty_age_25 = 120.0
+    
+    for idx in range(len(df_full)):
+        if float(df_full.iloc[idx]["צבירה תיקון 190"]) <= 0:
+            empty_age_190 = float(df_full.iloc[idx]["גיל"])
+            break
+    for idx in range(len(df_full)):
+        if float(df_full.iloc[idx]["צבירה מסלול ריאלי"]) <= 0:
+            empty_age_25 = float(df_full.iloc[idx]["גיל"])
+            break
+
+    # הפיכת גיל ההתרוקנות למחרוזת ברורה ללקוח
+    if empty_age_190 >= 105.0:
+        empty_190_str = "105+ (חסין)"
+    else:
+        empty_190_str = f"גיל {empty_age_190:.1f}"
+
+    if empty_age_25 >= 105.0:
+        empty_25_str = "105+ (חסין)"
+    else:
+        empty_25_str = f"גיל {empty_age_25:.1f}"
+
+    # --- טבלה 1 ---
     st.subheader(f"📊 מצב בגיל פרישה (גיל {start_age})")
     df_start_table = pd.DataFrame({
         "שאלה": ["עם כמה כסף אני מתחיל פרישה בתיק?", "מה שווי הנדלן שלי?", "גובה קצבאות", "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?", "קצב המשיכה באחוזים בפרישה?", "מה שווי כלל הנכסים שלי (הון + נדלן)?"],
@@ -65,6 +91,7 @@ def render_qa_section(results, user_inputs):
     })
     st.table(df_start_table.set_index("שאלה"))
 
+    # --- טבלה 2 ---
     st.subheader(f"🔮 מצב בגיל נבדק בסימולציה (גיל {check_age})")
     df_check_table = pd.DataFrame({
         "שאלה": ["כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?", "מה שיעור המשיכה בגיל הנבדק?", "כמה כסף נזיל יישאר לי בתיק?", "מה שווי כלל הנכסים שלי (הון + נדלן)?"],
@@ -73,10 +100,11 @@ def render_qa_section(results, user_inputs):
     })
     st.table(df_check_table.set_index("שאלה"))
 
+    # --- טבלה 3 ---
     st.subheader("🏁 שורה תחתונה וחסינות אקטוארית")
     df_bottom_table = pd.DataFrame({
-        "שורה תחתונה": ["כמה אחוז מההון ההתחלתי נשמר בגיל 97?"],
-        "מסלול תיקון 190": [f"{ratio_190_97:.2f}%"],
-        "מסלול 25% מס ריאלי": [f"{ratio_25_97:.2f}%"]
+        "שורה תחתונה": ["עד איזה גיל הכסף יחזיק (חסינות)?", "כמה אחוז מההון ההתחלתי נשמר בגיל 97 עם מטפלת?"],
+        "מסלול תיקון 190": [empty_190_str, f"{ratio_190_97:.2f}%"],
+        "מסלול 25% מס ריאלי": [empty_25_str, f"{ratio_25_97:.2f}%"]
     })
     st.table(df_bottom_table.set_index("שורה תחתונה"))
