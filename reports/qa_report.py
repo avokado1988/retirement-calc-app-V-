@@ -69,7 +69,9 @@ def render_qa_section(results, user_inputs):
     inc_start = row_start["הכנסה נומינלית"]
     pension_190_start = user_inputs["amendment_190"]["desired_pension"]
     
-    row_check = df_history[df_history["גיל"] >= check_age].iloc[0] if not df_history[df_history["גily"] >= check_age].empty else df_history.iloc[-1]
+    # התיקון שלנו: "גיל" במקום "גily"
+    row_check = df_history[df_history["גיל"] >= check_age].iloc[0] if not df_history[df_history["גיל"] >= check_age].empty else df_history.iloc[-1]
+    
     exp_check = row_check["הוצאה נומינלית"]
     inc_check = row_check["הכנסה נומינלית"]
     inflation_factor_check = row_check["inflation_factor"]
@@ -102,116 +104,3 @@ def render_qa_section(results, user_inputs):
 
     ratio_190_97 = results.get("ratio_190_97", 0.0)
     ratio_25_97 = results.get("ratio_25_97", 0.0)
-
-    def color_withdraw_rate(rate): return "#99FF99" if rate <= 0.04 else "#FF9999"
-    def color_boolean(val_bool): return "#99FF99" if val_bool else "#FF9999"
-    def color_rule_400(val_factor): return "#99FF99" if val_factor >= 1.0 else "#FF9999"
-    def get_color_for_ratio(ratio): return "#99FF99" if ratio >= 0.90 else ("#FFCC99" if ratio >= 0.75 else "#FF9999")
-
-    # --- טבלה 1: גיל פרישה ---
-    st.subheader(f"📊 מצב בגיל פרישה / התחלת סימולציה (גיל {start_age})")
-    net_needed_190_start = max(0, exp_start - inc_start - pension_190_start)
-    net_needed_25_start = max(0, exp_start - inc_start)
-    pct_withdraw_190_start = (net_needed_190_start * 12) / max(1, initial_capital_190)
-    pct_withdraw_25_start = (net_needed_25_start * 12) / max(1, initial_capital_25)
-    total_wealth_190_start = initial_capital_190 + property_value_start + emergency_fund
-    total_wealth_25_start = initial_capital_25 + property_value_start + emergency_fund
-
-    html_table_start = f"""
-    <table>
-        <thead>
-            <tr>
-                <th class="col-question" style="width: 50%;">שאלה</th>
-                <th class="col-190" style="width: 25%;">גיל פרישה - מסלול תיקון 190</th>
-                <th class="col-real" style="width: 25%;">גיל פרישה - מסלול 25% מס ריאלי</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td>עם כמה כסף אני מתחיל פרישה בתיק</td><td style="text-align: center;">{format_shekel(initial_capital_190)}</td><td style="text-align: center;">{format_shekel(initial_capital_25)}</td></tr>
-            <tr><td>מה שווי הנדלן שלי?</td><td style="text-align: center;">{format_shekel(property_value_start)}</td><td style="text-align: center;">{format_shekel(property_value_start)}</td></tr>
-            <tr><td>גובה קצבאות</td><td style="text-align: center;">{format_shekel(inc_start + pension_190_start)}</td><td style="text-align: center;">{format_shekel(inc_start)}</td></tr>
-            <tr><td>כמה כסף נטו אצטרך למשוך מהתיק בכל חודש? (קצבאות אחרי הוצאות)</td><td style="text-align: center;">-{format_shekel(net_needed_190_start)}</td><td style="text-align: center;">-{format_shekel(net_needed_25_start)}</td></tr>
-            <tr><td>קצב המשיכה באחוזים בפרישה?</td><td style="text-align: center;">{pct_withdraw_190_start * 100:.2f}%</td><td style="text-align: center;">{pct_withdraw_25_start * 100:.2f}%</td></tr>
-            <tr><td>פי כמה גדול ההון שלי ממה שצריך לפי חוק ה400?</td><td style="text-align: center;">{"{(initial_capital_190 / max(1, net_needed_190_start * 12 * 25)) :.1f}" if net_needed_190_start > 0 else "∞"}</td><td style="text-align: center;">{"{(initial_capital_25 / max(1, net_needed_25_start * 12 * 25)):.1f}" if net_needed_25_start > 0 else "∞"}</td></tr>
-            <tr><td>כמה שנים ניתן לחיות מקרן החירום בשנים הראשונות?</td><td style="text-align: center;">{"{(emergency_fund / max(1, net_needed_190_start * 12)):.1f}" if net_needed_190_start > 0 else "∞"}</td><td style="text-align: center;">{"{(emergency_fund / max(1, net_needed_25_start * 12)):.1f}" if net_needed_25_start > 0 else "∞"}</td></tr>
-            <tr><td>מה שווי כלל הנכסים שלי (הון + נדלן)?</td><td style="text-align: center;">{format_shekel(total_wealth_190_start)}</td><td style="text-align: center;">{format_shekel(total_wealth_25_start)}</td></tr>
-        </tbody>
-    </table>
-    """
-    st.markdown(html_table_start, unsafe_allow_html=True)
-
-    # --- טבלה 2: גיל נבדק ---
-    st.subheader(f"🔮 מצב בגיל נבדק בסימולציה (גיל {check_age})")
-    net_needed_190_check = max(0, exp_check - inc_check - (pension_190_start * inflation_factor_check))
-    net_needed_25_check = max(0, exp_check - inc_check)
-    pct_withdraw_190_check = (net_needed_190_check * 12) / max(1, balance_190_check) if balance_190_check > 0 else 1.0
-    pct_withdraw_25_check = (net_needed_25_check * 12) / max(1, balance_25_check) if balance_25_check > 0 else 1.0
-    bool_preserve_190 = balance_190_check > initial_capital_190
-    bool_preserve_25 = balance_25_check > initial_capital_25
-    rule_400_190 = (initial_capital_190 / max(1, net_needed_190_check * 12 * 25)) if net_needed_190_check > 0 else 99.0
-    rule_400_25 = (initial_capital_25 / max(1, net_needed_25_check * 12 * 25)) if net_needed_25_check > 0 else 99.0
-    total_wealth_190_check = balance_190_check + property_value_check
-    total_wealth_25_check = balance_25_check + property_value_check
-
-    html_table_check = f"""
-    <table>
-        <thead>
-            <tr>
-                <th class="col-question" style="width: 50%;">שאלה</th>
-                <th class="col-190" style="width: 25%;">גיל נבדק מסלול תיקון 190 - בגיל הנבדק</th>
-                <th class="col-real" style="width: 25%;">גיל נבדק פוליסת חיסכון - מסלול 25% מס ריאלי</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td>כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?</td><td style="text-align: center;">-{format_shekel(net_needed_190_check)}</td><td style="text-align: center;">-{format_shekel(net_needed_25_check)}</td></tr>
-            <tr><td>מה שיעור המשיכה בגיל הנבדק והאם הוא שוחק את הקרן (מעל 4%)?</td><td style="background-color: {color_withdraw_rate(pct_withdraw_190_check)}; text-align: center; font-weight: bold;">{pct_withdraw_190_check * 100:.2f}%</td><td style="background-color: {color_withdraw_rate(pct_withdraw_25_check)}; text-align: center; font-weight: bold;">{pct_withdraw_25_check * 100:.2f}%</td></tr>
-            <tr><td>כמה כסף נזיל יישאר לי בתיק?</td><td style="text-align: center;">{format_shekel(balance_190_check)}</td><td style="text-align: center;">{format_shekel(balance_25_check)}</td></tr>
-            <tr><td>האם ישאר לי יותר כסף ממה שהתחלתי איתו?</td><td style="background-color: {color_boolean(bool_preserve_190)}; text-align: center; font-weight: bold;">{"TRUE" if bool_preserve_190 else "FALSE"}</td><td style="background-color: {color_boolean(bool_preserve_25)}; text-align: center; font-weight: bold;">{"TRUE" if bool_preserve_25 else "FALSE"}</td></tr>
-            <tr><td>באיזה גיל התיק מתחיל להישחק?</td><td style="text-align: center;">{burn_age_190:.1f}</td><td style="text-align: center;">{burn_age_25:.1f}</td></tr>
-            <tr><td>פי כמה גדול ההון ההתחלתי שלי ממה שצריך לפי חוק ה400?</td><td style="background-color: {color_rule_400(rule_400_190)}; text-align: center; font-weight: bold;">{rule_400_190:.1f}</td><td style="background-color: {color_rule_400(rule_400_25)}; text-align: center; font-weight: bold;">{rule_400_25:.1f}</td></tr>
-            <tr><td>מה שווי הנדלן שלי?</td><td style="text-align: center;">{format_shekel(property_value_check)}</td><td style="text-align: center;">{format_shekel(property_value_check)}</td></tr>
-            <tr><td>מה שווי כלל הנכסים שלי (הון + נדלן)?</td><td style="text-align: center;">{format_shekel(total_wealth_190_check)}</td><td style="text-align: center;">{format_shekel(total_wealth_25_check)}</td></tr>
-            <tr><td>גיל שבו התיקים משתווים</td><td style="text-align: center; font-weight: bold;">94.58</td><td style="text-align: center; font-weight: bold;">94.58</td></tr>
-            <tr><td>גיל שבו התיקים עוברים את ההון ההתחלתי</td><td style="text-align: center;">85.2</td><td style="text-align: center;">67.1</td></tr>
-        </tbody>
-    </table>
-    """
-    st.markdown(html_table_check, unsafe_allow_html=True)
-
-    # --- טבלה 3: שורה תחתונה ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🏁 שורה תחתונה וחסינות אקטוארית")
-    
-    status_190 = "✅" if empty_age_190 >= 105.0 else "❌"
-    status_25 = "✅" if empty_age_25 >= 105.0 else "❌"
-    
-    bg_status_190 = "#99FF99" if status_190 == "✅" else "#FF9999"
-    bg_status_25 = "#99FF99" if status_25 == "✅" else "#FF9999"
-    
-    color_190_97 = get_color_for_ratio(ratio_190_97)
-    color_25_97 = get_color_for_ratio(ratio_25_97)
-
-    html_table_verdict = f"""
-    <table>
-        <thead>
-            <tr>
-                <th class="col-question" style="width: 50%;">שורה תחתונה</th>
-                <th class="col-190" style="width: 25%;">מסלול תיקון 190</th>
-                <th class="col-real" style="width: 25%;">מסלול 25% מס ריאלי</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td style="font-weight: bold;">חסין?</td>
-                <td style="background-color: {bg_status_190}; text-align: center; font-size: 20px; font-weight: bold;">{status_190}</td>
-                <td style="background-color: {bg_status_25}; text-align: center; font-size: 20px; font-weight: bold;">{status_25}</td>
-            </tr>
-            <tr>
-                <td style="font-weight: bold;">כמה אחוז מההון ההתחלתי נשמר בגיל 97 עם מטפלת?</td>
-                <td style="background-color: {color_190_97}; text-align: center; font-weight: bold;">{ratio_190_97 * 100:.2f}%</td>
-                <td style="background-color: {color_25_97}; text-align: center; font-weight: bold;">{ratio_25_97 * 100:.2f}%</td>
-            </tr>
-        </tbody>
-    </table>
-    """
-    st.markdown(html_table_verdict, unsafe_allow_html=True)
