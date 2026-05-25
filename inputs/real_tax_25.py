@@ -1,0 +1,15 @@
+import streamlit as st
+
+def render_25_inputs():
+    st.subheader("📊 מסלול 25% מס ריאלי (פוליסת חיסכון / תיק מנוהל)")
+    
+    st.markdown("##### ⚙️ פרמטרים כלכליים למסלול")
+    
+    strategy_data = {
+        "annual_return_25": st.slider("תשואה שנתית צפויה במסלול 25% (%)", min_value=0.0, max_value=15.0, value=5.0, step=0.1) / 100,
+        "management_fee_25": st.slider("דמי ניהול שנתיים מהצבירה (%)", min_value=0.0, max_value=2.0, value=0.6, step=0.05) / 100
+    }
+    
+    st.info("💡 במסלול זה כל ההון נזיל תמיד, והמס מחושב רק על הרווח הריאלי בעת המשיכה (ללא חובת קצבה מזערית).")
+    
+    return strategy_data
