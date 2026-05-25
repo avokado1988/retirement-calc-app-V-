@@ -3,6 +3,23 @@ import pandas as pd
 from inputs.ui_components import format_shekel
 
 def render_qa_section(results, user_inputs):
+    # --- הזרקת CSS בטוחה לחלוטין ליישור מימין לשמאל (RTL) ---
+    st.markdown(
+        """
+        <style>
+        .stTable, table {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+        th, td {
+            text-align: right !important;
+            direction: rtl !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     df_history = results["df"]
     
     timeline = user_inputs["timeline"]
@@ -78,52 +95,4 @@ def render_qa_section(results, user_inputs):
             format_shekel(inc_start + pension_190_start),
             "-" + format_shekel(net_needed_190_start),
             str(round(pct_190_start, 2)) + "%",
-            format_shekel(total_wealth_190_start)
-        ],
-        "מסלול 25% מס ריאלי": [
-            format_shekel(initial_capital_25),
-            format_shekel(property_value_start),
-            format_shekel(inc_start),
-            "-" + format_shekel(net_needed_25_start),
-            str(round(pct_25_start, 2)) + "%",
-            format_shekel(total_wealth_25_start)
-        ]
-    })
-    st.table(df_start_table.set_index("שאלה"))
-
-    st.subheader(f"🔮 מצב בגיל נבדק בסימולציה (גיל {check_age})")
-    df_check_table = pd.DataFrame({
-        "שאלה": [
-            "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
-            "מה שיעור המשיכה בגיל הנבדק?",
-            "כמה כסף נזיל יישאר לי בתיק?",
-            "מה שווי כלל הנכסים שלי (הון + נדלן)?"
-        ],
-        "מסלול תיקון 190": [
-            "-" + format_shekel(net_needed_190_check),
-            str(round(pct_190_check, 2)) + "%",
-            format_shekel(balance_190_check),
-            format_shekel(total_wealth_190_check)
-        ],
-        "מסלול 25% מס ריאלי": [
-            "-" + format_shekel(net_needed_25_check),
-            str(round(pct_25_check, 2)) + "%",
-            format_shekel(balance_25_check),
-            format_shekel(total_wealth_25_check)
-        ]
-    })
-    st.table(df_check_table.set_index("שאלה"))
-
-    st.subheader("🏁 שורה תחתונה וחסינות אקטוארית")
-    df_bottom_table = pd.DataFrame({
-        "שורה תחתונה": [
-            "כמה אחוז מההון ההתחלתי נשמר בגיל 97?"
-        ],
-        "מסלול תיקון 190": [
-            str(round(ratio_190_97, 2)) + "%"
-        ],
-        "מסלול 25% מס ריאלי": [
-            str(round(ratio_25_97, 2)) + "%"
-        ]
-    })
-    st.table(df_bottom_table.set_index("שורה תחתונה"))
+            format_shekel(total_wealth_1
