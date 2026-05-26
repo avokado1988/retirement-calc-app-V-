@@ -128,7 +128,7 @@ def render_qa_section(results, user_inputs):
             empty_age_190 = float(df_full.iloc[idx]["גיל"])
             break
     for idx in range(len(df_full)):
-        if float(df_full.iloc[idx]["צbiרה מסלול ריאלי"]) <= 0:
+        if float(df_full.iloc[idx]["צבירה מסלול ריאלי"]) <= 0:
             empty_age_25 = float(df_full.iloc[idx]["גיל"])
             break
 
