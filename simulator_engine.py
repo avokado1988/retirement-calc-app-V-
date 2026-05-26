@@ -3,28 +3,28 @@ import numpy as np
 
 def run_simulation(user_inputs):
     """
-    מנוע הסימולציה האקטוארי המעודכן - כולל תיקוני ביקורת מודלים:
-    1. עיתוי קבלת קצבה מבוסס גיל פרישה בפועל.
-    2. גביית מס יחסית מדויקת במצב התרוקנות פוליסת חיסכון (מסלול 25%).
-    3. בייסליין אחיד להשוואת תפוחים-לתפוחים.
+    מנוע סימולציה אקטוארי תקני ומיושר מול משתני ה-UI (Gold Standard).
+    מפריד בין תקופת צבירה לתקופת משיכה ומבצע התאמה מלאה של מפתחות המילון.
     """
     timeline = user_inputs.get("timeline", {})
     wealth = user_inputs.get("wealth", {})
+    expenses = user_inputs.get("expenses", {})
     amendment_190 = user_inputs.get("amendment_190", {})
     real_tax_25 = user_inputs.get("real_tax_25", {})
-    general = user_inputs.get("general", {})
     
-    # שליפת גילאים
-    start_age = float(timeline.get("start_age", 60))
-    retirement_age = float(timeline.get("retirement_age", 67))
-    check_age = float(timeline.get("check_age", 80))
+    # 1. שליפת גילאים מתוזמנים
+    start_age = float(timeline.get("start_age", 65.5))
+    retirement_age = float(timeline.get("retirement_age", 67.0))
+    check_age = float(timeline.get("check_age", 99.0))
     
-    # פרמטרים שוקיים חודשיים
-    inflation_rate = float(general.get("inflation_rate", 0.03))
-    yield_190 = float(amendment_190.get("yield", 0.05))
-    yield_25 = float(real_tax_25.get("yield", 0.05))
-    fees_190 = float(amendment_190.get("fees", 0.005))
-    fees_25 = float(real_tax_25.get("fees", 0.005))
+    # 2. נרמול ומיפוי משתני שוק חודשיים (פתרון באג ה-Key Mismatch)
+    inflation_rate = float(expenses.get("expected_inflation", 0.03))
+    
+    yield_190 = float(amendment_190.get("annual_return_190") or amendment_190.get("yield", 0.05))
+    fees_190 = float(amendment_190.get("management_fee_190") or amendment_190.get("fees", 0.005))
+    
+    yield_25 = float(real_tax_25.get("annual_return_25") or real_tax_25.get("yield", 0.05))
+    fees_25 = float(real_tax_25.get("management_fee_25") or real_tax_25.get("fees", 0.005))
     
     r_monthly_190 = (1 + yield_190) ** (1/12) - 1
     r_monthly_25 = (1 + yield_25) ** (1/12) - 1
@@ -32,23 +32,22 @@ def run_simulation(user_inputs):
     f_monthly_25 = fees_25 / 12
     inf_monthly = (1 + inflation_rate) ** (1/12) - 1
     
-    # הון התחלתי בשני המסלולים
-    balance_190 = float(amendment_190.get("net_for_190", 1000000) or 0)
-    balance_25 = float(real_tax_25.get("net_for_real_pathway", 1000000) or 0)
+    # 3. הון התחלתי ובסיס מס במקור לקופות
+    balance_190 = float(amendment_190.get("net_for_190", 2240000) or 0)
+    balance_25 = float(real_tax_25.get("net_for_real_pathway", 3340000) or 0)
     
-    # הגדרת בסיס מס (קרן פטורה) לשני המסלולים
     basis_190 = balance_190
     basis_25 = balance_25
     
-    # הוצאות והכנסות בסיס
-    base_expense = float(general.get("base_expense", 15000) or 0)
-    base_income = float(general.get("base_income", 5000) or 0)
-    pension_190_start = float(amendment_190.get("desired_pension", 4500) or 0)
+    # 4. תזרים מזומנים חודשי (פתרון באג מילון general)
+    base_expense = float(expenses.get("current_expenses", 15000))
+    work_income = float(expenses.get("work_income", 0))
+    national_insurance = float(wealth.get("national_insurance", 2591))
+    pension_190_start = float(amendment_190.get("desired_pension", 5000))
     
-    # פרמטרים סיעודיים וקרן חירום
-    emergency_fund = float(wealth.get("emergency_fund", 50000) or 0)
-    care_age = float(wealth.get("care_age", 85))
-    care_cost = float(wealth.get("care_cost", 10000) or 0)
+    # 5. רכיבים סיעודיים
+    care_age = float(wealth.get("care_age", 85.0))
+    care_cost = float(expenses.get("caregiver_cost", 3500)) # תוקן משתנה עלות המטפלת מה-UI
     
     history = []
     total_months = int((105 - start_age) * 12) + 1
@@ -60,53 +59,59 @@ def run_simulation(user_inputs):
         if m > 0:
             inflation_factor *= (1 + inf_monthly)
             
-        # הוצאות שוטפות (כולל קפיצה סיעודית מגיל 85)
+        # הוצאות שוטפות מוצמדות (כולל הוספה אקטוארית בגיל 85)
         current_expense = base_expense * inflation_factor
         if current_age >= care_age:
             current_expense += care_cost * inflation_factor
             
-        current_income = base_income * inflation_factor
-        
-        # 🛑 תיקון מס' 1: עיתוי קבלת הקצבה - רק מגיל פרישה והלאה!
-        if current_age >= retirement_age:
-            pension_190_indexed = pension_190_start * inflation_factor
-        else:
+        # ניהול הכנסות שוטפות לפי שלב בחיים (עבודה לפני פרישה, קצבאות אחרי פרישה)
+        if current_age < retirement_age:
+            current_income = work_income * inflation_factor
             pension_190_indexed = 0.0
+            # 🛑 פתרון באג פרישה: לפני גיל פרישה אין משיכות מהתיק לצרכי מחיה!
+            net_needed_190 = 0.0
+            net_needed_25 = 0.0
+        else:
+            current_income = national_insurance * inflation_factor
+            pension_190_indexed = pension_190_start * inflation_factor
+            net_needed_190 = max(0.0, current_expense - current_income - pension_190_indexed)
+            net_needed_25 = max(0.0, current_expense - current_income)
             
-        # סכום משיכה חודשי נדרש נטו
-        net_needed_190 = max(0.0, current_expense - current_income - pension_190_indexed)
-        net_needed_25 = max(0.0, current_expense - current_income)
+        # --- לוגיקת מסלול תיקון 190 + מעקב מס ---
+        tax_paid_month_190 = 0.0
+        if net_needed_190 > 0 and balance_190 > 0:
+            profit_ratio_190 = max(0.0, (balance_190 - basis_190) / balance_190)
+            eff_tax_190 = profit_ratio_190 * 0.15
+            gross_withdrawn_190 = net_needed_190 / (1 - eff_tax_190) if eff_tax_190 < 1 else net_needed_190
+            
+            if gross_withdrawn_190 > balance_190:
+                tax_paid_month_190 = balance_190 * profit_ratio_190 * 0.15
+                balance_190 = 0.0
+            else:
+                tax_paid_month_190 = gross_withdrawn_190 - net_needed_190
+                balance_190 -= gross_withdrawn_190
+                if balance_190 + gross_withdrawn_190 > 0:
+                    basis_190 *= (balance_190 / (balance_190 + gross_withdrawn_190))
+                    
+        # --- לוגיקת מסלול 25% מס ריאלי + מעקב מס ---
+        tax_paid_month_25 = 0.0
+        basis_25 *= (1 + inf_monthly) # הצמדת קרן פטורה למדד חודשי
         
-        # --- לוגיקת מסלול תיקון 190 ---
-        profit_ratio_190 = max(0.0, (balance_190 - basis_190) / balance_190) if balance_190 > 0 else 0.0
-        eff_tax_190 = profit_ratio_190 * 0.15
-        gross_withdrawn_190 = net_needed_190 / (1 - eff_tax_190) if eff_tax_190 < 1 else net_needed_190
-        
-        if gross_withdrawn_190 > balance_190:
-            gross_withdrawn_190 = balance_190
-            balance_190 = 0.0
-        else:
-            balance_190 -= gross_withdrawn_190
-            if balance_190 + gross_withdrawn_190 > 0:
-                basis_190 *= (balance_190 / (balance_190 + gross_withdrawn_190))
-                
-        # --- לוגיקת מסלול 25% מס ריאלי ---
-        basis_25 *= (1 + inf_monthly)  # הצמדת בסיס המס למדד חודש בחודשו
-        real_profit_ratio = max(0.0, (balance_25 - basis_25) / balance_25) if balance_25 > 0 else 0.0
-        eff_tax_25 = real_profit_ratio * 0.25
-        gross_withdrawn_25 = net_needed_25 / (1 - eff_tax_25) if eff_tax_25 < 1 else net_needed_25
-        
-        # 🛑 תיקון מס' 2: חישוב מס מדויק ויחסי במקרה של התרוקנות הקופה
-        if gross_withdrawn_25 > balance_25:
-            tax_paid_month_25 = balance_25 * real_profit_ratio * 0.25
-            gross_withdrawn_25 = balance_25
-            balance_25 = 0.0
-        else:
-            balance_25 -= gross_withdrawn_25
-            if balance_25 + gross_withdrawn_25 > 0:
-                basis_25 *= (balance_25 / (balance_25 + gross_withdrawn_25))
-                
-        # 🛑 סעיף 4: עיתוי משיכה (Conservative Biasing - הנחה שמרנית של משיכה בתחילת חודש)
+        if net_needed_25 > 0 and balance_25 > 0:
+            real_profit_ratio = max(0.0, (balance_25 - basis_25) / balance_25)
+            eff_tax_25 = real_profit_ratio * 0.25
+            gross_withdrawn_25 = net_needed_25 / (1 - eff_tax_25) if eff_tax_25 < 1 else net_needed_25
+            
+            if gross_withdrawn_25 > balance_25:
+                tax_paid_month_25 = balance_25 * real_profit_ratio * 0.25
+                balance_25 = 0.0
+            else:
+                tax_paid_month_25 = gross_withdrawn_25 - net_needed_25
+                balance_25 -= gross_withdrawn_25
+                if balance_25 + gross_withdrawn_25 > 0:
+                    basis_25 *= (balance_25 / (balance_25 + gross_withdrawn_25))
+                    
+        # קרדיט תשואה וניכוי דמי ניהול (משיכה בתחילת חודש - גישה שמרנית)
         if balance_190 > 0:
             balance_190 *= (1 + r_monthly_190)
             balance_190 *= (1 - f_monthly_190)
@@ -122,14 +127,16 @@ def run_simulation(user_inputs):
             "הכנסה מקצבה מזערית": pension_190_indexed,
             "צבירה תיקון 190": balance_190,
             "צבירה מסלול ריאלי": balance_25,
+            "מס ששולם 190": tax_paid_month_190,
+            "מס ששולם 25": tax_paid_month_25,
             "inflation_factor": inflation_factor
         })
         
     df_full = pd.DataFrame(history)
     df_check = df_full[df_full["גיל"] <= check_age]
     
-    # 🛑 תיקון מס' 3: המכנה לשימור הון מבוסס על מסלול 25% (ההון המקסימלי הנוזלי)
-    baseline_capital = float(real_tax_25.get("net_for_real_pathway", 1000000) or 1)
+    # בייסליין להשוואה (הון מסלול ריאלי התחלתי)
+    baseline_capital = float(real_tax_25.get("net_for_real_pathway", 3340000) or 1)
     df_97 = df_full[df_full["גיל"] >= 97.0]
     row_97 = df_97.iloc[0] if not df_97.empty else df_full.iloc[-1]
     
