@@ -22,7 +22,7 @@ def render_qa_section(results, user_inputs):
     initial_capital_190 = float(amendment_190.get("net_for_190") or 0)
     initial_capital_25 = float(real_tax_25.get("net_for_real_pathway") or 0)
     
-    # הבייסליין האקטוארי לכל חישובי ההתאוששות (תפוחים לתפוחים לפי הדרישה)
+    # הבייסליין האקטוארי לכל חישובי ההתאוששות והיחסים (מסלול ריאלי)
     baseline_capital = initial_capital_25
     
     property_value_start = float(wealth.get("new_apartment_cost") or 0)
@@ -32,10 +32,7 @@ def render_qa_section(results, user_inputs):
     
     # --- 1. נקודת הפרישה ---
     df_retire = df_history[df_history["גיל"] >= retire_age]
-    if not df_retire.empty:
-        row_retire = df_retire.iloc[0]
-    else:
-        row_retire = df_history.iloc[-1]
+    row_retire = df_retire.iloc[0] if not df_retire.empty else df_history.iloc[-1]
         
     exp_retire = float(row_retire["הוצאה נומינלית"])
     inc_retire = float(row_retire["הכנסה נומינלית"])
@@ -45,42 +42,32 @@ def render_qa_section(results, user_inputs):
     years_to_retire = retire_age - start_age
     property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
     
-    net_needed_190_retire = max(0.0, exp_retire - inc_retire - pension_190_start)
+    # שליפת מדד אינפלציה/קצבה צמודה לגיל הפרישה
+    if "הכנסה מקצבה מזערית" in row_retire:
+        pension_190_indexed_retire = float(row_retire["הכנסה מקצבה מזערית"])
+    else:
+        inf_factor_retire = float(row_retire.get("inflation_factor", 1.0))
+        pension_190_indexed_retire = pension_190_start * inf_factor_retire
+
+    net_needed_190_retire = max(0.0, exp_retire - inc_retire - pension_190_indexed_retire)
     net_needed_25_retire = max(0.0, exp_retire - inc_retire)
     
-    pct_190_retire = 0.0
-    if balance_190_retire > 0:
-        pct_190_retire = (net_needed_190_retire * 12) / balance_190_retire * 100
+    pct_190_retire = (net_needed_190_retire * 12) / balance_190_retire * 100 if balance_190_retire > 0 else 0.0
+    pct_25_retire = (net_needed_25_retire * 12) / balance_25_retire * 100 if balance_25_retire > 0 else 0.0
         
-    pct_25_retire = 0.0
-    if balance_25_retire > 0:
-        pct_25_retire = (net_needed_25_retire * 12) / balance_25_retire * 100
+    rule400_190_retire = f"{balance_190_retire / (net_needed_190_retire * 400):.2f}" if net_needed_190_retire > 0 else "∞"
+    emer_190_retire = f"{emergency_fund / (net_needed_190_retire * 12):.1f}" if net_needed_190_retire > 0 else "∞"
         
-    rule400_190_retire = "∞"
-    emer_190_retire = "∞"
-    if net_needed_190_retire > 0:
-        v_rule = balance_190_retire / (net_needed_190_retire * 400)
-        rule400_190_retire = f"{v_rule:.2f}"
-        v_emer = emergency_fund / (net_needed_190_retire * 12)
-        emer_190_retire = f"{v_emer:.1f}"
-        
-    rule400_25_retire = "∞"
-    emer_25_retire = "∞"
-    if net_needed_25_retire > 0:
-        v_rule2 = balance_25_retire / (net_needed_25_retire * 400)
-        rule400_25_retire = f"{v_rule2:.2f}"
-        v_emer2 = emergency_fund / (net_needed_25_retire * 12)
-        emer_25_retire = f"{v_emer2:.1f}"
+    rule400_25_retire = f"{balance_25_retire / (net_needed_25_retire * 400):.2f}" if net_needed_25_retire > 0 else "∞"
+    emer_25_retire = f"{emergency_fund / (net_needed_25_retire * 12):.1f}" if net_needed_25_retire > 0 else "∞"
 
+    # תיקון מס' 2: וידוא עקביות בקרן חירום בחישוב העושר הכולל
     total_wealth_190_retire = balance_190_retire + property_value_retire + emergency_fund
     total_wealth_25_retire = balance_25_retire + property_value_retire + emergency_fund
 
     # --- 2. נקודת הגיל הנבדק ---
     df_filtered = df_history[df_history["גיל"] >= check_age]
-    if not df_filtered.empty:
-        row_check = df_filtered.iloc[0]
-    else:
-        row_check = df_history.iloc[-1]
+    row_check = df_filtered.iloc[0] if not df_filtered.empty else df_history.iloc[-1]
         
     exp_check = float(row_check["הוצאה נומינלית"])
     inc_check = float(row_check["הכנסה נומינלית"])
@@ -90,32 +77,28 @@ def render_qa_section(results, user_inputs):
     years_passed_check = check_age - start_age
     property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed_check)
     
-    net_needed_190_check = max(0.0, exp_check - inc_check - pension_190_start)
+    # תיקון מס' 1: הצמדת הקצבה המזערית
+    if "הכנסה מקצבה מזערית" in row_check:
+        pension_190_indexed_check = float(row_check["הכנסה מקצבה מזערית"])
+    else:
+        inf_factor_check = float(row_check.get("inflation_factor", 1.0))
+        pension_190_indexed_check = pension_190_start * inf_factor_check
+
+    net_needed_190_check = max(0.0, exp_check - inc_check - pension_190_indexed_check)
     net_needed_25_check = max(0.0, exp_check - inc_check)
     
-    pct_190_check = 0.0
-    if balance_190_check > 0:
-        pct_190_check = (net_needed_190_check * 12) / balance_190_check * 100
+    pct_190_check = (net_needed_190_check * 12) / balance_190_check * 100 if balance_190_check > 0 else 0.0
+    pct_25_check = (net_needed_25_check * 12) / balance_25_check * 100 if balance_25_check > 0 else 0.0
         
-    pct_25_check = 0.0
-    if balance_25_check > 0:
-        pct_25_check = (net_needed_25_check * 12) / balance_25_check * 100
-        
-    rule400_190_check = "∞"
-    if net_needed_190_check > 0:
-        v_chk1 = balance_190_check / (net_needed_190_check * 400)
-        rule400_190_check = f"{v_chk1:.2f}"
-        
-    rule400_25_check = "∞"
-    if net_needed_25_check > 0:
-        v_chk2 = balance_25_check / (net_needed_25_check * 400)
-        rule400_25_check = f"{v_chk2:.2f}"
+    rule400_190_check = f"{balance_190_check / (net_needed_190_check * 400):.2f}" if net_needed_190_check > 0 else "∞"
+    rule400_25_check = f"{balance_25_check / (net_needed_25_check * 400):.2f}" if net_needed_25_check > 0 else "∞"
         
     bool_preserve_190 = "✅ כן" if balance_190_check > baseline_capital else "❌ לא"
     bool_preserve_25 = "✅ כן" if balance_25_check > baseline_capital else "❌ לא"
     
-    total_wealth_190_check = balance_190_check + property_value_check
-    total_wealth_25_check = balance_25_check + property_value_check
+    # תיקון מס' 2: הוספת קרן החירום לעושר הכולל גם בגיל הנבדק
+    total_wealth_190_check = balance_190_check + property_value_check + emergency_fund
+    total_wealth_25_check = balance_25_check + property_value_check + emergency_fund
 
     # --- 3. סריקות מערך לגילאים מתקדמים ---
     intersection_age = "לא משתווים"
@@ -156,16 +139,14 @@ def render_qa_section(results, user_inputs):
     empty_190_str = "105+ (חסין)" if empty_age_190 >= 105.0 else f"גיל {empty_age_190:.1f}"
     empty_25_str = "105+ (חסין)" if empty_age_25 >= 105.0 else f"גיל {empty_age_25:.1f}"
 
-    ratio_190_97 = float(results.get("ratio_190_97", 0.0)) * 100
-    ratio_25_97 = float(results.get("ratio_25_97", 0.0)) * 100
-
-    # --- מחרוזות מעוצבות למניעת שגיאות ---
-    pct_190_retire_str = f"{pct_190_retire:.2f}%"
-    pct_25_retire_str = f"{pct_25_retire:.2f}%"
-    pct_190_check_str = f"{pct_190_check:.2f}%"
-    pct_25_check_str = f"{pct_25_check:.2f}%"
-    ratio_190_str = f"{ratio_190_97:.2f}%"
-    ratio_25_str = f"{ratio_25_97:.2f}%"
+    # תיקון מס' 3: לוגיקת המכנה ביחס שימור ההון (Baseline)
+    df_97 = df_full[df_full["גיל"] >= 97.0]
+    row_97 = df_97.iloc[0] if not df_97.empty else df_full.iloc[-1]
+    balance_at_97_190 = float(row_97["צבירה תיקון 190"])
+    balance_at_97_25 = float(row_97["צבירה מסלול ריאלי"])
+    
+    ratio_190_str = f"{(balance_at_97_190 / max(1.0, baseline_capital)) * 100:.2f}%"
+    ratio_25_str = f"{(balance_at_97_25 / max(1.0, baseline_capital)) * 100:.2f}%"
 
     # ===============================================
     # הרכבת הטבלאות למסך
@@ -176,21 +157,21 @@ def render_qa_section(results, user_inputs):
         "שאלה": [
             "כמה כסף נזיל יישאר לי בתיק?",
             "מה שווי הנדלן שלי בפרישה?",
-            "גובה קצבאות בפרישה",
+            "גובה קצבאות בפרישה (כולל קצבה צפויה)",
             "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
             "פי כמה גדול ההון שלי ממה שצריך לפי חוק ה-400?",
             "כמה שנים ניתן לחיות מקרן החירום בשנים הראשונות?",
             "קצב המשיכה באחוזים בפרישה?",
-            "מה שווי כלל הנכסים שלי (הון + נדלן)?"
+            "מה שווי כלל הנכסים שלי (הון + נדלן + חירום)?"
         ],
         "מסלול תיקון 190": [
             format_shekel(balance_190_retire),
             format_shekel(property_value_retire),
-            format_shekel(inc_retire + pension_190_start),
+            format_shekel(inc_retire + pension_190_indexed_retire),
             f"-{format_shekel(net_needed_190_retire)}",
             rule400_190_retire,
             emer_190_retire,
-            pct_190_retire_str,
+            f"{pct_190_retire:.2f}%",
             format_shekel(total_wealth_190_retire)
         ],
         "מסלול 25% מס ריאלי": [
@@ -200,7 +181,7 @@ def render_qa_section(results, user_inputs):
             f"-{format_shekel(net_needed_25_retire)}",
             rule400_25_retire,
             emer_25_retire,
-            pct_25_retire_str,
+            f"{pct_25_retire:.2f}%",
             format_shekel(total_wealth_25_retire)
         ]
     })
@@ -216,12 +197,12 @@ def render_qa_section(results, user_inputs):
             "האם ישאר לי יותר כסף ממה שהתחלתי איתו?",
             "גיל שבו התיקים משתווים",
             "גיל שבו התיקים עוברים את ההון ההתחלתי",
-            "מה שווי כלל הנכסים שלי (הון + נדלן)?"
+            "מה שווי כלל הנכסים שלי (הון + נדלן + חירום)?"
         ],
         "מסלול תיקון 190": [
             format_shekel(balance_190_check),
             f"-{format_shekel(net_needed_190_check)}",
-            pct_190_check_str,
+            f"{pct_190_check:.2f}%",
             rule400_190_check,
             bool_preserve_190,
             intersection_age,
@@ -231,7 +212,7 @@ def render_qa_section(results, user_inputs):
         "מסלול 25% מס ריאלי": [
             format_shekel(balance_25_check),
             f"-{format_shekel(net_needed_25_check)}",
-            pct_25_check_str,
+            f"{pct_25_check:.2f}%",
             rule400_25_check,
             bool_preserve_25,
             intersection_age,
