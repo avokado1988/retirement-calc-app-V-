@@ -1,33 +1,51 @@
 import streamlit as st
-from inputs.ui_components import show_net_summary, format_shekel
+from inputs.ui_components import compact_number_input, labeled_slider_with_value, show_net_summary, DEFAULTS
 
 def render_wealth_inputs():
     st.subheader("💰 נתוני הון")
-    
     st.markdown("#### 📈 חישוב הון לטובת מסלולים")
-    net_sale = st.slider("נטו ממכירה מוערך", min_value=0, max_value=20_000_000, value=10_000_000, step=100_000, format="%d")
-    st.caption(f"בחרת: **{net_sale/1_000_000:.1f} מיליון ₪** ({format_shekel(net_sale)})")
     
-    existing_savings = st.slider("חסכונות קיימים", min_value=0, max_value=5_000_000, value=440_000, step=10_000, format="%d")
-    st.caption(f"בחרת: **{format_shekel(existing_savings)}**")
+    net_sale = compact_number_input(
+        "נטו ממכירה מוערך (₪)", 
+        value=DEFAULTS["net_sale"], min_value=0, step=100000,
+        help_text="סך התמורה נטו ממכירת הנכס/חברה"
+    )
     
-    new_apartment_cost = st.slider("עלות דירה חדשה (כולל הכל)", min_value=0, max_value=15_000_000, value=5_800_000, step=100_000, format="%d")
-    st.caption(f"בחרת: **{new_apartment_cost/1_000_000:.1f} מיליון ₪** ({format_shekel(new_apartment_cost)})")
+    existing_savings = compact_number_input(
+        "חסכונות קיימים (₪)", 
+        value=DEFAULTS["existing_savings"], min_value=0, step=10000
+    )
     
-    kids_help = st.slider("עזרה לילדים", min_value=0, max_value=5_000_000, value=1_000_000, step=50_000, format="%d")
-    st.caption(f"בחרת: **{kids_help/1_000_000:.1f} מיליון ₪** ({format_shekel(kids_help)})")
+    new_apartment_cost = compact_number_input(
+        "עלות דירה חדשה (כולל הכל) (₪)", 
+        value=DEFAULTS["new_apartment_cost"], min_value=0, step=100000
+    )
     
-    emergency_fund = st.slider("קרן חירום / מזומן", min_value=0, max_value=2_000_000, value=300_000, step=50_000, format="%d")
-    st.caption(f"בחרת: **{format_shekel(emergency_fund)}**")
+    kids_help = compact_number_input(
+        "עזרה לילדים (₪)", 
+        value=DEFAULTS["kids_help"], min_value=0, step=50000
+    )
+    
+    emergency_fund = compact_number_input(
+        "קרן חירום / מזומן (₪)", 
+        value=DEFAULTS["emergency_fund"], min_value=0, step=10000
+    )
     
     remaining_for_gimel = net_sale + existing_savings - new_apartment_cost - kids_help - emergency_fund
-    
     show_net_summary(title="סך הון פנוי לטובת מסלולים", amount=remaining_for_gimel)
     
     st.divider()
     st.markdown("#### ➕ נכסים נוספים")
-    national_insurance = st.number_input("קצבת ביטוח לאומי (₪ חודשי)", min_value=0, value=2591, step=50)
-    property_appreciation_pct = st.slider("עליה ערך נדלן שנתית (%)", min_value=0.0, max_value=10.0, value=2.3, step=0.1)
+    
+    # שימוש בתיבה קומפקטית לביטוח לאומי
+    national_insurance = st.number_input("קצבת ביטוח לאומי (₪ חודשי)", min_value=0, value=DEFAULTS["national_insurance"], step=50)
+    
+    property_appreciation_pct = labeled_slider_with_value(
+        "עליה ערך נדלן שנתית (%)", 
+        min_value=0.0, max_value=10.0, 
+        value=DEFAULTS["property_appreciation"] * 100, step=0.1, 
+        format="%.1f%%", is_percent=True
+    )
     
     wealth_data = {
         "net_sale": net_sale,
