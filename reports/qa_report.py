@@ -13,6 +13,7 @@ from inputs.ui_components import (
 )
 
 def render_qa_section(results, user_inputs):
+    # CSS ליישור מימין לשמאל ועיצוב רשת טבלה אחידה ומקצועית לרינדור HTML
     st.markdown("""
         <style>
         .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 15px 0; font-family: sans-serif; }
@@ -22,36 +23,29 @@ def render_qa_section(results, user_inputs):
     """, unsafe_allow_html=True)
 
     df_history = results["df"]
-    df_full = results.get("df_full", df_history)
+    df_full = results["df_full"]
     
     timeline = user_inputs.get("timeline", {})
     wealth = user_inputs.get("wealth", {})
-    expenses = user_inputs.get("expenses", {})
+    real_tax_25 = user_inputs.get("real_tax_25", {})
     
     start_age = float(timeline.get("start_age", 65.5))
     check_age = float(timeline.get("check_age", 87.0))
     retire_age = float(timeline.get("retirement_age", start_age))
     
-    amendment_190 = user_inputs.get("amendment_190", {})
-    real_tax_25 = user_inputs.get("real_tax_25", {})
+    # 🟢 בייסליין אחיד להשוואת תפוחים לתפוחים מול המסלול הריאלי (כפי שהגדרת!)
+    baseline_capital = float(real_tax_25.get("net_for_real_pathway") or 3340000)
     
-    initial_capital_190 = float(amendment_190.get("net_for_190", 0))
-    initial_capital_25 = float(real_tax_25.get("net_for_real_pathway", 0))
-    
+    emergency_fund = float(wealth.get("emergency_fund", 0))
     property_value_start = float(wealth.get("new_apartment_cost", 0))
     appreciation_rate = float(wealth.get("property_appreciation", 0))
-    emergency_fund = float(wealth.get("emergency_fund", 0))
-    
-    # 🟢 נשאב את ערכי הבסיס כדי לחשב קצבה נטו, בלי שיידבק לזה שכר עבודה
-    ni_base = float(wealth.get("national_insurance", 2500))
-    pension_base = float(amendment_190.get("desired_pension", 5000))
 
-    # --- 1. נקודת הפרישה ---
-    df_retire = df_history[df_history["גיל"] >= retire_age]
-    row_retire = df_retire.iloc[0] if not df_retire.empty else df_history.iloc[-1]
+    # --- 1. נקודת הפרישה (שליפה מהירה) ---
+    row_retire = df_full[df_full["גיל"] >= retire_age].iloc[0] if not df_full[df_full["גיל"] >= retire_age].empty else df_history.iloc[-1]
         
     exp_retire = float(row_retire["הוצאה נומינלית"])
     base_income_retire = float(row_retire["הכנסה נומינלית"]) 
+    pension_190_retire = float(row_retire.get("הכנסה מקצבה מזערית", 0.0))
     
     balance_190_retire = float(row_retire["צבירה תיקון 190"])
     balance_25_retire = float(row_retire["צבירה מסלול ריאלי"])
@@ -59,15 +53,8 @@ def render_qa_section(results, user_inputs):
     years_to_retire = retire_age - start_age
     property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
 
-    # 🟢 התיקון האולטימטיבי: חישוב קצבאות נטו מתוך המדד שאותו חודש יצר (בלי עבודה!)
-    inf_factor_retire = float(row_retire.get("inflation_factor", 1.0))
-    # מדד הפרישה מתחיל רק מגיל פרישה. בגיל הפרישה עצמו (חודש 0 לפרישה) הוא 1.0
-    pension_190_indexed_retire = pension_base * 1.0 
-    ni_indexed_retire = ni_base * 1.0 
-    total_pure_pension_190 = pension_190_indexed_retire + ni_indexed_retire
-    total_pure_pension_25 = ni_indexed_retire
-
-    net_needed_190_retire = max(0.0, exp_retire - (base_income_retire + pension_190_indexed_retire))
+    # 🟢 חישוב נטו למשיכה - תיקון כפל פנסיה לפי ההנחיה שלך
+    net_needed_190_retire = max(0.0, exp_retire - (base_income_retire + pension_190_retire))
     net_needed_25_retire = max(0.0, exp_retire - base_income_retire)
     
     pct_190_retire = (net_needed_190_retire * 12) / balance_190_retire * 100 if balance_190_retire > 0 else 0.0
@@ -82,9 +69,8 @@ def render_qa_section(results, user_inputs):
     total_wealth_190_retire = balance_190_retire + property_value_retire + emergency_fund
     total_wealth_25_retire = balance_25_retire + property_value_retire + emergency_fund
 
-    # --- 2. נקודת הגיל הנבדק ---
-    df_filtered = df_history[df_history["גיל"] >= check_age]
-    row_check = df_filtered.iloc[0] if not df_filtered.empty else df_history.iloc[-1]
+    # --- 2. נקודת הגיל הנבדק (שליפה מהירה) ---
+    row_check = df_full[df_full["גיל"] >= check_age].iloc[0] if not df_full[df_full["גיל"] >= check_age].empty else df_history.iloc[-1]
         
     exp_check = float(row_check["הוצאה נומינלית"])
     base_income_check = float(row_check["הכנסה נומינלית"])
@@ -96,6 +82,7 @@ def render_qa_section(results, user_inputs):
     years_passed_check = check_age - start_age
     property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed_check)
 
+    # 🟢 חישוב נטו למשיכה - תיקון כפל פנסיה
     net_needed_190_check = max(0.0, exp_check - (base_income_check + pension_190_check))
     net_needed_25_check = max(0.0, exp_check - base_income_check)
     
@@ -105,35 +92,32 @@ def render_qa_section(results, user_inputs):
     rule400_190_check = f"{balance_190_check / (net_needed_190_check * 400):.2f}" if net_needed_190_check > 0 else "∞"
     rule400_25_check = f"{balance_25_check / (net_needed_25_check * 400):.2f}" if net_needed_25_check > 0 else "∞"
         
-    bool_preserve_190 = "✅ כן" if balance_190_check > initial_capital_190 else "❌ לא"
-    bool_preserve_25 = "✅ כן" if balance_25_check > initial_capital_25 else "❌ לא"
+    # 🟢 תיקון הבייסליין: יחסי שימור הון מול בייסליין אחיד (מסלול 25%) כפי שהנחית!
+    bool_preserve_190 = "✅ כן" if balance_190_check > baseline_capital else "❌ לא"
+    bool_preserve_25 = "✅ כן" if balance_25_check > baseline_capital else "❌ לא"
     
     total_wealth_190_check = balance_190_check + property_value_check + emergency_fund
     total_wealth_25_check = balance_25_check + property_value_check + emergency_fund
 
     # --- 3. סריקות מערך לגילאים מתקדמים ---
     intersection_age = "לא משתווים"
-    has_been_lower = False
     for idx in range(len(df_full)):
-        b190 = float(df_full.iloc[idx]["צבירה תיקון 190"])
-        b25 = float(df_full.iloc[idx]["צבירה מסלול ריאלי"])
-        curr_age = float(df_full.iloc[idx]["גיל"])
-        if b190 < b25:
-            has_been_lower = True
-        if has_been_lower and b190 >= b25 and curr_age > start_age:
-            intersection_age = f"{curr_age:.1f}"
+        if df_full.iloc[idx]["צבירה תיקון 190"] >= df_full.iloc[idx]["צבירה מסלול ריאלי"] and df_full.iloc[idx]["גיל"] > retire_age + 2:
+            intersection_age = f"{df_full.iloc[idx]['גיל']:.1f}"
             break
 
     recovery_age_190 = "לא עובר"
     for idx in range(len(df_full)):
-        if float(df_full.iloc[idx]["צבירה תיקון 190"]) > initial_capital_190 and float(df_full.iloc[idx]["גיל"]) > start_age:
-            recovery_age_190 = f"{float(df_full.iloc[idx]['גיל']):.1f}"
+        # 🟢 סריקה מול בייסליין אחיד
+        if df_full.iloc[idx]["צבירה תיקון 190"] > baseline_capital and df_full.iloc[idx]["גיל"] > start_age:
+            recovery_age_190 = f"{df_full.iloc[idx]['גיל']:.1f}"
             break
-
+            
     recovery_age_25 = "לא עובר"
     for idx in range(len(df_full)):
-        if float(df_full.iloc[idx]["צבירה מסלול ריאלי"]) > initial_capital_25 and float(df_full.iloc[idx]["גיל"]) > start_age:
-            recovery_age_25 = f"{float(df_full.iloc[idx]['גיל']):.1f}"
+        # 🟢 סריקה מול בייסליין אחיד
+        if df_full.iloc[idx]["צבירה מסלול ריאלי"] > baseline_capital and df_full.iloc[idx]["גיל"] > start_age:
+            recovery_age_25 = f"{df_full.iloc[idx]['גיל']:.1f}"
             break
 
     empty_age_190 = 120.0
@@ -155,11 +139,12 @@ def render_qa_section(results, user_inputs):
     balance_at_97_190 = float(row_97["צבירה תיקון 190"])
     balance_at_97_25 = float(row_97["צבירה מסלול ריאלי"])
     
-    ratio_190_str = f"{(balance_at_97_190 / max(1.0, initial_capital_190)) * 100:.2f}%"
-    ratio_25_str = f"{(balance_at_97_25 / max(1.0, initial_capital_25)) * 100:.2f}%"
+    # חישוב אחוזים למול בייסליין אחיד
+    ratio_190_str = f"{(balance_at_97_190 / max(1.0, baseline_capital)) * 100:.2f}%"
+    ratio_25_str = f"{(balance_at_97_25 / max(1.0, baseline_capital)) * 100:.2f}%"
 
-    ratio_190_pct = (balance_at_97_190 / max(1.0, initial_capital_190)) * 100
-    ratio_25_pct = (balance_at_97_25 / max(1.0, initial_capital_25)) * 100
+    ratio_190_pct = (balance_at_97_190 / max(1.0, baseline_capital)) * 100
+    ratio_25_pct = (balance_at_97_25 / max(1.0, baseline_capital)) * 100
 
     is_190_larger = balance_190_check > balance_25_check
     is_25_larger = balance_25_check > balance_190_check
@@ -173,7 +158,7 @@ def render_qa_section(results, user_inputs):
         "שאלה": [
             "מה גודל התיק שלי בגיל פרישה?",
             "מה שווי הנדלן שלי בפרישה?",
-            "גובה קצבאות בפרישה (ב\"ל + פנסיה מ-190)",
+            "גובה קצבאות בפרישה (ב\"ל + פנסיה)",
             "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
             "פי כמה גדול ההון ממה שצריך (חוק ה-400)?",
             "כמה שנים ניתן לחיות מקרן החירום?",
@@ -183,8 +168,8 @@ def render_qa_section(results, user_inputs):
         "מסלול תיקון 190": [
             format_shekel(balance_190_retire),
             format_shekel(property_value_retire),
-            format_shekel(total_pure_pension_190), # 🟢 התצוגה המדויקת: 7,500 ₪
-            format_shekel(net_needed_190_retire),
+            format_shekel(base_income_retire + pension_190_retire), # 🟢 התצוגה המדויקת! (בלי הכפלות)
+            format_shekel(net_needed_190_retire), # 🟢 חישוב מתוקן נקי
             wrap_html_style(rule400_190_retire, get_400_rule_style(rule400_190_retire)),
             wrap_html_style(emer_190_retire, get_emergency_style(emer_190_retire)),
             wrap_html_style(f"{pct_190_retire:.2f}%", get_withdrawal_style(pct_190_retire)),
@@ -193,8 +178,8 @@ def render_qa_section(results, user_inputs):
         "מסלול 25% מס ריאלי": [
             format_shekel(balance_25_retire),
             format_shekel(property_value_retire),
-            format_shekel(total_pure_pension_25), # 🟢 התצוגה המדויקת: 2,500 ₪
-            format_shekel(net_needed_25_retire),
+            format_shekel(base_income_retire), # 🟢 התצוגה המדויקת! (רק ב"ל/עבודה)
+            format_shekel(net_needed_25_retire), # 🟢 חישוב מתוקן נקי
             wrap_html_style(rule400_25_retire, get_400_rule_style(rule400_25_retire)),
             wrap_html_style(emer_25_retire, get_emergency_style(emer_25_retire)),
             wrap_html_style(f"{pct_25_retire:.2f}%", get_withdrawal_style(pct_25_retire)),
@@ -209,7 +194,6 @@ def render_qa_section(results, user_inputs):
             "כמה כסף נזיל יישאר לי בתיק?",
             "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
             "מה שיעור המשיכה בגיל הנבדק?",
-            "פי כמה גדול ההון ממה שצריך (חוק ה-400)?",
             "האם ישאר לי יותר כסף ממה שהתחלתי איתו?",
             "גיל שבו התיקים משתווים",
             "גיל שבו התיקים עוברים את ההון ההתחלתי",
@@ -219,7 +203,6 @@ def render_qa_section(results, user_inputs):
             wrap_html_style(format_shekel(balance_190_check), get_larger_portfolio_style(is_190_larger)),
             format_shekel(net_needed_190_check),
             wrap_html_style(f"{pct_190_check:.2f}%", get_withdrawal_style(pct_190_check)),
-            wrap_html_style(rule400_190_check, get_400_rule_style(rule400_190_check)),
             wrap_html_style(bool_preserve_190, get_boolean_style(bool_preserve_190)),
             intersection_age,
             recovery_age_190,
@@ -229,7 +212,6 @@ def render_qa_section(results, user_inputs):
             wrap_html_style(format_shekel(balance_25_check), get_larger_portfolio_style(is_25_larger)),
             format_shekel(net_needed_25_check),
             wrap_html_style(f"{pct_25_check:.2f}%", get_withdrawal_style(pct_25_check)),
-            wrap_html_style(rule400_25_check, get_400_rule_style(rule400_25_check)),
             wrap_html_style(bool_preserve_25, get_boolean_style(bool_preserve_25)),
             intersection_age,
             recovery_age_25,
