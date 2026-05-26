@@ -42,7 +42,7 @@ def render_qa_summary_page(results, user_inputs):
     df_100 = df_full[df_full["גיל"] >= 100.0]
     row_100 = df_100.iloc[0] if not df_100.empty else df_full.iloc[-1]
     balance_190_at_100 = float(row_100["צבירה תיקון 190"])
-    balance_25_at_100 = float(row_100["צbiרה מסלול ריאלי"])
+    balance_25_at_100 = float(row_100["צבירה מסלול ריאלי"])
 
     st.subheader("📋 כלי סיכום נתונים להעתקה מהירה (QA)")
     
