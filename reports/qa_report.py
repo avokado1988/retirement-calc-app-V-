@@ -13,7 +13,6 @@ from inputs.ui_components import (
 )
 
 def render_qa_section(results, user_inputs):
-    # CSS ליישור מימין לשמאל ועיצוב רשת טבלה אחידה ומקצועית לרינדור HTML
     st.markdown("""
         <style>
         .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 15px 0; font-family: sans-serif; }
@@ -43,16 +42,16 @@ def render_qa_section(results, user_inputs):
     appreciation_rate = float(wealth.get("property_appreciation", 0))
     emergency_fund = float(wealth.get("emergency_fund", 0))
     
+    # 🟢 נשאב את ערכי הבסיס כדי לחשב קצבה נטו, בלי שיידבק לזה שכר עבודה
+    ni_base = float(wealth.get("national_insurance", 2500))
+    pension_base = float(amendment_190.get("desired_pension", 5000))
+
     # --- 1. נקודת הפרישה ---
     df_retire = df_history[df_history["גיל"] >= retire_age]
     row_retire = df_retire.iloc[0] if not df_retire.empty else df_history.iloc[-1]
         
     exp_retire = float(row_retire["הוצאה נומינלית"])
-    
-    # 🟢 שואבים את ההכנסה הכוללת (כפי שהמנוע חישב במסלול 25% - כלומר ללא הקצבה)
     base_income_retire = float(row_retire["הכנסה נומינלית"]) 
-    # 🟢 שואבים את הקצבה בנפרד (רק ל-190)
-    pension_190_retire = float(row_retire.get("הכנסה מקצבה מזערית", 0.0))
     
     balance_190_retire = float(row_retire["צבירה תיקון 190"])
     balance_25_retire = float(row_retire["צבירה מסלול ריאלי"])
@@ -60,8 +59,15 @@ def render_qa_section(results, user_inputs):
     years_to_retire = retire_age - start_age
     property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
 
-    # 🟢 חישוב המשיכות נטו המדויק ללא כפילויות
-    net_needed_190_retire = max(0.0, exp_retire - (base_income_retire + pension_190_retire))
+    # 🟢 התיקון האולטימטיבי: חישוב קצבאות נטו מתוך המדד שאותו חודש יצר (בלי עבודה!)
+    inf_factor_retire = float(row_retire.get("inflation_factor", 1.0))
+    # מדד הפרישה מתחיל רק מגיל פרישה. בגיל הפרישה עצמו (חודש 0 לפרישה) הוא 1.0
+    pension_190_indexed_retire = pension_base * 1.0 
+    ni_indexed_retire = ni_base * 1.0 
+    total_pure_pension_190 = pension_190_indexed_retire + ni_indexed_retire
+    total_pure_pension_25 = ni_indexed_retire
+
+    net_needed_190_retire = max(0.0, exp_retire - (base_income_retire + pension_190_indexed_retire))
     net_needed_25_retire = max(0.0, exp_retire - base_income_retire)
     
     pct_190_retire = (net_needed_190_retire * 12) / balance_190_retire * 100 if balance_190_retire > 0 else 0.0
@@ -81,7 +87,6 @@ def render_qa_section(results, user_inputs):
     row_check = df_filtered.iloc[0] if not df_filtered.empty else df_history.iloc[-1]
         
     exp_check = float(row_check["הוצאה נומינלית"])
-    
     base_income_check = float(row_check["הכנסה נומינלית"])
     pension_190_check = float(row_check.get("הכנסה מקצבה מזערית", 0.0))
     
@@ -168,7 +173,7 @@ def render_qa_section(results, user_inputs):
         "שאלה": [
             "מה גודל התיק שלי בגיל פרישה?",
             "מה שווי הנדלן שלי בפרישה?",
-            "גובה קצבאות בפרישה (כולל צפי)",
+            "גובה קצבאות בפרישה (ב\"ל + פנסיה מ-190)",
             "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
             "פי כמה גדול ההון ממה שצריך (חוק ה-400)?",
             "כמה שנים ניתן לחיות מקרן החירום?",
@@ -178,8 +183,7 @@ def render_qa_section(results, user_inputs):
         "מסלול תיקון 190": [
             format_shekel(balance_190_retire),
             format_shekel(property_value_retire),
-            # 🟢 התיקון: הצגה של ההכנסה הכללית (ללא הכפלה)
-            format_shekel(base_income_retire + pension_190_retire), 
+            format_shekel(total_pure_pension_190), # 🟢 התצוגה המדויקת: 7,500 ₪
             format_shekel(net_needed_190_retire),
             wrap_html_style(rule400_190_retire, get_400_rule_style(rule400_190_retire)),
             wrap_html_style(emer_190_retire, get_emergency_style(emer_190_retire)),
@@ -189,8 +193,7 @@ def render_qa_section(results, user_inputs):
         "מסלול 25% מס ריאלי": [
             format_shekel(balance_25_retire),
             format_shekel(property_value_retire),
-            # 🟢 התיקון: הצגה של הבסיס בלבד במסלול הריאלי
-            format_shekel(base_income_retire), 
+            format_shekel(total_pure_pension_25), # 🟢 התצוגה המדויקת: 2,500 ₪
             format_shekel(net_needed_25_retire),
             wrap_html_style(rule400_25_retire, get_400_rule_style(rule400_25_retire)),
             wrap_html_style(emer_25_retire, get_emergency_style(emer_25_retire)),
