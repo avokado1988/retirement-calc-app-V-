@@ -22,7 +22,6 @@ def render_qa_section(results, user_inputs):
     initial_capital_190 = float(amendment_190.get("net_for_190") or 0)
     initial_capital_25 = float(real_tax_25.get("net_for_real_pathway") or 0)
     
-    # הבייסליין האקטוארי לכל חישובי ההתאוששות והיחסים (מסלול ריאלי)
     baseline_capital = initial_capital_25
     
     property_value_start = float(wealth.get("new_apartment_cost") or 0)
@@ -42,7 +41,6 @@ def render_qa_section(results, user_inputs):
     years_to_retire = retire_age - start_age
     property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
     
-    # שליפת מדד אינפלציה/קצבה צמודה לגיל הפרישה
     if "הכנסה מקצבה מזערית" in row_retire:
         pension_190_indexed_retire = float(row_retire["הכנסה מקצבה מזערית"])
     else:
@@ -61,7 +59,6 @@ def render_qa_section(results, user_inputs):
     rule400_25_retire = f"{balance_25_retire / (net_needed_25_retire * 400):.2f}" if net_needed_25_retire > 0 else "∞"
     emer_25_retire = f"{emergency_fund / (net_needed_25_retire * 12):.1f}" if net_needed_25_retire > 0 else "∞"
 
-    # תיקון מס' 2: וידוא עקביות בקרן חירום בחישוב העושר הכולל
     total_wealth_190_retire = balance_190_retire + property_value_retire + emergency_fund
     total_wealth_25_retire = balance_25_retire + property_value_retire + emergency_fund
 
@@ -77,7 +74,6 @@ def render_qa_section(results, user_inputs):
     years_passed_check = check_age - start_age
     property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed_check)
     
-    # תיקון מס' 1: הצמדת הקצבה המזערית
     if "הכנסה מקצבה מזערית" in row_check:
         pension_190_indexed_check = float(row_check["הכנסה מקצבה מזערית"])
     else:
@@ -96,7 +92,6 @@ def render_qa_section(results, user_inputs):
     bool_preserve_190 = "✅ כן" if balance_190_check > baseline_capital else "❌ לא"
     bool_preserve_25 = "✅ כן" if balance_25_check > baseline_capital else "❌ לא"
     
-    # תיקון מס' 2: הוספת קרן החירום לעושר הכולל גם בגיל הנבדק
     total_wealth_190_check = balance_190_check + property_value_check + emergency_fund
     total_wealth_25_check = balance_25_check + property_value_check + emergency_fund
 
@@ -139,7 +134,6 @@ def render_qa_section(results, user_inputs):
     empty_190_str = "105+ (חסין)" if empty_age_190 >= 105.0 else f"גיל {empty_age_190:.1f}"
     empty_25_str = "105+ (חסין)" if empty_age_25 >= 105.0 else f"גיל {empty_age_25:.1f}"
 
-    # תיקון מס' 3: לוגיקת המכנה ביחס שימור ההון (Baseline)
     df_97 = df_full[df_full["גיל"] >= 97.0]
     row_97 = df_97.iloc[0] if not df_97.empty else df_full.iloc[-1]
     balance_at_97_190 = float(row_97["צבירה תיקון 190"])
@@ -149,7 +143,7 @@ def render_qa_section(results, user_inputs):
     ratio_25_str = f"{(balance_at_97_25 / max(1.0, baseline_capital)) * 100:.2f}%"
 
     # ===============================================
-    # הרכבת הטבלאות למסך
+    # הרכבת הטבלאות למסך (המינוסים הוסרו!)
     # ===============================================
 
     st.subheader(f"📊 מצב ביום הפרישה (גיל {retire_age:.1f})")
@@ -157,10 +151,10 @@ def render_qa_section(results, user_inputs):
         "שאלה": [
             "כמה כסף נזיל יישאר לי בתיק?",
             "מה שווי הנדלן שלי בפרישה?",
-            "גובה קצבאות בפרישה (כולל קצבה צפויה)",
+            "גובה קצבאות בפרישה (כולל צפי)",
             "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
-            "פי כמה גדול ההון שלי ממה שצריך לפי חוק ה-400?",
-            "כמה שנים ניתן לחיות מקרן החירום בשנים הראשונות?",
+            "פי כמה גדול ההון ממה שצריך (חוק ה-400)?",
+            "כמה שנים ניתן לחיות מקרן החירום?",
             "קצב המשיכה באחוזים בפרישה?",
             "מה שווי כלל הנכסים שלי (הון + נדלן + חירום)?"
         ],
@@ -168,7 +162,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(balance_190_retire),
             format_shekel(property_value_retire),
             format_shekel(inc_retire + pension_190_indexed_retire),
-            f"-{format_shekel(net_needed_190_retire)}",
+            format_shekel(net_needed_190_retire), # הוסר המינוס!
             rule400_190_retire,
             emer_190_retire,
             f"{pct_190_retire:.2f}%",
@@ -178,7 +172,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(balance_25_retire),
             format_shekel(property_value_retire),
             format_shekel(inc_retire),
-            f"-{format_shekel(net_needed_25_retire)}",
+            format_shekel(net_needed_25_retire), # הוסר המינוס!
             rule400_25_retire,
             emer_25_retire,
             f"{pct_25_retire:.2f}%",
@@ -193,7 +187,7 @@ def render_qa_section(results, user_inputs):
             "כמה כסף נזיל יישאר לי בתיק?",
             "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
             "מה שיעור המשיכה בגיל הנבדק?",
-            "פי כמה גדול ההון שלי ממה שצריך לפי חוק ה-400?",
+            "פי כמה גדול ההון ממה שצריך (חוק ה-400)?",
             "האם ישאר לי יותר כסף ממה שהתחלתי איתו?",
             "גיל שבו התיקים משתווים",
             "גיל שבו התיקים עוברים את ההון ההתחלתי",
@@ -201,7 +195,7 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול תיקון 190": [
             format_shekel(balance_190_check),
-            f"-{format_shekel(net_needed_190_check)}",
+            format_shekel(net_needed_190_check), # הוסר המינוס!
             f"{pct_190_check:.2f}%",
             rule400_190_check,
             bool_preserve_190,
@@ -211,7 +205,7 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 25% מס ריאלי": [
             format_shekel(balance_25_check),
-            f"-{format_shekel(net_needed_25_check)}",
+            format_shekel(net_needed_25_check), # הוסר המינוס!
             f"{pct_25_check:.2f}%",
             rule400_25_check,
             bool_preserve_25,
