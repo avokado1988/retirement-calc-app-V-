@@ -2,10 +2,6 @@ import pandas as pd
 import numpy as np
 
 def run_simulation(user_inputs):
-    """
-    מנוע סימולציה אקטוארי מתוקן - מיושר במלואו מול מפתחות ה-UI האמיתיים.
-    פותר את באג הנתונים ומקשר במדויק בין הסליידרים למערכת החישוב.
-    """
     timeline = user_inputs.get("timeline", {})
     wealth = user_inputs.get("wealth", {})
     expenses = user_inputs.get("expenses", {})
@@ -16,15 +12,11 @@ def run_simulation(user_inputs):
     retirement_age = float(timeline.get("retirement_age", 67.0))
     check_age = float(timeline.get("check_age", 87.0))
     
-    # מיפוי נכון של המפתחות מהסליידרים (מניעת נפילה ל-3% ברירת מחדל)
     inflation_rate = float(expenses.get("expected_inflation", 0.023))
-    
     yield_190 = float(amendment_190.get("annual_return_190", 0.05))
     fees_190 = float(amendment_190.get("management_fee_190", 0.003))
-    
-    # תמיכה בשני סוגי המפתחות האפשריים למסלול 25%
-    yield_25 = float(real_tax_25.get("annual_return_25") or real_tax_25.get("yield", 0.05))
-    fees_25 = float(real_tax_25.get("management_fee_25") or real_tax_25.get("fees", 0.003))
+    yield_25 = float(real_tax_25.get("annual_return_25", 0.05))
+    fees_25 = float(real_tax_25.get("management_fee_25", 0.003))
     
     r_monthly_190 = (1 + yield_190) ** (1/12) - 1
     r_monthly_25 = (1 + yield_25) ** (1/12) - 1
@@ -39,6 +31,8 @@ def run_simulation(user_inputs):
     
     base_expense = float(expenses.get("current_expenses", 11000))
     work_income = float(expenses.get("work_income", 0))
+    work_end_age = float(expenses.get("work_end_age", retirement_age)) # 🟢 שליפת גיל סיום עבודה
+    
     national_insurance = float(wealth.get("national_insurance", 2591))
     pension_190_start = float(amendment_190.get("desired_pension", 5000))
     care_age = float(wealth.get("care_age", 85.0))
@@ -57,17 +51,23 @@ def run_simulation(user_inputs):
         if current_age >= care_age:
             current_expense += care_cost * inflation_factor
             
-        # הפרדה תקנית בין תקופת טרום-פרישה (הכנסה מעבודה) לאחר-פרישה (ביטוח לאומי ופנסיה)
+        # 🟢 חישוב הכנסה דינמי: הכנסה מעבודה מוזרמת רק כל עוד לא עברנו את גיל הפסקת העבודה
+        current_work_income = (work_income * inflation_factor) if current_age < work_end_age else 0.0
+        
+        # חישוב קצבאות ופנסיה: מוזרמים רק החל מגיל פרישה
         if current_age < retirement_age:
-            current_income = work_income * inflation_factor
+            current_passive_income = 0.0
             pension_190_indexed = 0.0
-            net_needed_190 = max(0.0, current_expense - current_income)
-            net_needed_25 = max(0.0, current_expense - current_income)
         else:
-            current_income = national_insurance * inflation_factor
+            current_passive_income = national_insurance * inflation_factor
             pension_190_indexed = pension_190_start * inflation_factor
-            net_needed_190 = max(0.0, current_expense - current_income - pension_190_indexed)
-            net_needed_25 = max(0.0, current_expense - current_income)
+            
+        # סך ההכנסה החודשית המשולבת לאותו חודש
+        current_income = current_work_income + current_passive_income
+        
+        # חישוב החוסר הכספי למשיכה מהתיקים
+        net_needed_190 = max(0.0, current_expense - current_income - pension_190_indexed)
+        net_needed_25 = max(0.0, current_expense - current_income)
             
         tax_paid_month_190 = 0.0
         if net_needed_190 > 0 and balance_190 > 0:
