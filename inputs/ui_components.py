@@ -112,7 +112,7 @@ def wrap_html_style(val_str, style_str):
 
 
 # ==============================================================================
-# 💎 3. רכיבי ממשק משופרים והיברידיים (UX קומפקטי ומיושר בזמן אמת)
+# 💎 3. רכיבי ממשק משופרים והיברידיים (UX קומפקטי, דינמי ומוגן מפני קריסות)
 # ==============================================================================
 
 def compact_number_input(label, value, min_value=None, max_value=None, step=1, help_text=None, unit="₪"):
@@ -120,34 +120,38 @@ def compact_number_input(label, value, min_value=None, max_value=None, step=1, h
     with col1:
         v = st.number_input(label, value=value, min_value=min_value, max_value=max_value, step=step, help=help_text)
     
-    # 🟢 חומת אש: המרה בטוחה למספר כדי למנוע קריסות (TypeError) ממחרוזות שנתקעו ב-URL
-    try:
-        v = float(v) if '.' in str(step) else int(v)
-    except:
-        pass
-
     with col2:
-        if unit == "₪": formatted = format_shekel(v)
-        elif unit == "%": formatted = f"{v:.1f}%"
-        else: formatted = f"{v} {unit}" if unit else f"{v}"
-        st.markdown(f"<div style='padding-top: 28px; font-weight: bold; color: #2ca02c; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
+        # פירמוט נקי בהתאם לסוג היחידה
+        if unit == "₪": 
+            formatted = format_shekel(v)
+        elif unit == "%": 
+            formatted = f"{float(v):.1f}%"
+        elif unit: 
+            formatted = f"{float(v):.1f} {unit}" if isinstance(v, float) else f"{v} {unit}"
+        else: 
+            formatted = f"{float(v):.1f}" if isinstance(v, float) else f"{v}"
+        
+        # ID דינמי (id='num_{v}') מכריח את הדפדפן לרנדר את הטקסט מחדש ומונע קיפאון!
+        st.markdown(f"<div id='num_{v}' style='padding-top: 28px; font-weight: bold; color: #2ca02c; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
     return v
+
 
 def labeled_slider_with_value(key_label, min_value, max_value, value, step, format=None, help_text=None, unit=None):
     col1, col2 = st.columns([2.5, 1.5])
     with col1:
         val = st.slider(key_label, min_value=min_value, max_value=max_value, value=value, step=step, format=format, help=help_text)
     
-    # 🟢 חומת אש: המרה ודאית למספר עשרוני למקרה שהדפדפן דחף לנו טקסט
-    try:
-        val = float(val)
-    except:
-        pass
-
     with col2:
-        if unit == "₪": formatted = format_shekel(val)
-        elif unit == "%": formatted = f"{val:.1f}%"
-        elif unit: formatted = f"{val} {unit}"
-        else: formatted = f"{val:.1f}" if isinstance(val, float) else f"{val}"
-        st.markdown(f"<div style='padding-top: 28px; font-weight: bold; color: #1f77b4; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
+        # פירמוט עשרוני מוגן מפני Floating Point Bug
+        if unit == "₪": 
+            formatted = format_shekel(val)
+        elif unit == "%": 
+            formatted = f"{float(val):.1f}%"
+        elif unit: 
+            formatted = f"{float(val):.1f} {unit}" if isinstance(val, float) else f"{val} {unit}"
+        else: 
+            formatted = f"{float(val):.1f}" if isinstance(val, float) else f"{val}"
+        
+        # ID דינמי (id='slider_{val}') מכריח את הדפדפן לרנדר את הטקסט מחדש ומונע קיפאון!
+        st.markdown(f"<div id='slider_{val}' style='padding-top: 28px; font-weight: bold; color: #1f77b4; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
     return val
