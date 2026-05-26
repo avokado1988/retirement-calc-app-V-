@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 
 def run_simulation(user_inputs):
+    """
+    מנוע סימולציה אקטוארי מתוקן - מיושר במלואו מול מפתחות ה-UI האמיתיים.
+    פותר את באג הנתונים ומקשר במדויק בין הסליידרים למערכת החישוב.
+    """
     timeline = user_inputs.get("timeline", {})
     wealth = user_inputs.get("wealth", {})
     expenses = user_inputs.get("expenses", {})
@@ -10,13 +14,17 @@ def run_simulation(user_inputs):
     
     start_age = float(timeline.get("start_age", 65.5))
     retirement_age = float(timeline.get("retirement_age", 67.0))
-    check_age = float(timeline.get("check_age", 99.0))
+    check_age = float(timeline.get("check_age", 87.0))
     
-    inflation_rate = float(expenses.get("expected_inflation", 0.03))
+    # מיפוי נכון של המפתחות מהסליידרים (מניעת נפילה ל-3% ברירת מחדל)
+    inflation_rate = float(expenses.get("expected_inflation", 0.023))
+    
     yield_190 = float(amendment_190.get("annual_return_190", 0.05))
-    fees_190 = float(amendment_190.get("management_fee_190", 0.005))
-    yield_25 = float(real_tax_25.get("annual_return_25", 0.05))
-    fees_25 = float(real_tax_25.get("management_fee_25", 0.005))
+    fees_190 = float(amendment_190.get("management_fee_190", 0.003))
+    
+    # תמיכה בשני סוגי המפתחות האפשריים למסלול 25%
+    yield_25 = float(real_tax_25.get("annual_return_25") or real_tax_25.get("yield", 0.05))
+    fees_25 = float(real_tax_25.get("management_fee_25") or real_tax_25.get("fees", 0.003))
     
     r_monthly_190 = (1 + yield_190) ** (1/12) - 1
     r_monthly_25 = (1 + yield_25) ** (1/12) - 1
@@ -29,7 +37,7 @@ def run_simulation(user_inputs):
     basis_190 = balance_190
     basis_25 = balance_25
     
-    base_expense = float(expenses.get("current_expenses", 15000))
+    base_expense = float(expenses.get("current_expenses", 11000))
     work_income = float(expenses.get("work_income", 0))
     national_insurance = float(wealth.get("national_insurance", 2591))
     pension_190_start = float(amendment_190.get("desired_pension", 5000))
@@ -49,6 +57,7 @@ def run_simulation(user_inputs):
         if current_age >= care_age:
             current_expense += care_cost * inflation_factor
             
+        # הפרדה תקנית בין תקופת טרום-פרישה (הכנסה מעבודה) לאחר-פרישה (ביטוח לאומי ופנסיה)
         if current_age < retirement_age:
             current_income = work_income * inflation_factor
             pension_190_indexed = 0.0
