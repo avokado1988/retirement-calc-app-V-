@@ -5,7 +5,6 @@ def render_25_inputs(remaining_for_gimel):
     st.subheader("📉 מסלול 25% מס ריאלי")
     st.caption(f"הון התחלתי מועבר למסלול ריאלי: {format_shekel(remaining_for_gimel)}")
     
-    # במסלול זה, כל ההון מועבר ישירות לתיק הנזיל ללא ניכוי קצבה
     net_for_real_pathway = remaining_for_gimel
     show_net_summary(title="סך הון נטו פנוי במסלול 25% מס ריאלי", amount=net_for_real_pathway)
     
@@ -15,18 +14,17 @@ def render_25_inputs(remaining_for_gimel):
     annual_return_25 = labeled_slider_with_value(
         "תשואה שנתית צפויה במסלול ריאלי (%)", 
         min_value=0.0, max_value=15.0, value=DEFAULTS["annual_return"] * 100, step=0.1, 
-        format="%.1f%%", is_percent=True
+        format="%.1f%%", unit="%"
     ) / 100
     
     management_fee_25 = labeled_slider_with_value(
         "דמי ניהול שנתיים מהצבירה במסלול ריאלי (%)", 
         min_value=0.0, max_value=2.0, value=DEFAULTS["management_fee"] * 100, step=0.05, 
-        format="%.2f%%", is_percent=True
+        format="%.2f%%", unit="%"
     ) / 100
     
-    strategy_data = {
+    return {
         "net_for_real_pathway": net_for_real_pathway,
         "annual_return_25": annual_return_25,
         "management_fee_25": management_fee_25
     }
-    return strategy_data
