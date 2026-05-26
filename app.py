@@ -3,6 +3,7 @@ import inputs
 from simulator_engine import run_simulation
 from reports.graphs import render_charts
 from reports.qa_report import render_qa_section
+from reports.qa_summary import render_qa_summary_page
 
 # 1. הגדרת תצורת דף אחידה
 st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", page_icon="📊", layout="wide")
@@ -17,8 +18,8 @@ user_inputs = inputs.render_all_sidebar_inputs()
 # 3. הפעלת מנוע החישובים ("המוח") בזמן אמת על בסיס נתוני המשתמש
 sim_results = run_simulation(user_inputs)
 
-# 4. חלוקת המסך המרכזי ללשוניות תצוגה מקצועיות
-tab1, tab2, tab3 = st.tabs(["❓ שאלות ותשובות", "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה"])
+# 4. חלוקת המסך המרכזי ללשוניות תצוגה מקצועיות (נוספה לשונית רביעית ל-QA)
+tab1, tab2, tab3, tab4 = st.tabs(["❓ שאלות ותשובות", "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
 
 with tab1:
     # הצגת דוח שאלות ותשובות
@@ -43,3 +44,7 @@ with tab3:
         "מס ששולם 190": "{:,.0f} ₪",
         "מס ששולם 25": "{:,.0f} ₪"
     }), use_container_width=True)
+
+with tab4:
+    # הצגת סיכום הנתונים והעתקה מהירה לטובת בדיקות QA קלות
+    render_qa_summary_page(sim_results, user_inputs)
