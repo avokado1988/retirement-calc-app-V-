@@ -1,5 +1,7 @@
 import streamlit as st
 import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
 
 def render_charts(df_history):
     st.markdown("### 📈 ניתוח אקטוארי ויזואלי")
@@ -38,37 +40,50 @@ def render_charts(df_history):
     st.divider()
 
     # =========================================================
-    # גרף 2: תזרים מזומנים (הוצאות מול הכנסות)
+    # גרף 2: פאזל מימון המחיה (התזרים החדש והברור)
     # =========================================================
-    st.subheader("⚖️ 2. ניתוח פער תזרימי (Cash Flow Gap)")
-    st.markdown("סך ההוצאות הצמודות מול מקורות ההכנסה הקבועים. הפער (השטח הלבן תחת הקו האדום) הוא הסכום הנמשך מהתיק.")
+    st.subheader("⚖️ 2. פאזל מימון המחיה (מאיפה מגיע הכסף?)")
+    st.markdown("הגרף מראה כיצד ממומנות ההוצאות השוטפות שלך: ההכנסות הקבועות (ירוק/כחול), ו**הגירעון (באדום) אותו אתה נאלץ למשוך מהחסכונות**.")
     fig2 = go.Figure()
     
-    # קו הוצאות כולל
-    fig2.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["הוצאה נומינלית"],
-        mode='lines', name='סך הוצאות מחיה (כולל מדד/מטפלת)',
-        line=dict(color='#d62728', width=2, dash='dash')
-    ))
-    
-    # הכנסה בסיסית (עבודה + ב"ל)
+    # 1. הכנסה בסיסית (ב"ל + עבודה)
     fig2.add_trace(go.Scatter(
         x=df_history["גיל"], y=df_history["הכנסה נומינלית"],
-        mode='lines', name='הכנסה קבועה (ב"ל/עבודה)',
-        line=dict(color='#ff7f0e', width=2),
-        stackgroup='one'
+        mode='none', name='הכנסה קבועה (ב"ל/עבודה)',
+        fill='tozeroy', stackgroup='one', fillcolor='rgba(44, 160, 44, 0.6)' # ירוק
     ))
     
-    # תוספת קצבת 190
+    # 2. קצבת 190 (מונחת על ההכנסה הבסיסית)
     fig2.add_trace(go.Scatter(
         x=df_history["גיל"], y=df_history["הכנסה מקצבה מזערית"],
-        mode='lines', name='קצבת תיקון 190',
-        line=dict(color='#2ca02c', width=2),
-        stackgroup='one'
+        mode='none', name='קצבת תיקון 190',
+        fill='tonexty', stackgroup='one', fillcolor='rgba(31, 119, 180, 0.6)' # כחול
     ))
+    
+    # 3. החוסר הפיננסי שממומן מהתיק הנזיל
+    gap = df_history["הוצאה נומינלית"] - (df_history["הכנסה נומינלית"] + df_history["הכנסה מקצבה מזערית"])
+    gap = gap.clip(lower=0) # מתעלמים מחודשים של עודף לצורך הגרף הזה
+    
+    fig2.add_trace(go.Scatter(
+        x=df_history["גיל"], y=gap,
+        mode='none', name='משיכה מהחסכונות (גירעון)',
+        fill='tonexty', stackgroup='one', fillcolor='rgba(214, 39, 40, 0.5)' # אדום מחריד וברור
+    ))
+
+    # 4. קו הוצאות סה"כ (מסגרת עליונה)
+    fig2.add_trace(go.Scatter(
+        x=df_history["גיל"], y=df_history["הוצאה נומינלית"],
+        mode='lines', name='סך ההוצאות בפועל',
+        line=dict(color='black', width=2, dash='dot')
+    ))
+
+    # 💡 טריק אקטוארי לתצוגה: חותכים את ה"שפיצים" של ההוצאות החד פעמיות!
+    # ניקח את האחוזון ה-95 של ההוצאות ונכפיל ב-1.2, כך שנראה את השוטף בבירור ולא את הקפיצות הענקיות
+    max_y_view = df_history["הוצאה נומינלית"].quantile(0.95) * 1.3
 
     fig2.update_layout(
         xaxis_title="גיל", yaxis_title="סכום חודשי (₪)",
+        yaxis=dict(range=[0, max_y_view]), # הזום-אין שפותר את הבעיה
         hovermode="x unified", template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
@@ -83,21 +98,20 @@ def render_charts(df_history):
     st.subheader("🛡️ 3. סך מס רווחי הון ששולם בפועל (מצטבר)")
     st.markdown("הגרף ממחיש את אפקט 'המגן ממס' של תיקון 190 אל מול שחיקת המס במסלול הריאלי הרגיל.")
     
-    # חישוב מס מצטבר
-    df_history = df_history.copy()
-    df_history['cum_tax_190'] = df_history['מס ששולם 190'].cumsum()
-    df_history['cum_tax_25'] = df_history['מס ששולם 25'].cumsum()
+    df_history_tax = df_history.copy()
+    df_history_tax['cum_tax_190'] = df_history_tax['מס ששולם 190'].cumsum()
+    df_history_tax['cum_tax_25'] = df_history_tax['מס ששולם 25'].cumsum()
     
     fig3 = go.Figure()
     
     fig3.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["cum_tax_190"],
+        x=df_history_tax["גיל"], y=df_history_tax["cum_tax_190"],
         mode='lines', name='מס מצטבר - תיקון 190',
         line=dict(color='#2ca02c', width=3)
     ))
     
     fig3.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["cum_tax_25"],
+        x=df_history_tax["גיל"], y=df_history_tax["cum_tax_25"],
         mode='lines', name='מס מצטבר - 25% ריאלי',
         line=dict(color='#1f77b4', width=3)
     ))
@@ -118,19 +132,20 @@ def render_charts(df_history):
     st.subheader("🏢 4. שווי נקי כולל (הון נזיל + נדל\"ן)")
     st.markdown("מבט הוליסטי על סך הנכסים של התא המשפחתי, המציג את תמונת הירושה הכוללת בכל נקודת זמן.")
     
-    df_history['total_nw_190'] = df_history['צבירה תיקון 190'] + df_history['שווי נדלן']
-    df_history['total_nw_25'] = df_history['צבירה מסלול ריאלי'] + df_history['שווי נדלן']
+    df_history_nw = df_history.copy()
+    df_history_nw['total_nw_190'] = df_history_nw['צבירה תיקון 190'] + df_history_nw['שווי נדלן']
+    df_history_nw['total_nw_25'] = df_history_nw['צבירה מסלול ריאלי'] + df_history_nw['שווי נדלן']
     
     fig4 = go.Figure()
     
     fig4.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["total_nw_190"],
+        x=df_history_nw["גיל"], y=df_history_nw["total_nw_190"],
         mode='lines', name='שווי כולל - תיקון 190',
         line=dict(color='#2ca02c', width=3, dash='dot')
     ))
     
     fig4.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["total_nw_25"],
+        x=df_history_nw["גיל"], y=df_history_nw["total_nw_25"],
         mode='lines', name='שווי כולל - 25% ריאלי',
         line=dict(color='#1f77b4', width=3, dash='dot')
     ))
