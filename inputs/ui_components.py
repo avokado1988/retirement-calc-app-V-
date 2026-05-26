@@ -1,6 +1,33 @@
 import streamlit as st
 
 # ==============================================================================
+# ⚙️ קבועים וערכי ברירת מחדל מרוכזים (System Defaults)
+# ==============================================================================
+DEFAULTS = {
+    "start_age": 65.5,
+    "retirement_age": 67.0,
+    "check_age": 87.0,
+    "expected_inflation": 0.023,
+    "current_expenses": 11000,
+    "caregiver_cost": 3500,
+    "one_time_expense": 80000,
+    "one_time_frequency": 8,
+    "work_income": 0,
+    "desired_pension": 5000,
+    "national_insurance": 2500,
+    "annual_return": 0.05,
+    "management_fee": 0.006,
+    "net_sale": 10000000,
+    "existing_savings": 440000,
+    "new_apartment_cost": 5800000,
+    "kids_help": 1000000,
+    "emergency_fund": 300000,
+    "property_appreciation": 0.023,
+    "age_75_85_increase": 0.005,
+    "age_85_plus_increase": 0.015
+}
+
+# ==============================================================================
 # 📊 1. פונקציות פירמוט והצגה בסיסיות
 # ==============================================================================
 
@@ -137,6 +164,29 @@ def wrap_html_style(val_str, style_str):
     """עוטף ערך ב-HTML מעוצב לרינדור אחיד ומקצועי בתוך רשת הטבלאות"""
     if not style_str:
         return str(val_str)
-    # פאדינג ויישור יציב לימין בשביל התצוגה הויזואלית
     full_style = f"padding: 6px 10px; border-radius: 4px; display: block; text-align: right; {style_str}"
     return f"<div style='{full_style}'>{val_str}</div>"
+
+
+# ==============================================================================
+# 💎 4. רכיבי ממשק משופרים וקומפקטיים (UX Compact Inputs)
+# ==============================================================================
+
+def compact_number_input(label, value, min_value=None, max_value=None, step=1, help_text=None):
+    """תיבת הזנת מספר קומפקטית עם תצוגת שקלים מפורמטת ומיושרת בגובה העיניים"""
+    col1, col2 = st.columns([2.5, 1.5])
+    with col1:
+        v = st.number_input(label, value=value, min_value=min_value, max_value=max_value, step=step, help=help_text)
+    with col2:
+        st.markdown(f"<div style='padding-top: 28px; font-weight: bold; color: #2ca02c; text-align: left; direction: ltr;'>{format_shekel(v)}</div>", unsafe_allow_html=True)
+    return v
+
+def labeled_slider_with_value(key_label, min_value, max_value, value, step, format=None, help_text=None, is_percent=False):
+    """סליידר מעוצב המציג את ערכו הנוכחי בצד בצורה נקייה וקומפקטית"""
+    col1, col2 = st.columns([2.5, 1.5])
+    with col1:
+        val = st.slider(key_label, min_value=min_value, max_value=max_value, value=value, step=step, format=format, help=help_text)
+    with col2:
+        formatted_val = format_percent(val) if is_percent else format_shekel(val)
+        st.markdown(f"<div style='padding-top: 28px; font-weight: bold; color: #1f77b4; text-align: left; direction: ltr;'>{formatted_val}</div>", unsafe_allow_html=True)
+    return val
