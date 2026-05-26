@@ -36,36 +36,34 @@ def render_qa_section(results, user_inputs):
     amendment_190 = user_inputs.get("amendment_190", {})
     real_tax_25 = user_inputs.get("real_tax_25", {})
     
-    initial_capital_190 = float(amendment_190.get("net_for_190") or 0)
-    initial_capital_25 = float(real_tax_25.get("net_for_real_pathway") or 0)
+    initial_capital_190 = float(amendment_190.get("net_for_190", 0))
+    initial_capital_25 = float(real_tax_25.get("net_for_real_pathway", 0))
     
-    baseline_capital = initial_capital_25
-    
-    property_value_start = float(wealth.get("new_apartment_cost") or 0)
-    appreciation_rate = float(wealth.get("property_appreciation") or 0)
-    emergency_fund = float(wealth.get("emergency_fund") or 0)
-    pension_190_start = float(amendment_190.get("desired_pension") or 0)
+    property_value_start = float(wealth.get("new_apartment_cost", 0))
+    appreciation_rate = float(wealth.get("property_appreciation", 0))
+    emergency_fund = float(wealth.get("emergency_fund", 0))
     
     # --- 1. נקודת הפרישה ---
     df_retire = df_history[df_history["גיל"] >= retire_age]
     row_retire = df_retire.iloc[0] if not df_retire.empty else df_history.iloc[-1]
         
     exp_retire = float(row_retire["הוצאה נומינלית"])
-    inc_retire = float(row_retire["הכנסה נומינלית"])
+    
+    # 🟢 התיקון הקריטי: שאיבה מדויקת מהמנוע ללא כפילויות
+    # ההכנסה במסלול 25% היא הבסיס לכולם (רק ב"ל + עבודה)
+    base_income_retire = float(row_retire["הכנסה נומינלית"]) 
+    # הפנסיה ב-190 נשאבת מהעמודה היעודית שלה (אם הלקוח בפרישה)
+    pension_190_retire = float(row_retire.get("הכנסה מקצבה מזערית", 0.0))
+    
     balance_190_retire = float(row_retire["צבירה תיקון 190"])
     balance_25_retire = float(row_retire["צבירה מסלול ריאלי"])
     
     years_to_retire = retire_age - start_age
     property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
-    
-    if "הכנסה מקצבה מזערית" in row_retire:
-        pension_190_indexed_retire = float(row_retire["הכנסה מקצבה מזערית"])
-    else:
-        inf_factor_retire = float(row_retire.get("inflation_factor", 1.0))
-        pension_190_indexed_retire = pension_190_start * inf_factor_retire
 
-    net_needed_190_retire = max(0.0, exp_retire - inc_retire - pension_190_indexed_retire)
-    net_needed_25_retire = max(0.0, exp_retire - inc_retire)
+    # נטו למשיכה מחושב נכון לפי הקיזוזים
+    net_needed_190_retire = max(0.0, exp_retire - (base_income_retire + pension_190_retire))
+    net_needed_25_retire = max(0.0, exp_retire - base_income_retire)
     
     pct_190_retire = (net_needed_190_retire * 12) / balance_190_retire * 100 if balance_190_retire > 0 else 0.0
     pct_25_retire = (net_needed_25_retire * 12) / balance_25_retire * 100 if balance_25_retire > 0 else 0.0
@@ -84,21 +82,19 @@ def render_qa_section(results, user_inputs):
     row_check = df_filtered.iloc[0] if not df_filtered.empty else df_history.iloc[-1]
         
     exp_check = float(row_check["הוצאה נומינלית"])
-    inc_check = float(row_check["הכנסה נומינלית"])
+    
+    # 🟢 אותו תיקון לגיל הנבדק
+    base_income_check = float(row_check["הכנסה נומינלית"])
+    pension_190_check = float(row_check.get("הכנסה מקצבה מזערית", 0.0))
+    
     balance_190_check = float(row_check["צבירה תיקון 190"])
     balance_25_check = float(row_check["צבירה מסלול ריאלי"])
     
     years_passed_check = check_age - start_age
     property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed_check)
-    
-    if "הכנסה מקצבה מזערית" in row_check:
-        pension_190_indexed_check = float(row_check["הכנסה מקצבה מזערית"])
-    else:
-        inf_factor_check = float(row_check.get("inflation_factor", 1.0))
-        pension_190_indexed_check = pension_190_start * inf_factor_check
 
-    net_needed_190_check = max(0.0, exp_check - inc_check - pension_190_indexed_check)
-    net_needed_25_check = max(0.0, exp_check - inc_check)
+    net_needed_190_check = max(0.0, exp_check - (base_income_check + pension_190_check))
+    net_needed_25_check = max(0.0, exp_check - base_income_check)
     
     pct_190_check = (net_needed_190_check * 12) / balance_190_check * 100 if balance_190_check > 0 else 0.0
     pct_25_check = (net_needed_25_check * 12) / balance_25_check * 100 if balance_25_check > 0 else 0.0
@@ -106,8 +102,8 @@ def render_qa_section(results, user_inputs):
     rule400_190_check = f"{balance_190_check / (net_needed_190_check * 400):.2f}" if net_needed_190_check > 0 else "∞"
     rule400_25_check = f"{balance_25_check / (net_needed_25_check * 400):.2f}" if net_needed_25_check > 0 else "∞"
         
-    bool_preserve_190 = "✅ כן" if balance_190_check > baseline_capital else "❌ לא"
-    bool_preserve_25 = "✅ כן" if balance_25_check > baseline_capital else "❌ לא"
+    bool_preserve_190 = "✅ כן" if balance_190_check > initial_capital_190 else "❌ לא"
+    bool_preserve_25 = "✅ כן" if balance_25_check > initial_capital_25 else "❌ לא"
     
     total_wealth_190_check = balance_190_check + property_value_check + emergency_fund
     total_wealth_25_check = balance_25_check + property_value_check + emergency_fund
@@ -127,13 +123,13 @@ def render_qa_section(results, user_inputs):
 
     recovery_age_190 = "לא עובר"
     for idx in range(len(df_full)):
-        if float(df_full.iloc[idx]["צבירה תיקון 190"]) > baseline_capital and float(df_full.iloc[idx]["גיל"]) > start_age:
+        if float(df_full.iloc[idx]["צבירה תיקון 190"]) > initial_capital_190 and float(df_full.iloc[idx]["גיל"]) > start_age:
             recovery_age_190 = f"{float(df_full.iloc[idx]['גיל']):.1f}"
             break
 
     recovery_age_25 = "לא עובר"
     for idx in range(len(df_full)):
-        if float(df_full.iloc[idx]["צבירה מסלול ריאלי"]) > baseline_capital and float(df_full.iloc[idx]["גיל"]) > start_age:
+        if float(df_full.iloc[idx]["צבירה מסלול ריאלי"]) > initial_capital_25 and float(df_full.iloc[idx]["גיל"]) > start_age:
             recovery_age_25 = f"{float(df_full.iloc[idx]['גיל']):.1f}"
             break
 
@@ -156,14 +152,12 @@ def render_qa_section(results, user_inputs):
     balance_at_97_190 = float(row_97["צבירה תיקון 190"])
     balance_at_97_25 = float(row_97["צבירה מסלול ריאלי"])
     
-    ratio_190_str = f"{(balance_at_97_190 / max(1.0, baseline_capital)) * 100:.2f}%"
-    ratio_25_str = f"{(balance_at_97_25 / max(1.0, baseline_capital)) * 100:.2f}%"
+    ratio_190_str = f"{(balance_at_97_190 / max(1.0, initial_capital_190)) * 100:.2f}%"
+    ratio_25_str = f"{(balance_at_97_25 / max(1.0, initial_capital_25)) * 100:.2f}%"
 
-    # חישוב אחוזים נומריים נקיים לצורך רמזור גיל 97
-    ratio_190_pct = (balance_at_97_190 / max(1.0, baseline_capital)) * 100
-    ratio_25_pct = (balance_at_97_25 / max(1.0, baseline_capital)) * 100
+    ratio_190_pct = (balance_at_97_190 / max(1.0, initial_capital_190)) * 100
+    ratio_25_pct = (balance_at_97_25 / max(1.0, initial_capital_25)) * 100
 
-    # לוגיקת השוואה דינמית בין שני התיקים לצביעת התיק המוביל
     is_190_larger = balance_190_check > balance_25_check
     is_25_larger = balance_25_check > balance_190_check
 
@@ -186,7 +180,7 @@ def render_qa_section(results, user_inputs):
         "מסלול תיקון 190": [
             format_shekel(balance_190_retire),
             format_shekel(property_value_retire),
-            format_shekel(inc_retire + pension_190_indexed_retire),
+            format_shekel(base_income_retire + pension_190_retire), # 🟢 התצוגה המדויקת!
             format_shekel(net_needed_190_retire),
             wrap_html_style(rule400_190_retire, get_400_rule_style(rule400_190_retire)),
             wrap_html_style(emer_190_retire, get_emergency_style(emer_190_retire)),
@@ -196,7 +190,7 @@ def render_qa_section(results, user_inputs):
         "מסלול 25% מס ריאלי": [
             format_shekel(balance_25_retire),
             format_shekel(property_value_retire),
-            format_shekel(inc_retire),
+            format_shekel(base_income_retire), # 🟢 רק הכנסת הבסיס ללא הקצבה הווירטואלית
             format_shekel(net_needed_25_retire),
             wrap_html_style(rule400_25_retire, get_400_rule_style(rule400_25_retire)),
             wrap_html_style(emer_25_retire, get_emergency_style(emer_25_retire)),
