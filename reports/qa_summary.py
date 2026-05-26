@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import pandas as pd
 from inputs.ui_components import format_shekel
 
@@ -36,7 +36,7 @@ def render_qa_summary_page(results, user_inputs):
     work_end_age = float(expenses.get("work_end_age", retire_age))
     base_inc_ni = float(wealth.get("national_insurance", 2591))
     
-    # 🟢 שליפת נתוני מטפלת סיעודית מהממשק
+    # שליפת נתוני מטפלת סיעודית מהממשק
     care_age = float(wealth.get("care_age", 85.0))
     care_cost = float(expenses.get("caregiver_cost", 3500))
     
@@ -54,7 +54,7 @@ def render_qa_summary_page(results, user_inputs):
     df_100 = df_full[df_full["גיל"] >= 100.0]
     row_100 = df_100.iloc[0] if not df_100.empty else df_full.iloc[-1]
     balance_190_at_100 = float(row_100["צבירה תיקון 190"])
-    balance_25_at_100 = float(row_100["צבירה מסלול ריאלי"]) # 🟢 תוקן מ-"צbiרה" ל-"צבירה"!
+    balance_25_at_100 = float(row_100["צבירה מסלול ריאלי"])
 
     # הצגה ויזואלית בממשק
     st.subheader("📋 כלי סיכום נתונים להעתקה מהירה (QA)")
@@ -75,7 +75,7 @@ def render_qa_summary_page(results, user_inputs):
 - הכנסה מעבודה: {work_inc:,.0f} ש"ח (נפסקת בגיל: {work_end_age:.1f})
 - הכנסה מביטוח לאומי (מהפרישה): {base_inc_ni:,.0f} ש"ח
 - קצבה מבוקשת ל-190: {pension_190_start:,.0f} ש"ח
-- עלות מטפלת סיעודית: {care_cost:,.0f} ש"ח (מגיל: {care_age:.1f})  # 🟢 התווסף בהצלחה!
+- עלות מטפלת סיעודית: {care_cost:,.0f} ש"ח (מגיל: {care_age:.1f})
 - קרן חירום: {emergency_fund:,.0f} ש"ח
 - שווי נדל"ן התחלתי: {property_value_start:,.0f} ש"ח
 
