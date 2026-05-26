@@ -48,4 +48,23 @@ def render_qa_section(results, user_inputs):
     net_needed_190_retire = max(0.0, exp_retire - inc_retire - pension_190_start)
     net_needed_25_retire = max(0.0, exp_retire - inc_retire)
     
-    pct
+    pct_190_retire = 0.0
+    if balance_190_retire > 0:
+        pct_190_retire = (net_needed_190_retire * 12) / balance_190_retire * 100
+        
+    pct_25_retire = 0.0
+    if balance_25_retire > 0:
+        pct_25_retire = (net_needed_25_retire * 12) / balance_25_retire * 100
+        
+    rule400_190_retire = "∞"
+    emer_190_retire = "∞"
+    if net_needed_190_retire > 0:
+        v_rule = balance_190_retire / (net_needed_190_retire * 400)
+        rule400_190_retire = f"{v_rule:.2f}"
+        v_emer = emergency_fund / (net_needed_190_retire * 12)
+        emer_190_retire = f"{v_emer:.1f}"
+        
+    rule400_25_retire = "∞"
+    emer_25_retire = "∞"
+    if net_needed_25_retire > 0:
+        v_rule2 = balance_25_retire /
