@@ -29,6 +29,10 @@ def render_expenses_inputs():
     work_income = st.slider("הכנסה חודשית ממוצעת מעבודה כיום", min_value=0, max_value=30_000, value=0, step=500, format="%d")
     st.caption(f"בחרת: **{format_shekel(work_income)}**")
     
+    # 🟢 הסליידר החדש והקריטי:
+    work_end_age = st.slider("גיל הפסקת עבודה בפועל (סיום הכנסה מעבודה)", min_value=55.0, max_value=85.0, value=67.0, step=0.5)
+    st.caption(f"ההכנסה מעבודה תיפסק לחלוטין בגיל: **{work_end_age:.1f}**")
+    
     expenses_data = {
         "current_expenses": current_expenses,
         "expected_inflation": expected_inflation,
@@ -37,6 +41,7 @@ def render_expenses_inputs():
         "caregiver_cost": caregiver_cost,
         "one_time_expense": one_time_expense,
         "one_time_frequency": one_time_frequency,
-        "work_income": work_income
+        "work_income": work_income,
+        "work_end_age": work_end_age  # נשמר במילון
     }
     return expenses_data
