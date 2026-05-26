@@ -49,10 +49,9 @@ def render_qa_section(results, user_inputs):
         
     exp_retire = float(row_retire["הוצאה נומינלית"])
     
-    # 🟢 התיקון הקריטי: שאיבה מדויקת מהמנוע ללא כפילויות
-    # ההכנסה במסלול 25% היא הבסיס לכולם (רק ב"ל + עבודה)
+    # 🟢 שואבים את ההכנסה הכוללת (כפי שהמנוע חישב במסלול 25% - כלומר ללא הקצבה)
     base_income_retire = float(row_retire["הכנסה נומינלית"]) 
-    # הפנסיה ב-190 נשאבת מהעמודה היעודית שלה (אם הלקוח בפרישה)
+    # 🟢 שואבים את הקצבה בנפרד (רק ל-190)
     pension_190_retire = float(row_retire.get("הכנסה מקצבה מזערית", 0.0))
     
     balance_190_retire = float(row_retire["צבירה תיקון 190"])
@@ -61,7 +60,7 @@ def render_qa_section(results, user_inputs):
     years_to_retire = retire_age - start_age
     property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
 
-    # נטו למשיכה מחושב נכון לפי הקיזוזים
+    # 🟢 חישוב המשיכות נטו המדויק ללא כפילויות
     net_needed_190_retire = max(0.0, exp_retire - (base_income_retire + pension_190_retire))
     net_needed_25_retire = max(0.0, exp_retire - base_income_retire)
     
@@ -83,7 +82,6 @@ def render_qa_section(results, user_inputs):
         
     exp_check = float(row_check["הוצאה נומינלית"])
     
-    # 🟢 אותו תיקון לגיל הנבדק
     base_income_check = float(row_check["הכנסה נומינלית"])
     pension_190_check = float(row_check.get("הכנסה מקצבה מזערית", 0.0))
     
@@ -180,7 +178,8 @@ def render_qa_section(results, user_inputs):
         "מסלול תיקון 190": [
             format_shekel(balance_190_retire),
             format_shekel(property_value_retire),
-            format_shekel(base_income_retire + pension_190_retire), # 🟢 התצוגה המדויקת!
+            # 🟢 התיקון: הצגה של ההכנסה הכללית (ללא הכפלה)
+            format_shekel(base_income_retire + pension_190_retire), 
             format_shekel(net_needed_190_retire),
             wrap_html_style(rule400_190_retire, get_400_rule_style(rule400_190_retire)),
             wrap_html_style(emer_190_retire, get_emergency_style(emer_190_retire)),
@@ -190,7 +189,8 @@ def render_qa_section(results, user_inputs):
         "מסלול 25% מס ריאלי": [
             format_shekel(balance_25_retire),
             format_shekel(property_value_retire),
-            format_shekel(base_income_retire), # 🟢 רק הכנסת הבסיס ללא הקצבה הווירטואלית
+            # 🟢 התיקון: הצגה של הבסיס בלבד במסלול הריאלי
+            format_shekel(base_income_retire), 
             format_shekel(net_needed_25_retire),
             wrap_html_style(rule400_25_retire, get_400_rule_style(rule400_25_retire)),
             wrap_html_style(emer_25_retire, get_emergency_style(emer_25_retire)),
