@@ -10,25 +10,25 @@ DEFAULTS = {
     "desired_pension": 5306,
     "current_expenses": 11000,
     "expected_inflation": 0.023,
-    "age_75_85_increase": 0.005,         # עודכן ל-0.5% (0.005) כדי למנוע הצגת 50%
+    "age_75_85_increase": 0.005,         
     "age_85_plus_increase": 0.015,
     "one_time_expense": 80000,
     "one_time_frequency": 8,
     "caregiver_cost": 0,
-    "national_insurance": 2500,         # עודכן חזרה ל-2,500 ₪
+    "national_insurance": 2500,         
     "work_income": 0,
     "net_sale": 10000000,
-    "existing_savings": 440000,          # עודכן ל-440,000 ₪ בדיפולט
+    "existing_savings": 440000,          
     "new_apartment_cost": 5800000,
     "property_appreciation": 0.023,
     "kids_help": 1000000,
     "emergency_fund": 300000,
-    "annual_return": 0.055,              # תשואה של 5.5% בשני המסלולים
-    "management_fee": 0.006              # עודכן ל-0.6% (0.006) כדי למנוע הצגת 60%
+    "annual_return": 0.055,              
+    "management_fee": 0.006              
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב ברזל - מרווחים מדוייקים ומניעת שבירות שורות בתפריט הצד
+# 🎨 מנוע עיצוב ברזל - מרווחים מדוייקים, מניעת שבירות וכפיית יישור לימין
 # ==============================================================================
 st.markdown("""
 <style>
@@ -117,11 +117,9 @@ st.markdown("""
         text-align: center !important;
     }
 
-    /* ------------------- עיצוב טבלאות דוחות מרכזיות (.styled-table) ------------------- */
+    /* ------------------- 🎯 עיצוב טבלאות דוחות מרכזיות (.styled-table) - יישור קשיח לימין ------------------- */
     .styled-table { 
         width: 100% !important; 
-        direction: rtl !important; 
-        text-align: right !important; 
         border-collapse: collapse !important; 
         margin: 25px 0 !important; 
         font-family: sans-serif; 
@@ -130,10 +128,21 @@ st.markdown("""
         border-radius: 8px !important;
         overflow: hidden !important;
     }
+    
+    /* 🟢 נעילה הרמטית: כפיית כיווניות מימין לשמאל ויישור לימין על כל רכיב פנימי בטבלה כדי לבטל את החטיפה של פנדס */
+    .styled-table, 
+    .styled-table th, 
+    .styled-table td, 
+    .styled-table tr,
+    .styled-table tbody,
+    .styled-table thead {
+        text-align: right !important;
+        direction: rtl !important;
+    }
+    
     .styled-table th { 
         background-color: #334155 !important; 
         color: #ffffff !important; 
-        text-align: right !important; 
         padding: 14px 16px !important; 
         font-weight: bold !important; 
         border-bottom: 3px solid #475569 !important; 
@@ -141,7 +150,6 @@ st.markdown("""
     }
     .styled-table td { 
         padding: 12px 16px !important; 
-        text-align: right !important; 
         border-bottom: 1px solid #334155 !important; 
         color: #ffffff; 
         font-size: 14px !important;
