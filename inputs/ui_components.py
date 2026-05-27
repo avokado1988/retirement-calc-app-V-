@@ -70,7 +70,21 @@ def get_boolean_style(val_str):
     return "color: #16a34a; font-weight: bold;" if "✅" in val_str else "color: #dc2626; font-weight: bold;"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה אולטרה-פרובוקטיביים: שורה אחת ישרה, ערך ויחידה משמאל
+# 🎨 פונקציית עזר פרטית לזיהוי והתאמת צבעים לפי היגיון פיננסי
+# ==============================================================================
+def _get_dynamic_color_by_label(label):
+    lbl = label.lower()
+    # מילים שמייצגות הוצאות או שחיקה (אדום)
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניגרע", "דמי ניהול"]):
+        return "#f87171" # אדום-כתגלגל בהיר וחיוני
+    # מילים שמייצגות הכנסות או צמיחה (ירוק)
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]):
+        return "#4ade80" # ירוק פיננסי בוהק
+    # ברירת מחדל לנתוני זמנים, גילאים ומקדמים (תכלת)
+    return "#38bdf8"
+
+# ==============================================================================
+# 🧱 רכיבי הזנה מעוצבים עם צביעה דינמית חכמה
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -93,16 +107,15 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
         step_to_use = int(step)
 
     temp_key = widget_key + "_v5_holder"
-    current_val = st.session_state.get(temp_key, val_to_use)
+    
+    # זיהוי צבע מבוסס מפתח פיננסי
+    text_color = _get_dynamic_color_by_label(label)
 
-    # חלוקה מאוזנת: 55% לטקסט הימני, 45% לרכיבים השמאליים
     col1, col2 = st.columns([5.5, 4.5])
     with col1:
-        # כותרת לבנה חלקה, ללא ערכים דינמיים בפנים שעלולים לשבור אותה
         st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap;'>{label}</div>", unsafe_allow_html=True)
         
     with col2:
-        # פיצול פנימי משמאל: תיבה מימין והטקסט המשולב משמאל
         sub_col1, sub_col2 = st.columns([1.8, 2.2])
         with sub_col1:
             res = st.number_input(
@@ -110,7 +123,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
                 value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
             )
         with sub_col2:
-            # כאן נבנה את הטקסט המשולב בצבע תכלת ("1,000 שח" / "65.5 שנים")
             if unit == "₪" or unit == "שח":
                 formatted_display = f"{int(res):,} ₪"
             elif unit == "שנים":
@@ -118,7 +130,7 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             else:
                 formatted_display = f"{res} {unit}" if unit else f"{res}"
                 
-            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: #38bdf8; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
     
     st.query_params[widget_key] = str(res)
     return res
@@ -154,6 +166,9 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
 
     temp_key = widget_key + "_v5_holder"
     
+    # זיהוי צבע מבוסס מפתח פיננסי
+    text_color = _get_dynamic_color_by_label(label)
+    
     col1, col2 = st.columns([5.5, 4.5])
     with col1:
         st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap;'>{label}</div>", unsafe_allow_html=True)
@@ -175,7 +190,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             else:
                 formatted_display = f"{raw_input} {display_unit}" if display_unit else f"{raw_input}"
                 
-            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: #38bdf8; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
         
     res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
     st.query_params[widget_key] = str(res)
