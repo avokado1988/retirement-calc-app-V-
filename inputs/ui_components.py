@@ -26,53 +26,54 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב מתקדם - הצמדה מוחלטת, מירכוז אנכית ומרווחי שורות יוקרתיים
+# 🎨 מנוע עיצוב קשיח - מירכוז אנכי מוחלט, הצמדה אופקית ומרווחים אסתטיים
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. מרווח נקי ואסתטי בין שורה לשורה בתפריט הצד */
+    /* 1. מרווח אחיד, נקי ואסתטי בין שורה לשורה בתפריט הצד */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important; /* מירכוז אנכית מושלם של כל השורה */
-        gap: 0px !important;
-        margin-bottom: 18px !important; /* המרווח האופטימלי בין השורות */
-        padding: 2px 0 !important;
+        align-items: center !important; /* מירכוז אנכי מושלם של כל השורה כולה */
+        margin-bottom: 15px !important; /* מרווח נשימה יוקרתי בין האלמנטים */
     }
 
-    /* 2. עמודה ימנית (כותרת): מקבלת מרחב גמיש וממורכזת */
+    /* 2. מירכוז אנכי ומבנה גמיש לכותרת הלבנה מימין */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
-        flex: 1 1 auto !important;
-        width: auto !important;
-        min-width: 0 !important;
         display: flex !important;
-        align-items: center !important; /* מירכוז הכותרת מול האמצע של התיבה */
+        align-items: center !important; /* ממרכז את הטקסט בול באמצע הגובה של התיבה */
         justify-content: flex-start !important;
+        min-height: 30px !important;
     }
 
-    /* 3. עמודה שמאלית (תיבה + ערך צבעוני): נעולים יחד בהצמדה מלאה */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
-        flex: 0 0 auto !important;
-        width: auto !important;
+    /* 3. ביטול שבירת השורות האנכית של סטרימליט והצמדה מלאה לחלון ההזנה */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(2) [data-testid="stVerticalBlock"],
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(2) [data-testid="stVerticalBlock"] > div {
         display: flex !important;
-        flex-direction: row !important; /* זרימה אופקית רציפה משמין לשמאל */
-        align-items: center !important;
-        gap: 8px !important; /* 🟢 המרחק המדויק והצמוד בין חלון ההזנה למספר הצבעוני! */
-        justify-content: flex-start !important;
+        flex-direction: row !important; /* נעילת התיבה והמספר באותה שורה אופקית */
+        align-items: center !important; /* מירכוז אנכי של התיבה והמספר */
+        gap: 8px !important; /* 🟢 המרחק המדויק, הצמוד וההדוק בין חלון ההזנה למספר! */
+        width: max-content !important;
     }
 
-    /* 4. עיצוב טקסט הכותרת הלבנה */
+    /* 4. ניקוי שוליים נסתרים של פסקאות סטרימליט שזורקים רכיבים מהגובה */
+    [data-testid="stSidebar"] .custom-sidebar-label p,
+    [data-testid="stSidebar"] .custom-sidebar-badge p {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 5. עיצוב גודל וסגנון הטקסט של הכותרת הלבנה */
     .custom-sidebar-label {
-        font-size: 14.5px !important;
+        font-size: 14px !important;
         font-weight: 500 !important;
         color: #ffffff !important;
-        line-height: 1.3 !important;
+        line-height: 1.2 !important;
         text-align: right !important;
     }
 
-    /* 5. קיבוע ואיזון גודל תיבת חלון ההזנה הלבנה/שחורה */
+    /* 6. קיבוע גודל חלון ההזנה הלבן/שחור לרמת גימור אחידה */
     [data-testid="stSidebar"] .stNumberInput {
-        width: 85px !important; /* רוחב מהודק וקומפקטי */
+        width: 85px !important; /* רוחב קומפקטי ומקצועי */
         margin: 0 !important;
     }
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
@@ -85,13 +86,16 @@ st.markdown("""
         text-align: center !important;
     }
 
-    /* 6. עיצוב הערכים הצבעוניים המקוצרים */
+    /* 7. עיצוב הגודל והסגנון של הערכים הפיננסיים הצבעוניים */
     .custom-sidebar-badge {
         font-size: 14px !important;
         font-weight: 700 !important;
         white-space: nowrap !important;
         direction: rtl !important;
         text-align: right !important;
+        display: flex !important;
+        align-items: center !important;
+        height: 30px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -112,7 +116,7 @@ def show_net_summary(title, amount):
 def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
-# פונקציות הסטייל האקטואריות לטבלאות המרכזיות
+# פונקציות הסטייל האקטואריות לטבלאות
 def get_withdrawal_style(pct):
     val = float(pct)
     if val <= 3.5: return "color: #16a34a; font-weight: bold;"
@@ -143,10 +147,10 @@ def get_boolean_style(val_str):
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    if "חירום" in lbl: return "#fb923c" # כתום קרן חירום
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" # אדום שחיקה
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" # ירוק צמיחה
-    return "#38bdf8" # תכלת זמנים וגילאים
+    if "חירום" in lbl: return "#fb923c"
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171"
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80"
+    return "#38bdf8"
 
 def _format_compact_value(val, unit):
     val = float(val)
@@ -170,7 +174,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 2 עמודות צמודות וממורכזות
+# 🧱 רכיבי הזנה מעוצבים ומיושרים הרמטית
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -195,13 +199,11 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v6_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🟢 שינוי דרמטי: חלוקה ל-2 עמודות בלבד
-    col1, col2 = st.columns([5.5, 4.5])
+    col1, col2 = st.columns([5.3, 4.7])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
         
     with col2:
-        # חלון ההזנה והערך רצים ביחד באותה עמודה משמאל לימין (צמודים לחלוטין!)
         res = st.number_input(
             label, min_value=min_to_use, max_value=max_to_use, 
             value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
@@ -244,8 +246,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
     temp_key = widget_key + "_v6_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    # 🟢 חלוקה ל-2 עמודות בלבד
-    col1, col2 = st.columns([5.5, 4.5])
+    col1, col2 = st.columns([5.3, 4.7])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
 
