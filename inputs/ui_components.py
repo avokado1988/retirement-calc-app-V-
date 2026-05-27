@@ -77,25 +77,26 @@ def _get_dynamic_color_by_label(label):
     return "#38bdf8" # תכלת
 
 # ==============================================================================
-# 🪄 🟢 פונקציית עזר חכמה לקיצור מספרים פיננסיים (מ׳ ₪, א׳ ₪)
+# 🪄 פונקציית עזר מעודכנת - מספר מוביל יחידה (10 מ׳ ₪ / 300 א׳ ₪)
 # ==============================================================================
 def _format_compact_value(val, unit):
-    """הופכת מספרים גדולים לקיצורים קריאים בשילוב יחידות המידה"""
     val = float(val)
     
-    # טיפול במטבע שקלי (₪ / שח)
+    # טיפול במטבע שקלי - סדר עברי תקני
     if unit in ["₪", "שח", "ש\"ח"]:
         if val >= 1_000_000:
-            return f"{val / 1_000_000:.1f} מ׳ ₪".replace(".0 ", " ")
+            formatted = f"{val / 1_000_000:.1f}"
+            if formatted.endswith(".0"): formatted = formatted[:-2]
+            return f"{formatted} מ׳ ₪"
         if val >= 1_000:
             return f"{val / 1_000:.0f} א׳ ₪"
-        return f"{int(val)} ₪"
+        return f"{int(val):,} ₪"
         
-    # טיפול ביחידות של שנים
+    # טיפול בשנים
     if unit == "שנים":
         return f"{val:.1f} שנים" if val % 1 != 0 else f"{int(val)} שנים"
         
-    # ברירת מחדל לכל שאר היחידות (כמו אחוזים %)
+    # טיפול באחוזים או יחידות אחרות
     return f"{val:.1f}%" if unit == "%" else (f"{val} {unit}" if unit else f"{val}")
 
 # ==============================================================================
@@ -136,7 +137,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
                 value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
             )
         with sub_col2:
-            # 🟢 שימוש במנגנון הקיצור החכם
             formatted_display = _format_compact_value(res, unit)
             st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
     
@@ -187,7 +187,6 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
                 value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
             )
         with sub_col2:
-            # 🟢 שימוש במנגנון הקיצור החכם
             formatted_display = _format_compact_value(raw_input, display_unit)
             st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
         
