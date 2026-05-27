@@ -4,7 +4,8 @@ from inputs.ui_components import format_shekel
 
 def render_qa_summary_page(results, user_inputs):
     """
-    קובץ בדיקות (QA) עצמאי לחלוטין - ריכוז אינפוטים ושורות סיכום להעתקה מהירה
+    קובץ בדיקות (QA) עצמאי לחלוטין - ריכוז אינפוטים ושורות סיכום להעתקה מהירה.
+    מתקן: שליפת קצבת ביטוח לאומי מוצמדת ומדויקת מיום הפרישה מתוך ה-DataFrame.
     """
     df_history = results["df"]
     df_full = results.get("df_full", df_history)
@@ -34,7 +35,6 @@ def render_qa_summary_page(results, user_inputs):
     base_exp = float(expenses.get("current_expenses", 11000))
     work_inc = float(expenses.get("work_income", 0))
     work_end_age = float(expenses.get("work_end_age", retire_age))
-    base_inc_ni = float(wealth.get("national_insurance", 2591))
     
     # שליפת נתוני מטפלת סיעודית מהממשק
     care_age = float(wealth.get("care_age", 85.0))
@@ -44,11 +44,16 @@ def render_qa_summary_page(results, user_inputs):
     emergency_fund = float(wealth.get("emergency_fund") or 0)
     pension_190_start = float(amendment_190.get("desired_pension") or 0)
 
-    # 1. שליפת שווי תיק נזיל בגיל פרישה
+    # 1. שליפת שורת גיל פרישה במדויק מתוך ה-DataFrame
     df_retire = df_history[df_history["גיל"] >= retire_age]
     row_retire = df_retire.iloc[0] if not df_retire.empty else df_history.iloc[-1]
+    
     balance_190_retire = float(row_retire["צבירה תיקון 190"])
     balance_25_retire = float(row_retire["צבירה מסלול ריאלי"])
+    
+    # 🟢 התיקון האקטוארי: במקום להציג את מספר הבסיס, שולפים את ביטוח הלאומי המוצמד מיום הפרישה בפועל!
+    # (מכיוון שאין עבודה בגיל פרישה בנתונים שלך, עמודת 'הכנסה נומינלית' במנוע מייצגת בדיוק את ב"ל המוצמד)
+    indexed_national_insurance_retire = float(row_retire["הכנסה נומינלית"])
 
     # 2. שליפת שווי תיק נזיל בגיל 100
     df_100 = df_full[df_full["גיל"] >= 100.0]
@@ -59,7 +64,7 @@ def render_qa_summary_page(results, user_inputs):
     # הצגה ויזואלית בממשק
     st.subheader("📋 כלי סיכום נתונים להעתקה מהירה (QA)")
     
-    # בניית גוש הטקסט המרוכז להעתקה - כולל נתוני המטפלת הסיעודית
+    # בניית גוש הטקסט המרוכז להעתקה
     copy_text = f"""=== סימולציית פרישה אקטוארית - דוח QA מהיר ===
 
 [פרמטרים ואינפוטים שנבחרו]
@@ -73,7 +78,7 @@ def render_qa_summary_page(results, user_inputs):
 - הון התחלה מסלול ריאלי: {initial_capital_25:,.0f} ש"ח
 - הוצאת בסיס חודשית: {base_exp:,.0f} ש"ח
 - הכנסה מעבודה: {work_inc:,.0f} ש"ח (נפסקת בגיל: {work_end_age:.1f})
-- הכנסה מביטוח לאומי (מהפרישה): {base_inc_ni:,.0f} ש"ח
+- הכנסה מביטוח לאומי מוצמדת (בגיל פרישה {retire_age:.1f}): {indexed_national_insurance_retire:,.0f} ש"ח
 - קצבה מבוקשת ל-190: {pension_190_start:,.0f} ש"ח
 - עלות מטפלת סיעודית: {care_cost:,.0f} ש"ח (מגיל: {care_age:.1f})
 - קרן חירום: {emergency_fund:,.0f} ש"ח
