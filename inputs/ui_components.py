@@ -26,15 +26,15 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב ברזל - שורה אחת רציפה ללא שבירות טקסט (No-Wrap)
+# 🎨 מנוע עיצוב ברזל - שורה אופקית אחת, ללא שבירות פסקאות (Inline Nowrap)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. הגדרת השורה כולה כבלוק אופקי קשיח ללא יכולת שבירה או קיפול */
+    /* 1. הגדרת השורה כולה כחץ אופקי קשיח ללא יכולת שבירה או קיפול */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important; /* 🟢 מונע לחלוטין ירידת שורה של הרכיבים! */
+        flex-wrap: nowrap !important; /* מונע לחלוטין ירידת שורה של העמודות */
         align-items: center !important; /* מירכוז אנכי מושלם */
         gap: 6px !important; /* מרחק הדוק קבוע בין הרכיבים */
         margin-bottom: 12px !important; /* מרווח אסתטי בין שורה לשורה */
@@ -42,53 +42,62 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* ניקוי שוליים מובנים של עמודות סטרימליט */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* 2. עמודה 1: הכותרת הלבנה מימין */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
-        flex: 1 1 auto !important;
+    /* ניקוי שוליים וביטול חישובי אחוזים מובנים של עמודות סטרימליט */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div {
         width: auto !important;
-        min-width: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-
-    /* 3. עמודה 2: חלון ההזנה הלבן (מכווץ ל-75 פיקסלים כדי לחסוך מקום בשורה) */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
-        flex: 0 0 75px !important;
-        width: 75px !important;
-    }
-
-    /* 4. עמודה 3: הערך הפיננסי הצבעוני משמאל */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
-        flex: 0 0 auto !important;
-        width: auto !important;
+        max-width: none !important;
         min-width: max-content !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-
-    /* 5. מניעת שבירת מילים מוחלטת בתוך ה-HTML */
-    [data-testid="stSidebar"] .custom-sidebar-label p,
-    [data-testid="stSidebar"] .custom-sidebar-badge p {
-        margin: 0 !important;
+        flex: 0 0 auto !important;
         padding: 0 !important;
+        margin: 0 !important;
     }
 
-    /* 6. עיצוב טקסט הכותרת הלבנה עם פקודת נעילת שורה */
-    .custom-sidebar-label {
-        font-size: 13.5px !important; /* הקטנה קלה כדי שהכל ייכנס פיקס בשורה */
-        font-weight: 500 !important;
-        color: #ffffff !important;
-        white-space: nowrap !important; /* 🟢 מונע מהכותרת להישבר או לרדת שורה! */
+    /* עמודה 1: הכותרת הלבנה מימין - מקבלת עדיפות למרחב מבלי להישבר */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:nth-child(1) {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
         text-align: right !important;
     }
 
-    /* 7. קיבוע חלון ההזנה הלבן הגמיש */
+    /* עמודה 2: חלון ההזנה הלבן - נעול על רוחב קומפקטי של 75 פיקסלים */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:nth-child(2) {
+        flex: 0 0 75px !important;
+        width: 75px !important;
+        min-width: 75px !important;
+    }
+
+    /* עמודה 3: הערך הפיננסי הצבעוני משמאל */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:nth-child(3) {
+        flex: 0 0 auto !important;
+        text-align: right !important;
+    }
+
+    /* 🟢 התיקון ההרמטי: הפיכת פסקאות סטרימליט לאלמנט אינליין ומניעת שבירה */
+    .custom-sidebar-label p, .custom-sidebar-badge p {
+        display: inline !important; /* מנטרל את התנהגות הבלוק היורד שורה */
+        white-space: nowrap !important; /* מונע מהטקסט להישבר אופקית */
+        word-break: keep-all !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* עיצוב טקסט הכותרת הלבנה */
+    .custom-sidebar-label {
+        font-size: 13.5px !important;
+        font-weight: 500 !important;
+        color: #ffffff !important;
+        white-space: nowrap !important;
+    }
+
+    /* עיצוב הערך הפיננסי הצבעוני */
+    .custom-sidebar-badge {
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        direction: rtl !important;
+    }
+
+    /* קיבוע חלון ההזנה הלבן/שחור */
     [data-testid="stSidebar"] .stNumberInput {
         width: 75px !important;
         margin: 0 !important;
@@ -101,15 +110,6 @@ st.markdown("""
         padding: 2px 4px !important;
         font-size: 13px !important;
         text-align: center !important;
-    }
-
-    /* 8. עיצוב הערך הפיננסי הצבעוני עם פקודת נעילת שורה */
-    .custom-sidebar-badge {
-        font-size: 13.5px !important;
-        font-weight: 700 !important;
-        white-space: nowrap !important; /* 🟢 מונע מהמספר והמטבע להישבר שורה! */
-        direction: rtl !important;
-        text-align: right !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -161,10 +161,10 @@ def get_boolean_style(val_str):
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    if "חירום" in lbl: return "#fb923c" # כתום
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" # אדום
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" # ירוק
-    return "#38bdf8" # תכלת
+    if "חירום" in lbl: return "#fb923c" 
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" 
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" 
+    return "#38bdf8" 
 
 def _format_compact_value(val, unit):
     val = float(val)
