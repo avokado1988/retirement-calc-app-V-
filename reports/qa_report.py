@@ -1,18 +1,46 @@
 import streamlit as st
 import pandas as pd
-from inputs.ui_components import (
-    format_shekel, wrap_html_style, get_withdrawal_style, get_400_rule_style,
-    get_emergency_style, get_larger_portfolio_style, get_resiliency_style,
-    get_preservation_pct_style, get_boolean_style
-)
+from inputs.ui_components import format_shekel, wrap_html_style
 
-# 🟢 התיקון שהחזיר את הימין-שמאל: עוקף את פנדס בכוח ומזריק כיווניות לתוך התגית עצמה!
+# 🚥 פונקציות הרמזור והצבע (ייעודיות רק לדו"ח)
+def get_withdrawal_style(pct):
+    val = float(pct)
+    if val <= 3.5: return "color: #4ade80 !important; font-weight: bold !important;"
+    if val <= 5.0: return "color: #fb923c !important; font-weight: bold !important;"
+    return "color: #f87171 !important; font-weight: bold !important;"
+
+def get_400_rule_style(val_str):
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
+    except: return ""
+
+def get_emergency_style(val_str):
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
+    except: return ""
+
+def get_larger_portfolio_style(is_larger):
+    if is_larger: return "color: #4ade80 !important; font-weight: 700 !important;"
+    return "color: #ffffff !important; font-weight: 500 !important;"
+
+def get_resiliency_style(val_str):
+    return "color: #4ade80 !important; font-weight: bold !important;" if "חסין" in val_str or "105" in val_str else "color: #f87171 !important; font-weight: bold !important;"
+
+def get_preservation_pct_style(pct):
+    return "color: #4ade80 !important; font-weight: bold !important;" if float(pct) >= 100.0 else "color: #f87171 !important; font-weight: bold !important;"
+
+def get_boolean_style(val_str):
+    return "color: #4ade80 !important; font-weight: bold !important;" if "✅" in val_str else "color: #f87171 !important; font-weight: bold !important;"
+
+# 🟢 מזרק כיווניות קשיח לטבלאות פנדס
 def _render_rtl_table(df, index_col):
     raw_html = df.set_index(index_col).to_html(escape=False, classes='styled-table')
     rtl_html = raw_html.replace('<table', '<table dir="rtl"')
     st.markdown(f"<div dir='rtl' style='width: 100%; text-align: right;'>{rtl_html}</div>", unsafe_allow_html=True)
 
+
 def render_qa_section(results, user_inputs):
+    # 🎨 עיצוב מבודד לטבלאות הדו"ח בלבד
     st.markdown("""
         <style>
         table.styled-table { 
@@ -38,7 +66,7 @@ def render_qa_section(results, user_inputs):
         table.styled-table td { 
             padding: 12px 16px !important; 
             border-bottom: 1px solid #334155 !important; 
-            color: #ffffff; /* ללא important כדי שהרמזור יעבוד */
+            color: #ffffff; /* ללא important כדי שהרמזור יעבוד! */
             font-size: 14px !important;
             text-align: right !important;
         }
