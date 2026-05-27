@@ -71,36 +71,37 @@ def get_boolean_style(val_str):
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    if "חירום" in lbl: return "#fb923c" # כתום
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" # אדום
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" # ירוק
-    return "#38bdf8" # תכלת
+    if "חירום" in lbl: return "#fb923c"
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171"
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80"
+    return "#38bdf8"
 
 # ==============================================================================
-# 🪄 פונקציית עזר מעודכנת - מספר מוביל יחידה (10 מ׳ ₪ / 300 א׳ ₪)
+# 🪄 פונקציית עזר עם הגנת כיווניות ברזל (RTL Fix)
 # ==============================================================================
 def _format_compact_value(val, unit):
     val = float(val)
+    rtl_mark = "\u200f" # תו הגנת כיווניות עברית
     
-    # טיפול במטבע שקלי - סדר עברי תקני
     if unit in ["₪", "שח", "ש\"ח"]:
         if val >= 1_000_000:
             formatted = f"{val / 1_000_000:.1f}"
             if formatted.endswith(".0"): formatted = formatted[:-2]
-            return f"{formatted} מ׳ ₪"
+            return f"{rtl_mark}{formatted} מ׳ ₪"
         if val >= 1_000:
-            return f"{val / 1_000:.0f} א׳ ₪"
-        return f"{int(val):,} ₪"
+            return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
+        return f"{rtl_mark}{int(val):,} ₪"
         
-    # טיפול בשנים
     if unit == "שנים":
-        return f"{val:.1f} שנים" if val % 1 != 0 else f"{int(val)} שנים"
+        return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
         
-    # טיפול באחוזים או יחידות אחרות
-    return f"{val:.1f}%" if unit == "%" else (f"{val} {unit}" if unit else f"{val}")
+    if unit == "%":
+        return f"{rtl_mark}{val:.1f}%"
+        
+    return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מעוצבים ומקוצרים
+# 🧱 רכיבי הזנה מעוצבים ומיושרים הרמטית מימין לשמאל
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -138,7 +139,8 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             )
         with sub_col2:
             formatted_display = _format_compact_value(res, unit)
-            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
+            # 🟢 הזרקת כיווניות מפורשת (direction: rtl) למנוע היפוך דפדפן
+            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px; direction: rtl; text-align: right;'>{formatted_display}</div>", unsafe_allow_html=True)
     
     st.query_params[widget_key] = str(res)
     return res
@@ -188,7 +190,8 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             )
         with sub_col2:
             formatted_display = _format_compact_value(raw_input, display_unit)
-            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
+            # 🟢 הזרקת כיווניות מפורשת (direction: rtl) למנוע היפוך דפדפן
+            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px; direction: rtl; text-align: right;'>{formatted_display}</div>", unsafe_allow_html=True)
         
     res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
     st.query_params[widget_key] = str(res)
