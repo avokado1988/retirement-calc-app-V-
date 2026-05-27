@@ -28,44 +28,96 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 עיצוב נקי לסרגל הצד בלבד
+# 🎨 הזרקת העיצוב הגלובלית האוטומטית - מחזירה את תפריט הצד לחיים!
 # ==============================================================================
-def inject_design_system():
-    st.markdown("""
-    <style>
-        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-            align-items: center !important; 
-            direction: rtl !important; 
-            margin-bottom: 12px !important; 
-        }
-        .custom-sidebar-label {
-            font-size: 14px !important;
-            font-weight: 500 !important;
-            color: #ffffff !important;
-            line-height: 1.2 !important;
-        }
-        .custom-sidebar-badge {
-            font-size: 14.5px !important;
-            font-weight: 700 !important;
-            direction: rtl !important;
-            text-align: left !important;
-            white-space: nowrap !important;
-        }
-        [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
-            height: 32px !important;
-            border-radius: 6px !important;
-        }
-        [data-testid="stSidebar"] .stNumberInput input {
-            padding: 2px 4px !important;
-            font-size: 13.5px !important;
-            text-align: center !important;
-        }
-        [data-testid="stSidebar"] .stSlider {
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+    /* הגדרת השורה כולה כמכלול אופקי קשיח ללא יכולת קיפול או שבירה */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
+        align-items: center !important; /* מירכוז אנכי מושלם */
+        direction: rtl !important; 
+        margin-bottom: 14px !important; 
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* עמודה 1: הכותרת הלבנה מימין */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        text-align: right !important;
+        margin-left: 10px !important;
+    }
+
+    /* עמודה 2: חלון ההזנה הלבן באמצע */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
+        flex: 0 0 80px !important;
+        width: 80px !important;
+        min-width: 80px !important;
+    }
+
+    /* עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
+        flex: 0 0 auto !important;
+        min-width: max-content !important;
+        text-align: right !important;
+        margin-right: 8px !important;
+    }
+
+    /* ביטול מוחלט של שבירת פסקאות מרקדאון */
+    [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
+    .custom-sidebar-label p, 
+    .custom-sidebar-badge p {
+        display: inline !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .custom-sidebar-label {
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #ffffff !important;
+        white-space: nowrap !important;
+    }
+
+    .custom-sidebar-badge {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        direction: rtl !important;
+    }
+
+    .custom-sidebar-badge, .custom-sidebar-badge * {
+        color: inherit !important;
+    }
+
+    /* קיבוע חלון ההזנה הלבן/שחור */
+    [data-testid="stSidebar"] .stNumberInput {
+        width: 80px !important;
+        margin: 0 !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
+        height: 30px !important;
+        border-radius: 4px !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput input {
+        padding: 2px 4px !important;
+        font-size: 13.5px !important;
+        text-align: center !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 
 def format_shekel(amount):
@@ -106,7 +158,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה (סליידרים) לסרגל הצד
+# 🧱 רכיבי הזנה (בלי סליידרים, עם חלון הזנה דינמי וערך מחושב)
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -132,17 +184,18 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    col1, col2, col3 = st.columns([5, 2.5, 2.5])
+    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
         res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
     with col3:
         formatted_display = _format_compact_value(res, unit)
-        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
     st.query_params[widget_key] = str(res)
     return res
 
+# 🟢 גם פונקציה זו הוסבה לחלוטין לגרסת הזנה בלבד ללא סליידר!
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
     is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
@@ -176,14 +229,15 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    col1, col2, col3 = st.columns([4, 4, 2])
+    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
-        res = st.slider(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
+        # 🟢 הפקודה st.slider הוחלפה ב-st.number_input כדי להתאים לגרסת ההזנה בלבד!
+        res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
     with col3:
         formatted_display = _format_compact_value(res, display_unit)
-        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
         
     final_res = float(res) / 100.0 if is_percentage_fraction else res
     st.query_params[widget_key] = str(final_res)
