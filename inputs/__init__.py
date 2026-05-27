@@ -26,7 +26,7 @@ def render_all_sidebar_inputs():
     with st.sidebar.expander("4. תקציב והוצאות", expanded=False):
         expenses_ui = render_expenses_inputs()
         
-    # --- הזרקת ההכנסות חזרה למקומן המקורי עבור המנוע ---
+    # --- הזרקת ההכנסות למקומן עבור המנוע ---
     inputs_dict["wealth"]["national_insurance"] = incomes_ui["national_insurance"]
     expenses_ui["work_income"] = incomes_ui["work_income"]
     expenses_ui["work_end_age"] = incomes_ui["work_end_age"]
