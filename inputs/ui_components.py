@@ -26,23 +26,23 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב מתקדם - קביעת מרווחים אופטימליים לתפריט הצד
+# 🎨 מנוע עיצוב ברזל - חסינות שורות, מרווחים אסתטיים וביטול דריסות
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. הגדרת השורה כולה כמכלול אופקי כמקשה אחת */
+    /* 1. הגדרת השורה כולה כמכלול אופקי קשיח ללא יכולת קיפול או שבירה */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
-        align-items: center !important; 
+        align-items: center !important; /* מירכוז אנכי מושלם */
         direction: rtl !important; 
-        margin-bottom: 14px !important; 
+        margin-bottom: 14px !important; /* מרווח אסתטי ונקי בין שורה לשורה */
         padding: 0 !important;
         width: 100% !important;
     }
 
-    /* ניקוי שוליים של עמודות סטרימליט */
+    /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         padding: 0 !important;
         margin: 0 !important;
@@ -63,7 +63,7 @@ st.markdown("""
         min-width: 80px !important;
     }
 
-    /* עמודה 3: הערך הפיננסי הצבעוני משמאל */
+    /* עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
         flex: 0 0 auto !important;
         min-width: max-content !important;
@@ -71,7 +71,7 @@ st.markdown("""
         margin-right: 8px !important;
     }
 
-    /* ביטול שבירת פסקאות מרקדאון */
+    /* ביטול מוחלט של שבירת פסקאות מרקדאון */
     [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
     .custom-sidebar-label p, 
     .custom-sidebar-badge p {
@@ -101,7 +101,7 @@ st.markdown("""
         color: inherit !important;
     }
 
-    /* קיבוע חלון ההזנה הלבן */
+    /* קיבוע חלון ההזנה הלבן/שחור */
     [data-testid="stSidebar"] .stNumberInput {
         width: 80px !important;
         margin: 0 !important;
@@ -122,7 +122,7 @@ st.markdown("""
 def format_shekel(amount):
     return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
 
-# 🎯 תיקון המסגרת: הוסרה לחלוטין המסגרת הירוקה הצידית שהייתה בכרטיס הסיכום
+# 🎯 תיקון כרטיס הסיכום: המסגרת הירוקה הצידית נמחקה לצמיתות (border-right רגיל ללא צבע זרחני)
 def show_net_summary(title, amount):
     st.markdown(
         f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; direction: rtl; text-align: right;'> "
@@ -135,7 +135,9 @@ def show_net_summary(title, amount):
 def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
-# 🎯 תיקון חוקי הרמזור: הזרקת important! קשיח לתוך הסטייל כדי למנוע מסטרימליט לדרוס אותם
+# ==============================================================================
+# 🚥 פונקציות הרמזור האקטואריות לטבלאות - הזרקת !important למניעת דריסה
+# ==============================================================================
 def get_withdrawal_style(pct):
     val = float(pct)
     if val <= 3.5: return "color: #4ade80 !important; font-weight: bold !important;"
@@ -152,8 +154,10 @@ def get_emergency_style(val_str):
     try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
     except: return ""
 
+# 🎯 תיקון המסגרת המכוערת: הוסרו לחלוטין כל הגבולות והרקעים, מעכשיו זה טקסט ירוק/לבן נקי!
 def get_larger_portfolio_style(is_larger):
-    if is_larger: return "color: #4ade80 !important; font-weight: 700 !important;"
+    if is_larger: 
+        return "color: #4ade80 !important; font-weight: 700 !important;"
     return "color: #ffffff !important; font-weight: 500 !important;"
 
 def get_resiliency_style(val_str):
@@ -172,7 +176,7 @@ def _get_dynamic_color_by_label(label):
     if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
     return "#ffffff" 
 
-# 🎯 תיקון הקיצורים: מעכשיו סכומים מתחת ל-100 אלף מוצגים מלא (כמו 2,500 ₪) ולא מקוצרים!
+# 🎯 תיקון מנוע הקיצורים: סכומים קטנים מ-100,000 ₪ מוצגים במלואם (למשל: 2,500 ₪ ולא 2 א׳)
 def _format_compact_value(val, unit):
     val = float(val)
     rtl_mark = "\u200f"
@@ -183,7 +187,7 @@ def _format_compact_value(val, unit):
             return f"{rtl_mark}{formatted} מ׳ ₪"
         if val >= 100_000 or val <= -100_000:
             return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
-        return f"{rtl_mark}{int(val):,} ₪" # תצוגה מלאה לסכומים קטנים באלפים
+        return f"{rtl_mark}{int(val):,} ₪" # תצוגה מלאה ומפורטת לאלפים קטנים
         
     if unit == "שנים":
         return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
@@ -194,7 +198,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מאוזנים אופטית
+# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 3 עמודות מאוזנות
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
