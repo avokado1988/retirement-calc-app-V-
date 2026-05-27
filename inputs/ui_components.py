@@ -61,7 +61,7 @@ def get_larger_portfolio_style(is_larger):
     return "color: #16a34a; font-weight: 700; background-color: #f0fdf4; padding: 2px 5px; border-radius: 3px;" if is_larger else "color: #4b5563;"
 
 def get_resiliency_style(val_str):
-    return "color: #16a34a; font-weight: bold;" if "حסין" in val_str or "105" in val_str else "color: #dc2626; font-weight: bold;"
+    return "color: #16a34a; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #dc2626; font-weight: bold;"
 
 def get_preservation_pct_style(pct):
     return "color: #16a34a; font-weight: bold;" if float(pct) >= 100.0 else "color: #dc2626; font-weight: bold;"
@@ -70,7 +70,7 @@ def get_boolean_style(val_str):
     return "color: #16a34a; font-weight: bold;" if "✅" in val_str else "color: #dc2626; font-weight: bold;"
 
 # ==============================================================================
-# 🧱 מנגנון השמירה ב-URL והעיצוב החדש והבטוח בשורה אחת
+# 🧱 רכיבי הזנה מעוצבים - שילוב הערכים והיחידות ישירות בטקסט הימני
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -81,30 +81,39 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             value = float(stored_val) if isinstance(step, float) or isinstance(value, float) else int(stored_val)
         except: pass
 
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
-    with col2:
-        if isinstance(step, float) or isinstance(value, float):
-            val_to_use = float(value)
-            min_to_use = float(min_value) if min_value is not None else None
-            max_to_use = float(max_value) if max_value is not None else None
-            step_to_use = float(step)
-        else:
-            val_to_use = int(value)
-            min_to_use = int(min_value) if min_value is not None else None
-            max_to_use = int(max_value) if max_value is not None else None
-            step_to_use = int(step)
+    if isinstance(step, float) or isinstance(value, float):
+        val_to_use = float(value)
+        min_to_use = float(min_value) if min_value is not None else None
+        max_to_use = float(max_value) if max_value is not None else None
+        step_to_use = float(step)
+    else:
+        val_to_use = int(value)
+        min_to_use = int(min_value) if min_value is not None else None
+        max_to_use = int(max_value) if max_value is not None else None
+        step_to_use = int(step)
 
-        sub_col1, sub_col2 = st.columns([4, 1])
-        with sub_col1:
-            res = st.number_input(
-                label, min_value=min_to_use, max_value=max_to_use, 
-                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=widget_key + "_v3_in"
-            )
-        with sub_col2:
-            if unit:
-                st.markdown(f"<div style='line-height: 2.6; font-weight: 600; color: #4b5563; white-space: nowrap;'>{unit}</div>", unsafe_allow_html=True)
+    # 🟢 שלב 1: מייצרים את הקלט קודם (בצורה נסתרת זמנית) כדי לדעת מה הערך הנוכחי בזמן אמת
+    # אנחנו מייצרים קוד ייחודי זמני כדי למנוע כפל רכיבים
+    temp_key = widget_key + "_v4_holder"
+    current_val = st.session_state.get(temp_key, val_to_use)
+
+    col1, col2 = st.columns([3.2, 1.8])
+    with col1:
+        # 🟢 שלב 2: הדפסת הטקסט המשולב בלבן בוהק: "כותרת: 1,000 שח"
+        if unit == "₪":
+            formatted_display = f"{int(current_val):,} {unit}"
+        elif unit == "שנים":
+            formatted_display = f"{current_val:.1f} {unit}" if isinstance(step, float) else f"{int(current_val)} {unit}"
+        else:
+            formatted_display = f"{current_val} {unit}" if unit else f"{current_val}"
+            
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff;'>{label}: <span style='color: #38bdf8; font-weight: 700;'>{formatted_display}</span></div>", unsafe_allow_html=True)
+        
+    with col2:
+        res = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
     
     st.query_params[widget_key] = str(res)
     return res
@@ -119,40 +128,48 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             value = stored_val if is_percentage_fraction else (float(stored_val) if isinstance(step, float) else int(stored_val))
         except: pass
 
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
-    with col2:
-        if is_percentage_fraction:
-            val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
-            min_to_use = float(min_value) * 100.0
-            max_to_use = float(max_value) * 100.0
-            step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
-            display_unit = "%"
+    if is_percentage_fraction:
+        val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
+        min_to_use = float(min_value) * 100.0
+        max_to_use = float(max_value) * 100.0
+        step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
+        display_unit = "%"
+    else:
+        if isinstance(step, float) or '.' in str(value) or isinstance(value, float):
+            val_to_use = float(value)
+            min_to_use = float(min_value)
+            max_to_use = float(max_value)
+            step_to_use = float(step)
         else:
-            if isinstance(step, float) or '.' in str(value) or isinstance(value, float):
-                val_to_use = float(value)
-                min_to_use = float(min_value)
-                max_to_use = float(max_value)
-                step_to_use = float(step)
-            else:
-                val_to_use = int(value)
-                min_to_use = int(min_value)
-                max_to_use = int(max_value)
-                step_to_use = int(step)
-            display_unit = unit if unit else ""
+            val_to_use = int(value)
+            min_to_use = int(min_value)
+            max_to_use = int(max_value)
+            step_to_use = int(step)
+        display_unit = unit if unit else ""
 
-        sub_col1, sub_col2 = st.columns([4, 1])
-        with sub_col1:
-            raw_input = st.number_input(
-                label, min_value=min_to_use, max_value=max_to_use, 
-                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=widget_key + "_v3_in"
-            )
-        with sub_col2:
-            if display_unit:
-                st.markdown(f"<div style='line-height: 2.6; font-weight: 600; color: #4b5563; white-space: nowrap;'>{display_unit}</div>", unsafe_allow_html=True)
+    temp_key = widget_key + "_v4_holder"
+    current_val = st.session_state.get(temp_key, val_to_use)
+
+    col1, col2 = st.columns([3.2, 1.8])
+    with col1:
+        # 🟢 שלב 2: הדפסת הטקסט המשולב לאחוזים או יחידות אחרות: "תשואה: 4.5%"
+        if display_unit == "%":
+            formatted_display = f"{current_val:.1f}%"
+        elif display_unit == "שנים":
+            formatted_display = f"{current_val:.1f} שנים" if isinstance(step, float) else f"{int(current_val)} שנים"
+        elif display_unit == "₪":
+            formatted_display = f"{int(current_val):,} ₪"
+        else:
+            formatted_display = f"{current_val} {display_unit}" if display_unit else f"{current_val}"
             
-        res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff;'>{label}: <span style='color: #38bdf8; font-weight: 700;'>{formatted_display}</span></div>", unsafe_allow_html=True)
+
+    with col2:
+        raw_input = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
         
+    res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
     st.query_params[widget_key] = str(res)
     return res
