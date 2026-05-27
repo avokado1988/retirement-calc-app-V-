@@ -1,7 +1,7 @@
 import streamlit as st
 
 # ==============================================================================
-# 🎯 מילון ערכי ברירת המחדל המעודכנים והמדויקים של המערכת
+# 🎯 מילון ערכי ברירת המחדל
 # ==============================================================================
 DEFAULTS = {
     "start_age": 65.5,
@@ -28,7 +28,7 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע העיצוב הגלובלי - צמצום רווחים מקסימלי והצמדת הערכים לחלונית
+# 🎨 מנוע העיצוב הגלובלי 
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
@@ -51,9 +51,9 @@ def inject_design_system():
             padding-left: 4px !important;
         }
 
-        /* ערך צבעוני משמאל - מוצמד הדוק לחלונית בזכות יישור ימין */
+        /* ערך צבעוני משמאל */
         .custom-sidebar-badge {
-            font-size: 14px !important;
+            font-size: 14.5px !important;
             font-weight: 700 !important;
             direction: rtl !important;
             text-align: right !important; 
@@ -66,17 +66,18 @@ def inject_design_system():
             color: inherit !important;
         }
 
-        /* קיבוע חלונית ההזנה */
+        /* 🟢 עיצוב חלונית ההזנה - מותאם למסך כהה וקריא לחלוטין */
         [data-testid="stSidebar"] .stNumberInput {
             width: 75px !important;
         }
         [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
             height: 28px !important;
             border-radius: 4px !important;
-            background-color: #ffffff !important;
+            background-color: #334155 !important; /* רקע אפור-כחלחל פרימיום */
+            border: 1px solid #475569 !important;
         }
         [data-testid="stSidebar"] .stNumberInput input {
-            color: #000000 !important;
+            color: #ffffff !important; /* טקסט לבן בוהק וקריא */
             padding: 2px !important;
             font-size: 13.5px !important;
             text-align: center !important;
@@ -100,7 +101,7 @@ def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
 # ==============================================================================
-# 🚥 פונקציות הרמזור הנדרשות עבור קובץ הדוחות (מניעת ImportError)
+# 🚥 פונקציות הרמזור לדו"ח המרכזי
 # ==============================================================================
 def get_withdrawal_style(pct):
     val = float(pct)
@@ -153,17 +154,15 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 מנוע ההזנה המאוחד - חלוניות בלבד, ללא סליידרים (באג הצמצום תוקן!)
+# 🧱 מנוע ההזנה המאוחד - חלוניות בלבד
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪", is_pct=False):
-    # מרחב שמות חדש v4 כדי למחוק את ה-Cache המשובש של הדפדפן
     widget_key = f"saved_v4_{label.replace(' ', '_')}"
     is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or is_pct
     
     if widget_key in st.query_params:
         try:
             stored_val = float(st.query_params[widget_key])
-            # אם זה אחוז, נשמר בזיכרון כשבר (0.023) אבל בתיבה יוצג כשלם (2.3)
             value = stored_val * 100.0 if is_pct else stored_val
             if not is_float: value = int(value)
         except: pass
@@ -182,7 +181,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🎯 חלוקת עמודות חדשה וצפופה: תווית (מימין), תיבה (אמצע), ערך צבוע צמוד (משמאל)
     col1, col2, col3 = st.columns([6.0, 1.5, 2.5])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
@@ -192,7 +190,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
         formatted_display = _format_compact_value(res, "%" if is_pct else unit)
         st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
     
-    # החזרה וחישוב למנוע: אחוזים יישמרו ויחזרו כשברים (0.023) כדי לא להרוס את המנוע הפיננסי
     final_val = float(res) / 100.0 if is_pct else res
     st.query_params[widget_key] = str(final_val)
     return final_val
