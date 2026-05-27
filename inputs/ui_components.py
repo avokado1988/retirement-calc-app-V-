@@ -230,12 +230,12 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה חסינים - פתרון אבסולוטי לשגיאות טיפוסים (Mixed Types)
+# 🧱 רכיבי הזנה אקטואריים חסינים - נעילת סוגי נתונים אבסולוטית למניעת קריסות
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
     
-    # 🟢 זיהוי דינמי חסין: בודק אם לפחות אחד מהפרמטרים הוא float
+    # 🟢 בדיקה דינמית: האם אחד מהפרמטרים שהגיעו הוא שבר (float)?
     is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
 
     if widget_key in st.query_params:
@@ -244,17 +244,17 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             value = float(stored_val) if is_float else int(stored_val)
         except: pass
 
-    # 🟢 נעילת כל הערכים לאותו סוג נתונים בדיוק כדי למנוע את שגיאת סטרימליט
+    # 🟢 התאמה קשיחה של כל הפרמטרים לאותו הסוג בדיוק! (מונע שגיאות סוגים מעורבים בסטרימליט)
     if is_float:
         val_to_use = float(value)
-        min_to_use = float(min_value) if min_value is not None else None
+        min_to_use = float(min_value) if min_value is not None else 0.0
         max_to_use = float(max_value) if max_value is not None else None
-        step_to_use = float(step)
+        step_to_use = float(step) if step is not None else 1.0
     else:
         val_to_use = int(value)
-        min_to_use = int(min_value) if min_value is not None else None
+        min_to_use = int(min_value) if min_value is not None else 0
         max_to_use = int(max_value) if max_value is not None else None
-        step_to_use = int(step)
+        step_to_use = int(step) if step is not None else 1
 
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
@@ -289,7 +289,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
         val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
         min_to_use = float(min_value) * 100.0
         max_to_use = float(max_value) * 100.0
-        step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
+        step_to_use = float(step) * 100.0 if step is not None else 1.0
         display_unit = "%"
     else:
         is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
@@ -297,12 +297,12 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             val_to_use = float(value)
             min_to_use = float(min_value)
             max_to_use = float(max_value)
-            step_to_use = float(step)
+            step_to_use = float(step) if step is not None else 1.0
         else:
             val_to_use = int(value)
             min_to_use = int(min_value)
             max_to_use = int(max_value)
-            step_to_use = int(step)
+            step_to_use = int(step) if step is not None else 1
         display_unit = unit if unit else ""
 
     temp_key = widget_key + "_v7_holder"
