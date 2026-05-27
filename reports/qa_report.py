@@ -6,29 +6,24 @@ from inputs.ui_components import (
     get_preservation_pct_style, get_boolean_style
 )
 
+# 🟢 התיקון שהחזיר את הימין-שמאל: עוקף את פנדס בכוח ומזריק כיווניות לתוך התגית עצמה!
+def _render_rtl_table(df, index_col):
+    raw_html = df.set_index(index_col).to_html(escape=False, classes='styled-table')
+    rtl_html = raw_html.replace('<table', '<table dir="rtl"')
+    st.markdown(f"<div dir='rtl' style='width: 100%; text-align: right;'>{rtl_html}</div>", unsafe_allow_html=True)
+
 def render_qa_section(results, user_inputs):
-    # 🎯 מערכת עיצוב עצמאית לחלוטין - כופה כיווניות מימין לשמאל ומשאירה את הרמזורים עובדים
     st.markdown("""
         <style>
-        .report-table-container {
-            direction: rtl !important;
-            text-align: right !important;
-            width: 100% !important;
-        }
         table.styled-table { 
             width: 100% !important; 
-            direction: rtl !important; 
-            text-align: right !important; 
             border-collapse: collapse !important; 
             margin: 25px 0 !important; 
             font-family: sans-serif; 
-            background-color: #1e293b !important; /* רקע כהה פרימיום */
+            background-color: #1e293b !important; 
             border: 1px solid #334155 !important;
             border-radius: 8px !important;
             overflow: hidden !important;
-        }
-        table.styled-table th, table.styled-table td {
-            text-align: right !important;
             direction: rtl !important;
         }
         table.styled-table th { 
@@ -38,12 +33,14 @@ def render_qa_section(results, user_inputs):
             font-weight: bold !important; 
             border-bottom: 3px solid #475569 !important; 
             font-size: 14.5px !important;
+            text-align: right !important;
         }
         table.styled-table td { 
             padding: 12px 16px !important; 
             border-bottom: 1px solid #334155 !important; 
-            color: #ffffff; /* צבע לבן כברירת מחדל ללא important כדי לאפשר לרמזורים לזרוח */
+            color: #ffffff; /* ללא important כדי שהרמזור יעבוד */
             font-size: 14px !important;
+            text-align: right !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -64,14 +61,11 @@ def render_qa_section(results, user_inputs):
     property_value_start = float(wealth.get("new_apartment_cost", 0))
     appreciation_rate = float(wealth.get("property_appreciation", 0))
 
-    # --- 1. ביום הפרישה ---
     row_retire = df_full[df_full["גיל"] >= retire_age].iloc[0] if not df_full[df_full["גיל"] >= retire_age].empty else df_history.iloc[-1]
-        
     exp_retire = float(row_retire["הוצאה נומינלית"])
     work_retire = float(row_retire["הכנסה מעבודה"])
     ni_retire = float(row_retire["קצבת ביטוח לאומי"])
     pension_190_retire = float(row_retire["קצבה מזערית 190"])
-    
     balance_190_retire = float(row_retire["צבירה תיקון 190"])
     balance_25_retire = float(row_retire["צבירה מסלול ריאלי"])
     
@@ -86,21 +80,17 @@ def render_qa_section(results, user_inputs):
         
     rule400_190_retire = f"{balance_190_retire / (net_needed_190_retire * 400):.2f}" if net_needed_190_retire > 0 else "∞"
     emer_190_retire = f"{emergency_fund / (net_needed_190_retire * 12):.1f}" if net_needed_190_retire > 0 else "∞"
-        
     rule400_25_retire = f"{balance_25_retire / (net_needed_25_retire * 400):.2f}" if net_needed_25_retire > 0 else "∞"
     emer_25_retire = f"{emergency_fund / (net_needed_25_retire * 12):.1f}" if net_needed_25_retire > 0 else "∞"
 
     total_wealth_190_retire = balance_190_retire + property_value_retire + emergency_fund
     total_wealth_25_retire = balance_25_retire + property_value_retire + emergency_fund
 
-    # --- 2. בגיל הנבדק ---
     row_check = df_full[df_full["גיל"] >= check_age].iloc[0] if not df_full[df_full["גיל"] >= check_age].empty else df_history.iloc[-1]
-        
     exp_check = float(row_check["הוצאה נומינלית"])
     work_check = float(row_check["הכנסה מעבודה"])
     ni_check = float(row_check["קצבת ביטוח לאומי"])
     pension_190_check = float(row_check["קצבה מזערית 190"])
-    
     balance_190_check = float(row_check["צבירה תיקון 190"])
     balance_25_check = float(row_check["צבירה מסלול ריאלי"])
     
@@ -122,7 +112,6 @@ def render_qa_section(results, user_inputs):
     total_wealth_190_check = balance_190_check + property_value_check + emergency_fund
     total_wealth_25_check = balance_25_check + property_value_check + emergency_fund
 
-    # --- 3. סריקות מתקדמות ---
     intersection_age = "לא משתווים"
     for idx in range(len(df_full)):
         if df_full.iloc[idx]["צבירה תיקון 190"] >= df_full.iloc[idx]["צבירה מסלול ריאלי"] and df_full.iloc[idx]["גיל"] > retire_age + 2:
@@ -168,7 +157,6 @@ def render_qa_section(results, user_inputs):
 
     is_190_larger = balance_190_check > balance_25_check
 
-    # טבלאות תצוגה
     st.subheader(f"📊 מצב ביום הפרישה (גיל {retire_age:.1f})")
     df_start_table = pd.DataFrame({
         "שאלה": [
@@ -202,8 +190,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(total_wealth_25_retire)
         ]
     })
-    # 🟢 סגירה הרמטית: עטיפת HTML קשיחה שמכריחה כיווניות ויישור לימין בדפדפן
-    st.markdown(f"<div class='report-table-container'>{df_start_table.set_index('שאלה').to_html(escape=False, classes='styled-table')}</div>", unsafe_allow_html=True)
+    _render_rtl_table(df_start_table, "שאלה")
 
     st.subheader(f"🔮 מצב בגיל נבדק בסימולציה (גיל {check_age:.1f})")
     df_check_table = pd.DataFrame({
@@ -235,8 +222,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(total_wealth_25_check)
         ]
     })
-    # 🟢 סגירה הרמטית: עטיפת HTML קשיחה שמכריחה כיווניות ויישור לימין בדפדפן
-    st.markdown(f"<div class='report-table-container'>{df_check_table.set_index('שאלה').to_html(escape=False, classes='styled-table')}</div>", unsafe_allow_html=True)
+    _render_rtl_table(df_check_table, "שאלה")
 
     st.subheader("🏁 שורה תחתונה וחסינות אקטוארית")
     df_bottom_table = pd.DataFrame({
@@ -253,5 +239,4 @@ def render_qa_section(results, user_inputs):
             wrap_html_style(f"{ratio_25_str}", get_preservation_pct_style(ratio_25_pct))
         ]
     })
-    # 🟢 סגירה הרמטית: עטיפת HTML קשיחה שמכריחה כיווניות ויישור לימין בדפדפן
-    st.markdown(f"<div class='report-table-container'>{df_bottom_table.set_index('שורה תחתונה').to_html(escape=False, classes='styled-table')}</div>", unsafe_allow_html=True)
+    _render_rtl_table(df_bottom_table, "שורה תחתונה")
