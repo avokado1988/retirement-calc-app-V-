@@ -26,29 +26,27 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב ברזל - חסינות שורות, מרווחים אסתטיים וביטול דריסות
+# 🎨 ריכוז חוקי העיצוב הגלובליים (תפריט צד + טבלאות מרכזיות)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. הגדרת השורה כולה כמכלול אופקי קשיח ללא יכולת קיפול או שבירה */
+    /* ------------------- עיצוב תפריט הצד (Sidebar) ------------------- */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
-        align-items: center !important; /* מירכוז אנכי מושלם */
+        flex-wrap: nowrap !important; /* מונע נפילת שורות */
+        align-items: center !important; 
         direction: rtl !important; 
-        margin-bottom: 14px !important; /* מרווח אסתטי ונקי בין שורה לשורה */
+        margin-bottom: 14px !important; 
         padding: 0 !important;
         width: 100% !important;
     }
 
-    /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         padding: 0 !important;
         margin: 0 !important;
     }
 
-    /* עמודה 1: הכותרת הלבנה מימין */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
         flex: 1 1 auto !important;
         min-width: 0 !important;
@@ -56,14 +54,12 @@ st.markdown("""
         margin-left: 10px !important;
     }
 
-    /* עמודה 2: חלון ההזנה הלבן באמצע */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
         flex: 0 0 80px !important;
         width: 80px !important;
         min-width: 80px !important;
     }
 
-    /* עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
         flex: 0 0 auto !important;
         min-width: max-content !important;
@@ -71,7 +67,6 @@ st.markdown("""
         margin-right: 8px !important;
     }
 
-    /* ביטול מוחלט של שבירת פסקאות מרקדאון */
     [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
     .custom-sidebar-label p, 
     .custom-sidebar-badge p {
@@ -86,22 +81,18 @@ st.markdown("""
         font-size: 14px !important;
         font-weight: 500 !important;
         color: #ffffff !important;
-        white-space: nowrap !important;
     }
 
     .custom-sidebar-badge {
         font-size: 14px !important;
         font-weight: 700 !important;
-        white-space: nowrap !important;
         direction: rtl !important;
     }
 
-    .custom-sidebar-badge,
-    .custom-sidebar-badge * {
+    .custom-sidebar-badge, .custom-sidebar-badge * {
         color: inherit !important;
     }
 
-    /* קיבוע חלון ההזנה הלבן/שחור */
     [data-testid="stSidebar"] .stNumberInput {
         width: 80px !important;
         margin: 0 !important;
@@ -115,6 +106,36 @@ st.markdown("""
         font-size: 13.5px !important;
         text-align: center !important;
     }
+
+    /* ------------------- עיצוב טבלאות דוחות מרכזיות (.styled-table) ------------------- */
+    .styled-table { 
+        width: 100% !important; 
+        direction: rtl !important; 
+        text-align: right !important; 
+        border-collapse: collapse !important; 
+        margin: 25px 0 !important; 
+        font-family: sans-serif; 
+        background-color: #1e293b !important; /* רקע כהה פרימיום */
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+    }
+    .styled-table th { 
+        background-color: #334155 !important; 
+        color: #ffffff !important; 
+        text-align: right !important; 
+        padding: 14px 16px !important; 
+        font-weight: bold !important; 
+        border-bottom: 3px solid #475569 !important; 
+        font-size: 14.5px !important;
+    }
+    .styled-table td { 
+        padding: 12px 16px !important; 
+        text-align: right !important; 
+        border-bottom: 1px solid #334155 !important; 
+        color: #ffffff; /* לבן כברירת מחדל כדי שלא יידרס לאפור, ללא !important כדי שהרמזור יעבוד */
+        font-size: 14px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,7 +143,6 @@ st.markdown("""
 def format_shekel(amount):
     return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
 
-# 🎯 תיקון כרטיס הסיכום: המסגרת הירוקה הצידית נמחקה לצמיתות (border-right רגיל ללא צבע זרחני)
 def show_net_summary(title, amount):
     st.markdown(
         f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; direction: rtl; text-align: right;'> "
@@ -136,38 +156,36 @@ def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
 # ==============================================================================
-# 🚥 פונקציות הרמזור האקטואריות לטבלאות - הזרקת !important למניעת דריסה
+# 🚥 פונקציות הרמזור האקטואריות (ללא !important כדי למנוע התנגשויות)
 # ==============================================================================
 def get_withdrawal_style(pct):
     val = float(pct)
-    if val <= 3.5: return "color: #4ade80 !important; font-weight: bold !important;"
-    if val <= 5.0: return "color: #fb923c !important; font-weight: bold !important;"
-    return "color: #f87171 !important; font-weight: bold !important;"
+    if val <= 3.5: return "color: #4ade80; font-weight: bold;"
+    if val <= 5.0: return "color: #fb923c; font-weight: bold;"
+    return "color: #f87171; font-weight: bold;"
 
 def get_400_rule_style(val_str):
-    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
-    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
+    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
+    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
     except: return ""
 
 def get_emergency_style(val_str):
-    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
-    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
+    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
+    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
     except: return ""
 
-# 🎯 תיקון המסגרת המכוערת: הוסרו לחלוטין כל הגבולות והרקעים, מעכשיו זה טקסט ירוק/לבן נקי!
 def get_larger_portfolio_style(is_larger):
-    if is_larger: 
-        return "color: #4ade80 !important; font-weight: 700 !important;"
-    return "color: #ffffff !important; font-weight: 500 !important;"
+    if is_larger: return "color: #4ade80; font-weight: 700;"
+    return "color: #ffffff; font-weight: 500;"
 
 def get_resiliency_style(val_str):
-    return "color: #4ade80 !important; font-weight: bold !important;" if "חסין" in val_str or "105" in val_str else "color: #f87171 !important; font-weight: bold !important;"
+    return "color: #4ade80; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #f87171; font-weight: bold;"
 
 def get_preservation_pct_style(pct):
-    return "color: #4ade80 !important; font-weight: bold !important;" if float(pct) >= 100.0 else "color: #f87171 !important; font-weight: bold !important;"
+    return "color: #4ade80; font-weight: bold;" if float(pct) >= 100.0 else "color: #f87171; font-weight: bold;"
 
 def get_boolean_style(val_str):
-    return "color: #4ade80 !important; font-weight: bold !important;" if "✅" in val_str else "color: #f87171 !important; font-weight: bold !important;"
+    return "color: #4ade80; font-weight: bold;" if "✅" in val_str else "color: #f87171; font-weight: bold;"
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
@@ -176,7 +194,6 @@ def _get_dynamic_color_by_label(label):
     if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
     return "#ffffff" 
 
-# 🎯 תיקון מנוע הקיצורים: סכומים קטנים מ-100,000 ₪ מוצגים במלואם (למשל: 2,500 ₪ ולא 2 א׳)
 def _format_compact_value(val, unit):
     val = float(val)
     rtl_mark = "\u200f"
@@ -187,7 +204,7 @@ def _format_compact_value(val, unit):
             return f"{rtl_mark}{formatted} מ׳ ₪"
         if val >= 100_000 or val <= -100_000:
             return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
-        return f"{rtl_mark}{int(val):,} ₪" # תצוגה מלאה ומפורטת לאלפים קטנים
+        return f"{rtl_mark}{int(val):,} ₪" # תצוגה מלאה לסכומים קטנים כמו ביטוח לאומי
         
     if unit == "שנים":
         return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
