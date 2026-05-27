@@ -26,7 +26,7 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב מתקדם - תיקון צבעים והצמדה אופטית
+# 🎨 מנוע עיצוב מתקדם - איזון מרווחים אופטימלי והצמדה פיננסית
 # ==============================================================================
 st.markdown("""
 <style>
@@ -98,7 +98,7 @@ st.markdown("""
         direction: rtl !important;
     }
 
-    /* 🎯 התיקון ההרמטי: הכרחת כל התגיות הפנימיות של סטרימליט לרשת את הצבע הדינמי שהגדרנו */
+    /* הכרחת כל התגיות הפנימיות של סטרימליט לרשת את הצבע הדינמי שהגדרנו */
     .custom-sidebar-badge,
     .custom-sidebar-badge * {
         color: inherit !important;
@@ -140,38 +140,42 @@ def wrap_html_style(text, style_str):
 # פונקציות הסטייל האקטואריות לטבלאות
 def get_withdrawal_style(pct):
     val = float(pct)
-    if val <= 3.5: return "color: #16a34a; font-weight: bold;"
-    if val <= 5.0: return "color: #d97706; font-weight: bold;"
-    return "color: #dc2626; font-weight: bold;"
+    if val <= 3.5: return "color: #4ade80; font-weight: bold;"
+    if val <= 5.0: return "color: #fb923c; font-weight: bold;"
+    return "color: #f87171; font-weight: bold;"
 
 def get_400_rule_style(val_str):
-    if val_str == "∞": return "color: #16a34a; font-weight: bold;"
-    try: return "color: #16a34a; font-weight: bold;" if float(val_str) >= 1.0 else "color: #dc2626; font-weight: bold;"
+    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
+    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
     except: return ""
 
 def get_emergency_style(val_str):
-    if val_str == "∞": return "color: #16a34a; font-weight: bold;"
-    try: return "color: #16a34a; font-weight: bold;" if float(val_str) >= 1.0 else "color: #dc2626; font-weight: bold;"
+    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
+    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
     except: return ""
 
+# 🎯 תיקון קריטי: הפיכת התיק הפחות גדול ללבן בוהק במקום אפור כהה נעלם!
 def get_larger_portfolio_style(is_larger):
-    return "color: #16a34a; font-weight: 700; background-color: #f0fdf4; padding: 2px 5px; border-radius: 3px;" if is_larger else "color: #4b5563;"
+    if is_larger:
+        return "color: #4ade80; font-weight: 700; background-color: #14532d; padding: 3px 6px; border-radius: 4px; border: 1px solid #22c55e;"
+    return "color: #ffffff; font-weight: 500;"
 
 def get_resiliency_style(val_str):
-    return "color: #16a34a; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #dc2626; font-weight: bold;"
+    return "color: #4ade80; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #f87171; font-weight: bold;"
 
+# 🎯 תיקון באג סינטקס קודם בשם הפונקציה
 def get_preservation_pct_style(pct):
-    return "color: #16a34a; font-weight: bold;" if float(pct) >= 100.0 else "color: #dc2626; font-weight: bold;"
+    return "color: #4ade80; font-weight: bold;" if float(pct) >= 100.0 else "color: #f87171; font-weight: bold;"
 
 def get_boolean_style(val_str):
-    return "color: #16a34a; font-weight: bold;" if "✅" in val_str else "color: #dc2626; font-weight: bold;"
+    return "color: #4ade80; font-weight: bold;" if "✅" in val_str else "color: #f87171; font-weight: bold;"
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
     if "חירום" in lbl: return "#fb923c" 
     if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" 
     if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
-    return "#ffffff" # 🎯 שינוי ללבן בוהק כברירת מחדל כדי למנוע מראה אפור ודהוי
+    return "#ffffff" 
 
 def _format_compact_value(val, unit):
     val = float(val)
@@ -193,9 +197,6 @@ def _format_compact_value(val, unit):
         
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
-# ==============================================================================
-# 🧱 רכיבי הזנה מאוזנים אופטית
-# ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
     
