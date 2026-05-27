@@ -30,11 +30,11 @@ DEFAULTS = {
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. הגדרת השורה כולה כמכלול אופקי ממורכז בכיווניות עברית מלאה */
+    /* 1. הגדרת השורה כולה כמכלול אופקי כמקשה אחת */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important; /* חוסם לחלוטינ נפילת שורות */
+        flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
         align-items: center !important; 
         direction: rtl !important; 
         margin-bottom: 14px !important; 
@@ -42,7 +42,7 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* ניקוי שוליים ופדינגים של עמודות סטרימליט */
+    /* ניקוי שוליים של עמודות סטרימליט */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         padding: 0 !important;
         margin: 0 !important;
@@ -122,9 +122,10 @@ st.markdown("""
 def format_shekel(amount):
     return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
 
+# 🎯 תיקון המסגרת: הוסרה לחלוטין המסגרת הירוקה הצידית שהייתה בכרטיס הסיכום
 def show_net_summary(title, amount):
     st.markdown(
-        f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; border-right:5px solid #4ade80; direction: rtl; text-align: right;'> "
+        f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; direction: rtl; text-align: right;'> "
         f"<span style='font-weight:600; color:#ffffff; font-size:15px;'>{title}:</span> "
         f"<span style='font-weight:700; color:#4ade80; font-size:16px; margin-right:6px;'>{format_shekel(amount)}</span>"
         f"</div>", 
@@ -134,37 +135,35 @@ def show_net_summary(title, amount):
 def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
-# פונקציות הסטייל האקטואריות לטבלאות
+# 🎯 תיקון חוקי הרמזור: הזרקת important! קשיח לתוך הסטייל כדי למנוע מסטרימליט לדרוס אותם
 def get_withdrawal_style(pct):
     val = float(pct)
-    if val <= 3.5: return "color: #4ade80; font-weight: bold;"
-    if val <= 5.0: return "color: #fb923c; font-weight: bold;"
-    return "color: #f87171; font-weight: bold;"
+    if val <= 3.5: return "color: #4ade80 !important; font-weight: bold !important;"
+    if val <= 5.0: return "color: #fb923c !important; font-weight: bold !important;"
+    return "color: #f87171 !important; font-weight: bold !important;"
 
 def get_400_rule_style(val_str):
-    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
-    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
     except: return ""
 
 def get_emergency_style(val_str):
-    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
-    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
     except: return ""
 
-# 🎯 תיקון המסגרת המכוערת: הסרנו את הקופסה, הרקע והגבולות. מעכשיו זה טקסט נקי ויפה!
 def get_larger_portfolio_style(is_larger):
-    if is_larger:
-        return "color: #4ade80; font-weight: 700;"
-    return "color: #ffffff; font-weight: 500;"
+    if is_larger: return "color: #4ade80 !important; font-weight: 700 !important;"
+    return "color: #ffffff !important; font-weight: 500 !important;"
 
 def get_resiliency_style(val_str):
-    return "color: #4ade80; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #f87171; font-weight: bold;"
+    return "color: #4ade80 !important; font-weight: bold !important;" if "חסין" in val_str or "105" in val_str else "color: #f87171 !important; font-weight: bold !important;"
 
 def get_preservation_pct_style(pct):
-    return "color: #4ade80; font-weight: bold;" if float(pct) >= 100.0 else "color: #f87171; font-weight: bold;"
+    return "color: #4ade80 !important; font-weight: bold !important;" if float(pct) >= 100.0 else "color: #f87171 !important; font-weight: bold !important;"
 
 def get_boolean_style(val_str):
-    return "color: #4ade80; font-weight: bold;" if "✅" in val_str else "color: #f87171; font-weight: bold;"
+    return "color: #4ade80 !important; font-weight: bold !important;" if "✅" in val_str else "color: #f87171 !important; font-weight: bold !important;"
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
@@ -173,7 +172,7 @@ def _get_dynamic_color_by_label(label):
     if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
     return "#ffffff" 
 
-# 🎯 תיקון הקיצורים באלפים: מעכשיו סכומים מתחת ל-100 אלף מוצגים מלאים (כמו 2,500 ₪) ולא מקוצרים!
+# 🎯 תיקון הקיצורים: מעכשיו סכומים מתחת ל-100 אלף מוצגים מלא (כמו 2,500 ₪) ולא מקוצרים!
 def _format_compact_value(val, unit):
     val = float(val)
     rtl_mark = "\u200f"
@@ -184,7 +183,7 @@ def _format_compact_value(val, unit):
             return f"{rtl_mark}{formatted} מ׳ ₪"
         if val >= 100_000 or val <= -100_000:
             return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
-        return f"{rtl_mark}{int(val):,} ₪" # סכומים רגילים באלפים מוצגים מלא
+        return f"{rtl_mark}{int(val):,} ₪" # תצוגה מלאה לסכומים קטנים באלפים
         
     if unit == "שנים":
         return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
@@ -195,7 +194,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה
+# 🧱 רכיבי הזנה מאוזנים אופטית
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
