@@ -1,6 +1,6 @@
 import streamlit as st
 
-# 1. הגדרת תצורת דף אחידה - חובה ראשון!
+# 1. הגדרת תצורת דף אחידה - חייב להיות ראשון בקוד
 st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", page_icon="📊", layout="wide")
 
 import inputs
