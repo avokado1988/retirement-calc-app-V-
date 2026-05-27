@@ -1,7 +1,7 @@
 import streamlit as st
 
 # ==============================================================================
-# 🎯 מילון ערכי ברירת המחדל - נשמר בדיוק כפי שסיכמנו!
+# 🎯 מילון ערכי ברירת המחדל המעודכנים והמדויקים של המערכת
 # ==============================================================================
 DEFAULTS = {
     "start_age": 65.5,
@@ -28,7 +28,7 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע העיצוב הגלובלי - צמצום רווחים והצמדת הערך השמאלי לחלונית
+# 🎨 מנוע העיצוב הגלובלי - צמצום רווחים מקסימלי והצמדת הערכים לחלונית
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
@@ -48,12 +48,12 @@ def inject_design_system():
             color: #ffffff !important;
             white-space: nowrap !important;
             text-align: right !important;
-            padding-left: 5px;
+            padding-left: 4px !important;
         }
 
-        /* ערך צבעוני משמאל - מיושר לימין כדי שייצמד לחלונית ההזנה! */
+        /* ערך צבעוני משמאל - מוצמד הדוק לחלונית בזכות יישור ימין */
         .custom-sidebar-badge {
-            font-size: 14.5px !important;
+            font-size: 14px !important;
             font-weight: 700 !important;
             direction: rtl !important;
             text-align: right !important; 
@@ -66,7 +66,7 @@ def inject_design_system():
             color: inherit !important;
         }
 
-        /* עיצוב חלונית ההזנה */
+        /* קיבוע חלונית ההזנה */
         [data-testid="stSidebar"] .stNumberInput {
             width: 75px !important;
         }
@@ -100,7 +100,7 @@ def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
 # ==============================================================================
-# 🚥 פונקציות הרמזור לדו"ח המרכזי
+# 🚥 פונקציות הרמזור הנדרשות עבור קובץ הדוחות (מניעת ImportError)
 # ==============================================================================
 def get_withdrawal_style(pct):
     val = float(pct)
@@ -132,13 +132,13 @@ def get_boolean_style(val_str):
     return "color: #4ade80 !important; font-weight: bold !important;" if "✅" in val_str else "color: #f87171 !important; font-weight: bold !important;"
 
 # ==============================================================================
-# 🚥 לוגיקת הצבעים של סרגל הצד - עובד נקי
+# 🚥 לוגיקת צבעי סרגל הצד
 # ==============================================================================
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
     if "חירום" in lbl or "מזומן" in lbl: return "#fb923c" 
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "אינפלציה", "עזרה", "ניהול", "עלות", "מס"]): return "#f87171" 
-    if any(x in lbl for x in ["הכנסה", "קצבה", "חיסכון", "חסכונות", "תשואה", "מכירה", "נדלן", "נדל\"ן", "הון"]): return "#4ade80" 
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "אינפלציה", "עזרה", "ניהול", "עלות", "מס", "דירה", "רכישה", "ילדים"]): return "#f87171" 
+    if any(x in lbl for x in ["הכנסה", "קצבה", "חיסכון", "חסכונות", "תשואה", "מכירה", "נדלן", "נדל\"ן", "הון", "פנסיה", "ביטוח"]): return "#4ade80" 
     return "#ffffff" 
 
 def _format_compact_value(val, unit):
@@ -153,16 +153,19 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי ההזנה - חלוניות בלבד, ללא סליידרים! (באג המתמטיקה תוקן)
+# 🧱 מנוע ההזנה המאוחד - חלוניות בלבד, ללא סליידרים (באג הצמצום תוקן!)
 # ==============================================================================
-def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
-    widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
+def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪", is_pct=False):
+    # מרחב שמות חדש v4 כדי למחוק את ה-Cache המשובש של הדפדפן
+    widget_key = f"saved_v4_{label.replace(' ', '_')}"
+    is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or is_pct
     
     if widget_key in st.query_params:
         try:
-            stored_val = st.query_params[widget_key]
-            value = float(stored_val) if is_float else int(float(stored_val))
+            stored_val = float(st.query_params[widget_key])
+            # אם זה אחוז, נשמר בזיכרון כשבר (0.023) אבל בתיבה יוצג כשלם (2.3)
+            value = stored_val * 100.0 if is_pct else stored_val
+            if not is_float: value = int(value)
         except: pass
 
     if is_float:
@@ -179,52 +182,22 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🟢 סדר העמודות: תגית (ימין), חלונית (אמצע), ערך שמוצמד לחלונית (שמאל)
-    col1, col2, col3 = st.columns([5.5, 2.5, 2.0])
+    # 🎯 חלוקת עמודות חדשה וצפופה: תווית (מימין), תיבה (אמצע), ערך צבוע צמוד (משמאל)
+    col1, col2, col3 = st.columns([6.0, 1.5, 2.5])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
         res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
     with col3:
-        formatted_display = _format_compact_value(res, unit)
+        formatted_display = _format_compact_value(res, "%" if is_pct else unit)
         st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
     
-    st.query_params[widget_key] = str(res)
-    return res
+    # החזרה וחישוב למנוע: אחוזים יישמרו ויחזרו כשברים (0.023) כדי לא להרוס את המנוע הפיננסי
+    final_val = float(res) / 100.0 if is_pct else res
+    st.query_params[widget_key] = str(final_val)
+    return final_val
 
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
-    widget_key = f"saved_v3_{label.replace(' ', '_')}"
     is_pct = format is not None and "%" in format
-    
-    # 🟢 תיקון קריטי: אם זה אחוז, הקלט מהדפדפן או מהדיפולט מכוון לערך השלם (למשל 2.3)
-    if widget_key in st.query_params:
-        try:
-            stored_val = float(st.query_params[widget_key])
-            value = stored_val * 100.0 if is_pct else stored_val
-        except: pass
-    else:
-        # אם זה בא מהדיפולט, נניח שהקבצים האחרים כבר הכפילו ב-100 ולכן הערך מוכן לתצוגה
-        pass
-
-    val_to_use = float(value) if value is not None else 0.0
-    min_to_use = float(min_value) * 100.0 if is_pct and min_value is not None else float(min_value) if min_value is not None else 0.0
-    max_to_use = float(max_value) * 100.0 if is_pct and max_value is not None else float(max_value) if max_value is not None else None
-    step_to_use = float(step) * 100.0 if is_pct and step is not None else float(step) if step is not None else 1.0
     display_unit = "%" if is_pct else (unit if unit else "")
-
-    temp_key = widget_key + "_v7_holder"
-    text_color = _get_dynamic_color_by_label(label)
-    
-    # 🟢 מבנה זהה - חלונית הזנה בלבד ללא שום סליידרים
-    col1, col2, col3 = st.columns([5.5, 2.5, 2.0])
-    with col1:
-        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
-    with col2:
-        res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
-    with col3:
-        formatted_display = _format_compact_value(res, display_unit)
-        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
-        
-    final_res = float(res) / 100.0 if is_pct else res
-    st.query_params[widget_key] = str(final_res)
-    return final_res
+    return compact_number_input(label, value, min_value, max_value, step, unit=display_unit, is_pct=is_pct)
