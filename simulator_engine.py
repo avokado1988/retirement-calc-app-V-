@@ -11,7 +11,6 @@ def run_simulation(user_inputs):
     start_age = float(timeline.get("start_age", 65.5))
     retirement_age = float(timeline.get("retirement_age", 67.0))
     check_age = float(timeline.get("check_age", 87.0))
-    
     annual_inflation_base = float(expenses.get("expected_inflation", 0.023))
     
     r_monthly_190 = (1 + (float(amendment_190.get("annual_return_190", 0.05)) - float(amendment_190.get("management_fee_190", 0.006)))) ** (1/12) - 1
@@ -35,7 +34,8 @@ def run_simulation(user_inputs):
 
     history = []
     inflation_factor = 1.0
-    retirement_inflation_factor = 1.0  
+    retirement_inflation_factor = 1.0 
+
     total_months = int((105 - start_age) * 12) + 1
 
     for m in range(total_months):
@@ -46,12 +46,10 @@ def run_simulation(user_inputs):
         elif current_age >= 75.0: current_ann_inf += float(expenses.get("age_75_85_increase", 0.005))
         
         i_monthly = (1 + current_ann_inf) ** (1/12) - 1
-        
         if m > 0: 
             inflation_factor *= (1 + i_monthly)
-        
-        if current_age >= retirement_age and m > 0:
-            retirement_inflation_factor *= (1 + i_monthly)
+            if current_age >= retirement_age:
+                retirement_inflation_factor *= (1 + i_monthly)
 
         curr_base_exp = base_monthly_expense
         if current_age >= 85.0: curr_base_exp += caregiver_cost_base
@@ -61,25 +59,21 @@ def run_simulation(user_inputs):
             curr_base_exp += float(expenses.get("one_time_expense", 80000))
             
         nominal_expense = curr_base_exp * inflation_factor
-
         curr_work_inc = work_income_static if current_age < work_end_age else 0.0
         
         if current_age >= retirement_age:
             p_indexed = pension_base * retirement_inflation_factor
-            ni_indexed = ni_base * inflation_factor 
+            ni_indexed = ni_base * inflation_factor
         else:
-            p_indexed = 0.0
-            ni_indexed = 0.0
+            p_indexed = 0.0; ni_indexed = 0.0
             
-        base_income = curr_work_inc + ni_indexed
-        
-        net_needed_190 = max(0.0, nominal_expense - (base_income + p_indexed))
-        net_needed_25 = max(0.0, nominal_expense - base_income)
+        net_needed_190 = max(0.0, nominal_expense - (curr_work_inc + ni_indexed + p_indexed))
+        net_needed_25 = max(0.0, nominal_expense - (curr_work_inc + ni_indexed))
 
         if current_age < retirement_age:
-            net_needed_190 = 0.0
-            net_needed_25 = 0.0
+            net_needed_190 = 0.0; net_needed_25 = 0.0
 
+        # משיכות ומס
         tax_190 = 0.0
         if net_needed_190 > 0 and balance_190 > 0:
             pr = max(0.0, (balance_190 - basis_190) / balance_190)
@@ -103,15 +97,12 @@ def run_simulation(user_inputs):
         if balance_25 > 0: balance_25 *= (1 + r_monthly_25)
         property_value *= (1 + prop_appreciation_monthly)
 
-        # 🟢 הדחיפה ל-DataFrame עם השמות המדויקים והקשיחים 🟢
         history.append({
             "גיל": current_age, "חודש": m, "הוצאה נומינלית": nominal_expense,
-            "הכנסה מעבודה": curr_work_inc,
-            "קצבת ביטוח לאומי": ni_indexed,
-            "קצבה מזערית 190": p_indexed,
-            "צבירה תיקון 190": balance_190, "צבירה מסלול ריאלי": balance_25,
-            "מס ששולם 190": tax_190, "מס ששולם 25": tax_25,
-            "שווי נדלן": property_value, "inflation_factor": inflation_factor
+            "הכנסה מעבודה": curr_work_inc, "קצבת ביטוח לאומי": ni_indexed,
+            "קצבה מזערית 190": p_indexed, "צבירה תיקון 190": balance_190,
+            "צבירה מסלול ריאלי": balance_25, "מס ששולם 190": tax_190, "מס ששולם 25": tax_25,
+            "שווי נדלן": property_value, "נטו למשיכה 190": net_needed_190, "נטו למשיכה 25": net_needed_25
         })
 
     df_full = pd.DataFrame(history)
@@ -119,6 +110,7 @@ def run_simulation(user_inputs):
     
     return {
         "df": df_full[df_full["גיל"] <= check_age], "df_full": df_full,
+        "baseline_capital": baseline_capital,
         "ratio_190_97": float(row_97["צבירה תיקון 190"] / baseline_capital),
         "ratio_25_97": float(row_97["צבירה מסלול ריאלי"] / baseline_capital)
     }
