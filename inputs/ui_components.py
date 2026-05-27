@@ -28,14 +28,15 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע העיצוב הגלובלי 
+# 🎨 מנוע העיצוב הגלובלי - יישור, מרווחים אסתטיים וצבעים קשיחים
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
     <style>
-        /* ביטול מרווחים בין עמודות בסרגל הצד */
+        /* ביטול מרווחים בין עמודות בסרגל הצד ושמירה על שורה אחידה */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-            gap: 0px !important;
+            gap: 2px !important;
+            flex-wrap: nowrap !important;
             align-items: center !important; 
             direction: rtl !important; 
             margin-bottom: 12px !important; 
@@ -51,33 +52,33 @@ def inject_design_system():
             padding-left: 4px !important;
         }
 
-        /* ערך צבעוני משמאל */
+        /* ערך צבעוני משמאל - מוצמד הדוק לחלונית בזכות יישור ימין מדויק */
         .custom-sidebar-badge {
             font-size: 14.5px !important;
             font-weight: 700 !important;
             direction: rtl !important;
             text-align: right !important; 
             white-space: nowrap !important;
-            margin-right: 4px !important;
+            margin-right: 6px !important;
         }
 
-        /* כפיית צבע דינמי חסין */
-        .custom-sidebar-badge * {
-            color: inherit !important;
+        .custom-sidebar-badge p {
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         /* 🟢 עיצוב חלונית ההזנה - מותאם למסך כהה וקריא לחלוטין */
         [data-testid="stSidebar"] .stNumberInput {
-            width: 75px !important;
+            width: 100% !important;
         }
         [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
             height: 28px !important;
             border-radius: 4px !important;
-            background-color: #334155 !important; /* רקע אפור-כחלחל פרימיום */
+            background-color: #334155 !important;
             border: 1px solid #475569 !important;
         }
         [data-testid="stSidebar"] .stNumberInput input {
-            color: #ffffff !important; /* טקסט לבן בוהק וקריא */
+            color: #ffffff !important;
             padding: 2px !important;
             font-size: 13.5px !important;
             text-align: center !important;
@@ -133,12 +134,17 @@ def get_boolean_style(val_str):
     return "color: #4ade80 !important; font-weight: bold !important;" if "✅" in val_str else "color: #f87171 !important; font-weight: bold !important;"
 
 # ==============================================================================
-# 🚥 לוגיקת צבעי סרגל הצד
+# 🚥 לוגיקת צבעי סרגל הצד - עכשיו עם נתונים אקטואריים בכחול!
 # ==============================================================================
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
+    # כתום: קרן חירום
     if "חירום" in lbl or "מזומן" in lbl: return "#fb923c" 
+    # כחול: נתונים אקטואריים
+    if any(x in lbl for x in ["גיל", "שנים", "מקדם", "אבטחה", "תקופת", "יעד"]): return "#60a5fa" 
+    # אדום: הוצאות, אינפלציה, מס, עלויות
     if any(x in lbl for x in ["הוצאה", "הוצאות", "אינפלציה", "עזרה", "ניהול", "עלות", "מס", "דירה", "רכישה", "ילדים"]): return "#f87171" 
+    # ירוק: הכנסות, קצבאות, תשואה, נדל"ן
     if any(x in lbl for x in ["הכנסה", "קצבה", "חיסכון", "חסכונות", "תשואה", "מכירה", "נדלן", "נדל\"ן", "הון", "פנסיה", "ביטוח"]): return "#4ade80" 
     return "#ffffff" 
 
@@ -181,14 +187,16 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    col1, col2, col3 = st.columns([6.0, 1.5, 2.5])
+    # 🎯 פרופורציות אסתטיות ומדויקות: [תגית ימין 5.2] [הזנה 2.2] [ערך 2.6]
+    col1, col2, col3 = st.columns([5.2, 2.2, 2.6])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
         res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
     with col3:
         formatted_display = _format_compact_value(res, "%" if is_pct else unit)
-        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
+        # הזרקת פקודת הצבע ישירות לספאן חוסמת כל סיכוי לדריסה של סטרימליט!
+        st.markdown(f"<div class='custom-sidebar-badge'><span style='color: {text_color} !important;'>{formatted_display}</span></div>", unsafe_allow_html=True)
     
     final_val = float(res) / 100.0 if is_pct else res
     st.query_params[widget_key] = str(final_val)
