@@ -1,6 +1,6 @@
 import streamlit as st
 
-# 🟢 מילון ערכי ברירת המחדל המדויקים והמיושרים של האפליקציה שלך
+# מילון ערכי ברירת המחדל המדויקים והמיושרים של האפליקציה
 DEFAULTS = {
     "start_age": 65.5,
     "retirement_age": 67.0,
@@ -39,10 +39,49 @@ def show_net_summary(title, amount):
         unsafe_allow_html=True
     )
 
+def wrap_html_style(text, style_str):
+    """פונקציית עזר להזרקת סטייל לתוך HTML בטבלאות"""
+    return f"<span style='{style_str}'>{text}</span>"
+
+# ==============================================================================
+# 🎨 פונקציות הסטייל והצבעים האקטואריים שדוחות ה-QA מחפשים (שחזור החוסר)
+# ==============================================================================
+def get_withdrawal_style(pct):
+    val = float(pct)
+    if val <= 3.5: return "color: #16a34a; font-weight: bold;" # ירוק בטוח
+    if val <= 5.0: return "color: #d97706; font-weight: bold;" # צהוב גבולי
+    return "color: #dc2626; font-weight: bold;" # אדום מסוכן
+
+def get_400_rule_style(val_str):
+    if val_str == "∞": return "color: #16a34a; font-weight: bold;"
+    try:
+        val = float(val_str)
+        return "color: #16a34a; font-weight: bold;" if val >= 1.0 else "color: #dc2626; font-weight: bold;"
+    except: return ""
+
+def get_emergency_style(val_str):
+    if val_str == "∞": return "color: #16a34a; font-weight: bold;"
+    try:
+        val = float(val_str)
+        return "color: #16a34a; font-weight: bold;" if val >= 1.0 else "color: #dc2626; font-weight: bold;"
+    except: return ""
+
+def get_larger_portfolio_style(is_larger):
+    return "color: #16a34a; font-weight: 700; background-color: #f0fdf4; padding: 2px 5px; border-radius: 3px;" if is_larger else "color: #4b5563;"
+
+def get_resiliency_style(val_str):
+    return "color: #16a34a; font-weight: bold;" if "حסין" in val_str or "105" in val_str else "color: #dc2626; font-weight: bold;"
+
+def get_preservation_pct_style(pct):
+    return "color: #16a34a; font-weight: bold;" if float(pct) >= 100.0 else "color: #dc2626; font-weight: bold;"
+
+def get_boolean_style(val_str):
+    return "color: #16a34a; font-weight: bold;" if "✅" in val_str else "color: #dc2626; font-weight: bold;"
+
+# ==============================================================================
+# 🧱 רכיבי הזנת נתונים (UI Components) - מבוססי הקלדה בלבד
+# ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
-    """
-    מציג שורת קלט מעוצבת: טקסט מימין, ותיבת הקלדה קטנה משמאל.
-    """
     col1, col2 = st.columns([3, 2])
     with col1:
         st.markdown(f"<div style='line-height: 2.5; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
@@ -51,8 +90,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
         min_to_use = float(min_value) if min_value is not None else None
         max_to_use = float(max_value) if max_value is not None else None
         
-        # בניית סיומת יחידה לצד התיבה (למשל חיווי של ש"ח)
-        suffix = f" {unit}" if unit else ""
         res = st.number_input(
             label,
             min_value=min_to_use, 
@@ -67,18 +104,16 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
 
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
     """
-    🔄 הוסב באופן מלא להזנת מספרים תוך שמירה על הערכים והחיוויים האסתטיים בצד שמאל של השורה!
+    🔄 הוסב להזנת מספרים (הקלדה) תוך הצגת סימונים אסתטיים (%, שנים, ₪) באותה השורה!
     """
     col1, col2 = st.columns([3, 2])
     with col1:
         st.markdown(f"<div style='line-height: 2.5; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
     with col2:
-        # בדיקה האם מדובר באחוזים קטנים מ-1 (כמו 0.05 שמייצג 5%)
+        # טיפול חכם בשברי אחוזים (למשל: הפיכת 0.023 ל-2.3% לצורך הקלדה נוחה)
         is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
         
-        # התאמת הערכים להקלדה נוחה
         if is_percentage_fraction:
-            # הופך את ה-0.05 ל-5.0 לצורך הקלדה נוחה של המשתמש
             val_to_use = float(value) * 100.0
             min_to_use = float(min_value) * 100.0
             max_to_use = float(max_value) * 100.0
@@ -89,7 +124,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             max_to_use = float(max_value) if isinstance(max_value, float) else int(max_value)
             step_to_use = step
 
-        # יצירת שתי עמודות פנימיות קטנות: אחת לשדה המספר ואחת לסימון (%, שנים, ₪) באותו הגובה
+        # ציור שדה הקלט וסימן היחידה יחד באותו הגובה
         sub_col1, sub_col2 = st.columns([3, 1])
         with sub_col1:
             raw_input = st.number_input(
@@ -101,11 +136,9 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
                 label_visibility="collapsed"
             )
         with sub_col2:
-            # קביעת הסימון שיופיע בצד שמאל בדיוק באותו קו
             display_unit = "%" if (format and "%" in format) or unit == "%" else (unit if unit else "")
             st.markdown(f"<div style='line-height: 2.5; font-weight: 600; color: #4b5563;'>{display_unit}</div>", unsafe_allow_html=True)
             
-        # החזרת הערך לקוד בצורה הנכונה (אם זה היה שבר אחוזים, נחלק חזרה ב-100)
         res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
         
     return res
