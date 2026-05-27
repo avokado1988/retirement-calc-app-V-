@@ -1,6 +1,6 @@
 import streamlit as st
 
-# מילון ערכי ברירת המחדל המדויקים והמיושרים של האפליקציה
+# מילון ערכי ברירת המחדל המדויקים של האפליקציה
 DEFAULTS = {
     "start_age": 65.5,
     "retirement_age": 67.0,
@@ -61,7 +61,7 @@ def get_larger_portfolio_style(is_larger):
     return "color: #16a34a; font-weight: 700; background-color: #f0fdf4; padding: 2px 5px; border-radius: 3px;" if is_larger else "color: #4b5563;"
 
 def get_resiliency_style(val_str):
-    return "color: #16a34a; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #dc2626; font-weight: bold;"
+    return "color: #16a34a; font-weight: bold;" if "حסין" in val_str or "105" in val_str else "color: #dc2626; font-weight: bold;"
 
 def get_preservation_pct_style(pct):
     return "color: #16a34a; font-weight: bold;" if float(pct) >= 100.0 else "color: #dc2626; font-weight: bold;"
@@ -70,12 +70,11 @@ def get_boolean_style(val_str):
     return "color: #16a34a; font-weight: bold;" if "✅" in val_str else "color: #dc2626; font-weight: bold;"
 
 # ==============================================================================
-# 🧱 מנגנון השמירה והיישור המובנה - קו אחד חלק ללא לולאות וקריסות
+# 🧱 מנגנון השמירה ב-URL והעיצוב החדש והבטוח בשורה אחת
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
-    widget_key = f"saved_v2_{label.replace(' ', '_')}"
+    widget_key = f"saved_v3_{label.replace(' ', '_')}"
     
-    # טעינה חכמה מהדפדפן או מזיכרון ה-session
     if widget_key in st.query_params:
         try:
             stored_val = st.query_params[widget_key]
@@ -101,7 +100,7 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
         with sub_col1:
             res = st.number_input(
                 label, min_value=min_to_use, max_value=max_to_use, 
-                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=widget_key + "_input"
+                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=widget_key + "_v3_in"
             )
         with sub_col2:
             if unit:
@@ -111,7 +110,7 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     return res
 
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
-    widget_key = f"saved_v2_{label.replace(' ', '_')}"
+    widget_key = f"saved_v3_{label.replace(' ', '_')}"
     is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
     
     if widget_key in st.query_params:
@@ -147,7 +146,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
         with sub_col1:
             raw_input = st.number_input(
                 label, min_value=min_to_use, max_value=max_to_use, 
-                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=widget_key + "_input"
+                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=widget_key + "_v3_in"
             )
         with sub_col2:
             if display_unit:
