@@ -28,12 +28,12 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 פונקציית הזרקת העיצוב הגלובלית - תופסת גם את הסרגל הצידי וגם את המסך הראשי
+# 🎨 פונקציית הזרקת העיצוב הגלובלית - תפריט צד + טבלאות
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
     <style>
-        /* ------------------- עיצוב תפריט הצד (Sidebar) ------------------- */
+        /* 1. הגדרת השורה כולה כמכלול אופקי קשיח ללא יכולת קיפול או שבירה */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
             display: flex !important;
             flex-direction: row !important;
@@ -45,11 +45,13 @@ def inject_design_system():
             width: 100% !important;
         }
 
+        /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
             padding: 0 !important;
             margin: 0 !important;
         }
 
+        /* עמודה 1: הכותרת הלבנה מימין */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
             flex: 1 1 auto !important;
             min-width: 0 !important;
@@ -57,12 +59,14 @@ def inject_design_system():
             margin-left: 10px !important;
         }
 
+        /* עמודה 2: חלון ההזנה הלבן באמצע */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
             flex: 0 0 80px !important;
             width: 80px !important;
             min-width: 80px !important;
         }
 
+        /* עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
             flex: 0 0 auto !important;
             min-width: max-content !important;
@@ -70,6 +74,7 @@ def inject_design_system():
             margin-right: 8px !important;
         }
 
+        /* ביטול מוחלט של שבירת פסקאות מרקדאון */
         [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
         .custom-sidebar-label p, 
         .custom-sidebar-badge p {
@@ -98,6 +103,7 @@ def inject_design_system():
             color: inherit !important;
         }
 
+        /* קיבוע חלון ההזנה הלבן/שחור */
         [data-testid="stSidebar"] .stNumberInput {
             width: 80px !important;
             margin: 0 !important;
@@ -124,13 +130,7 @@ def inject_design_system():
             overflow: hidden !important;
         }
         
-        /* כפיית כיווניות מימין לשמאל ויישור לימין על כל רכיבי הטבלה במסך המרכזי */
-        .styled-table, 
-        .styled-table th, 
-        .styled-table td, 
-        .styled-table tr,
-        .styled-table tbody,
-        .styled-table thead {
+        .styled-table th, .styled-table td {
             text-align: right !important;
             direction: rtl !important;
         }
@@ -150,7 +150,6 @@ def inject_design_system():
             font-size: 14px !important;
         }
         
-        /* וידוא שצבעי הרמזור הפנימיים לא יימחקו ללבן */
         .styled-table td span {
             color: inherit !important;
         }
@@ -230,35 +229,98 @@ def _format_compact_value(val, unit):
         
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
+# ==============================================================================
+# 🧱 רכיבי הזנה חסינים - פתרון אבסולוטי לשגיאות טיפוסים (Mixed Types)
+# ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
+    
+    # 🟢 זיהוי דינמי חסין: בודק אם לפחות אחד מהפרמטרים הוא float
+    is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
+
     if widget_key in st.query_params:
-        try: value = int(st.query_params[widget_key])
+        try:
+            stored_val = st.query_params[widget_key]
+            value = float(stored_val) if is_float else int(stored_val)
         except: pass
+
+    # 🟢 נעילת כל הערכים לאותו סוג נתונים בדיוק כדי למנוע את שגיאת סטרימליט
+    if is_float:
+        val_to_use = float(value)
+        min_to_use = float(min_value) if min_value is not None else None
+        max_to_use = float(max_value) if max_value is not None else None
+        step_to_use = float(step)
+    else:
+        val_to_use = int(value)
+        min_to_use = int(min_value) if min_value is not None else None
+        max_to_use = int(max_value) if max_value is not None else None
+        step_to_use = int(step)
+
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
     col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
-    with col1: st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
-    with col2: res = st.number_input(label, min_value=min_value, max_value=max_value, value=int(value), step=int(step), label_visibility="collapsed", key=temp_key)
-    with col3: st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{_format_compact_value(res, unit)}</div>", unsafe_allow_html=True)
+    with col1:
+        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
+        
+    with col2:
+        res = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
+    with col3:
+        formatted_display = _format_compact_value(res, unit)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
+    
     st.query_params[widget_key] = str(res)
     return res
 
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    is_pct = format is not None and "%" in format and float(value) <= 1.0
+    is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
+    
     if widget_key in st.query_params:
-        try: value = float(st.query_params[widget_key])
+        try:
+            stored_val = float(st.query_params[widget_key])
+            value = stored_val if is_percentage_fraction else (float(stored_val) if isinstance(step, float) else int(stored_val))
         except: pass
-    val_to_use = float(value) * 100.0 if is_pct else float(value)
+
+    if is_percentage_fraction:
+        val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
+        min_to_use = float(min_value) * 100.0
+        max_to_use = float(max_value) * 100.0
+        step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
+        display_unit = "%"
+    else:
+        is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
+        if is_float:
+            val_to_use = float(value)
+            min_to_use = float(min_value)
+            max_to_use = float(max_value)
+            step_to_use = float(step)
+        else:
+            val_to_use = int(value)
+            min_to_use = int(min_value)
+            max_to_use = int(max_value)
+            step_to_use = int(step)
+        display_unit = unit if unit else ""
+
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
-
+    
     col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
-    with col1: st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
-    with col2: raw_input = st.number_input(label, min_value=float(min_value)*100 if is_pct else float(min_value), max_value=float(max_value)*100 if is_pct else float(max_value), value=val_to_use, step=float(step)*100 if is_pct else float(step), label_visibility="collapsed", key=temp_key)
-    res = float(raw_input) / 100.0 if is_pct else raw_input
-    with col3: st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{_format_compact_value(raw_input, '%' if is_pct else unit)}</div>", unsafe_allow_html=True)
+    with col1:
+        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
+
+    with col2:
+        raw_input = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
+    with col3:
+        formatted_display = _format_compact_value(raw_input, display_unit)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
+        
+    res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
     st.query_params[widget_key] = str(res)
     return res
