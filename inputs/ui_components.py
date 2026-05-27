@@ -35,11 +35,18 @@ def inject_design_system():
     <style>
         /* ביטול מרווחים בין עמודות בסרגל הצד ושמירה על שורה אחידה */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-            gap: 2px !important;
+            gap: 4px !important;
             flex-wrap: nowrap !important;
             align-items: center !important; 
             direction: rtl !important; 
-            margin-bottom: 12px !important; 
+            margin-bottom: 8px !important; 
+        }
+
+        /* 🟢 מחיקת הריווח הפנימי הדיפולטיבי של עמודות סטרימליט שגרם לספייס ענק! */
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+            padding: 0 !important;
+            margin: 0 !important;
+            min-width: 0 !important;
         }
 
         /* תווית לבנה מימין */
@@ -49,17 +56,19 @@ def inject_design_system():
             color: #ffffff !important;
             white-space: nowrap !important;
             text-align: right !important;
-            padding-left: 4px !important;
+            padding-left: 2px !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* ערך צבעוני משמאל - מוצמד הדוק לחלונית בזכות יישור ימין מדויק */
+        /* ערך צבעוני משמאל - מוצמד לחלונית ההזנה */
         .custom-sidebar-badge {
-            font-size: 14.5px !important;
+            font-size: 14px !important;
             font-weight: 700 !important;
             direction: rtl !important;
             text-align: right !important; 
             white-space: nowrap !important;
-            margin-right: 6px !important;
+            margin-right: 4px !important;
         }
 
         .custom-sidebar-badge p {
@@ -67,19 +76,20 @@ def inject_design_system():
             padding: 0 !important;
         }
 
-        /* 🟢 עיצוב חלונית ההזנה - מותאם למסך כהה וקריא לחלוטין */
+        /* עיצוב חלונית ההזנה */
         [data-testid="stSidebar"] .stNumberInput {
             width: 100% !important;
+            min-width: 60px !important;
         }
         [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
-            height: 28px !important;
+            height: 30px !important;
             border-radius: 4px !important;
             background-color: #334155 !important;
             border: 1px solid #475569 !important;
         }
         [data-testid="stSidebar"] .stNumberInput input {
             color: #ffffff !important;
-            padding: 2px !important;
+            padding: 0px !important;
             font-size: 13.5px !important;
             text-align: center !important;
         }
@@ -163,7 +173,7 @@ def _format_compact_value(val, unit):
 # 🧱 מנוע ההזנה המאוחד - חלוניות בלבד
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪", is_pct=False):
-    widget_key = f"saved_v4_{label.replace(' ', '_')}"
+    widget_key = f"saved_v5_{label.replace(' ', '_')}"
     is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or is_pct
     
     if widget_key in st.query_params:
@@ -187,15 +197,15 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🎯 פרופורציות אסתטיות ומדויקות: [תגית ימין 5.2] [הזנה 2.2] [ערך 2.6]
-    col1, col2, col3 = st.columns([5.2, 2.2, 2.6])
+    # 🎯 חלוקת עמודות חדשה וצפופה המבטלת מרווחים מיותרים: [5.5, 2.0, 2.5]
+    col1, col2, col3 = st.columns([5.5, 2.0, 2.5])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
         res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
     with col3:
         formatted_display = _format_compact_value(res, "%" if is_pct else unit)
-        # הזרקת פקודת הצבע ישירות לספאן חוסמת כל סיכוי לדריסה של סטרימליט!
+        # 🟢 הזרקת פקודת הצבע ישירות לספאן חוסמת כל סיכוי לדריסה של סטרימליט!
         st.markdown(f"<div class='custom-sidebar-badge'><span style='color: {text_color} !important;'>{formatted_display}</span></div>", unsafe_allow_html=True)
     
     final_val = float(res) / 100.0 if is_pct else res
