@@ -1,7 +1,7 @@
 import streamlit as st
 
 # ==============================================================================
-# 🎯 מילון ערכי ברירת המחדל המעודכנים והמדויקים של המערכת
+# 🎯 מילון ערכי ברירת המחדל
 # ==============================================================================
 DEFAULTS = {
     "start_age": 65.5,
@@ -28,98 +28,61 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 פונקציית הזרקת העיצוב - עכשיו קיימת ומחזירה את הסרגל לחיים ללא שגיאות!
+# 🎨 מנוע העיצוב המדויק - צבעים, יישור וצמצום רווחים
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
     <style>
-        /* הגדרת השורה כולה כמכלול אופקי קשיח ללא יכולת קיפול או שבירה */
+        /* ביטול מרווחים בין עמודות בסרגל הצד */
         [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
-            align-items: center !important; /* מירכוז אנכי מושלם */
+            gap: 0px !important;
+            align-items: center !important; 
             direction: rtl !important; 
-            margin-bottom: 14px !important; 
-            padding: 0 !important;
-            width: 100% !important;
+            margin-bottom: 10px !important; 
         }
 
-        /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
-        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        /* עמודה 1: הכותרת הלבנה מימין */
-        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
-            flex: 1 1 auto !important;
-            min-width: 0 !important;
-            text-align: right !important;
-            margin-left: 10px !important;
-        }
-
-        /* עמודה 2: חלון ההזנה הלבן באמצע */
-        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
-            flex: 0 0 80px !important;
-            width: 80px !important;
-            min-width: 80px !important;
-        }
-
-        /* עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית */
-        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
-            flex: 0 0 auto !important;
-            min-width: max-content !important;
-            text-align: right !important;
-            margin-right: 8px !important;
-        }
-
-        /* ביטול מוחלט של שבירת פסקאות מרקדאון */
-        [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
-        .custom-sidebar-label p, 
-        .custom-sidebar-badge p {
-            display: inline !important;
-            white-space: nowrap !important;
-            word-break: keep-all !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
+        /* תווית לבנה מימין */
         .custom-sidebar-label {
             font-size: 14px !important;
             font-weight: 500 !important;
             color: #ffffff !important;
             white-space: nowrap !important;
+            text-align: right !important;
+            padding-left: 5px;
         }
 
+        /* ערך צבעוני משמאל - מוצמד לחלונית */
         .custom-sidebar-badge {
             font-size: 14px !important;
             font-weight: 700 !important;
-            white-space: nowrap !important;
             direction: rtl !important;
+            text-align: right !important; /* יישור לימין בתוך העמודה השמאלית להצמדה */
+            white-space: nowrap !important;
+            margin-right: 2px !important;
         }
 
-        .custom-sidebar-badge, .custom-sidebar-badge * {
+        /* כפיית צבע על הילדים של ה-badge */
+        .custom-sidebar-badge * {
             color: inherit !important;
         }
 
-        /* קיבוע חלון ההזנה הלבן/שחור */
+        /* עיצוב חלונית ההזנה */
         [data-testid="stSidebar"] .stNumberInput {
-            width: 80px !important;
-            margin: 0 !important;
+            width: 75px !important;
         }
         [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
-            height: 30px !important;
+            height: 28px !important;
             border-radius: 4px !important;
+            background-color: #ffffff !important;
         }
         [data-testid="stSidebar"] .stNumberInput input {
-            padding: 2px 4px !important;
-            font-size: 13.5px !important;
+            color: #000000 !important;
+            padding: 2px !important;
+            font-size: 13px !important;
             text-align: center !important;
         }
     </style>
     """, unsafe_allow_html=True)
-
 
 def format_shekel(amount):
     return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
@@ -136,108 +99,68 @@ def show_net_summary(title, amount):
 def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
+# ==============================================================================
+# 🚥 לוגיקת הצבעים שסיכמנו
+# ==============================================================================
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    if "חירום" in lbl: return "#fb923c" 
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" 
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
+    # כתום: קרן חירום
+    if "חירום" in lbl or "מזומן" in lbl: return "#fb923c" 
+    # אדום: הוצאות, אינפלציה, עזרה לילדים, דמי ניהול, מס
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "אינפלציה", "עזרה", "ניהול", "עלות", "מס"]): return "#f87171" 
+    # ירוק: הכנסות, קצבאות, חסכונות, תשואה, נטו ממכירה, שווי נדל"ן
+    if any(x in lbl for x in ["הכנסה", "קצבה", "חיסכון", "חסכונות", "תשואה", "מכירה", "נדלן", "נדל\"ן", "הון"]): return "#4ade80" 
+    # לבן: גילאים וזמנים
     return "#ffffff" 
 
 def _format_compact_value(val, unit):
     val = float(val)
     rtl_mark = "\u200f"
     if unit in ["₪", "שח", "ש\"ח"]:
-        if val >= 1_000_000 or val <= -1_000_000:
-            return f"{rtl_mark}{val / 1_000_000:.2f} מ׳ ₪"
-        if val >= 100_000 or val <= -100_000:
-            return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
+        if val >= 1_000_000 or val <= -1_000_000: return f"{rtl_mark}{val / 1_000_000:.2f} מ׳ ₪"
+        if val >= 100_000 or val <= -100_000: return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
         return f"{rtl_mark}{int(val):,} ₪" 
-    if unit == "שנים":
-        return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
-    if unit == "%":
-        return f"{rtl_mark}{val:.1f}%"
+    if unit == "שנים": return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
+    if unit == "%": return f"{rtl_mark}{val:.1f}%"
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מבוססי חלוניות בלבד (בלי סליידרים)
+# 🧱 רכיבי ההזנה - מבנה 3 עמודות צפוף ללא סליידר
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
-
+    is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float))
+    
     if widget_key in st.query_params:
         try:
             stored_val = st.query_params[widget_key]
             value = float(stored_val) if is_float else int(float(stored_val))
         except: pass
 
-    if is_float:
-        val_to_use = float(value) if value is not None else 0.0
-        min_to_use = float(min_value) if min_value is not None else 0.0
-        max_to_use = float(max_value) if max_value is not None else None
-        step_to_use = float(step) if step is not None else 1.0
-    else:
-        val_to_use = int(value) if value is not None else 0
-        min_to_use = int(min_value) if min_value is not None else 0
-        max_to_use = int(max_value) if max_value is not None else None
-        step_to_use = int(step) if step is not None else 1
+    val_to_use = float(value) if is_float else int(value)
+    min_to_use = float(min_value) if min_value is not None else (0.0 if is_float else 0)
+    step_to_use = float(step) if is_float else int(step)
 
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
-    with col1:
+    # יחס עמודות חדש וצפוף: [ערך צבעוני] [חלונית] [תגית]
+    col1, col2, col3 = st.columns([5.5, 1.8, 2.7])
+    with col3:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
         res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
-    with col3:
+    with col1:
         formatted_display = _format_compact_value(res, unit)
         st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
+    
     st.query_params[widget_key] = str(res)
     return res
 
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
-    widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
+    # הסבה של פונקציית ה"סליידר" להזנה בלבד כדי לשמור על אחידות המערכת
+    is_pct = format is not None and "%" in format
+    display_unit = "%" if is_pct else (unit if unit else "")
     
-    if widget_key in st.query_params:
-        try:
-            stored_val = float(st.query_params[widget_key])
-            value = stored_val
-        except: pass
-
-    if is_percentage_fraction:
-        val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
-        min_to_use = float(min_value) * 100.0
-        max_to_use = float(max_value) * 100.0
-        step_to_use = float(step) * 100.0 if step is not None else 1.0
-        display_unit = "%"
-    else:
-        display_unit = unit if unit else ""
-        is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
-        if is_float:
-            val_to_use = float(value)
-            min_to_use = float(min_value) if min_value is not None else 0.0
-            max_to_use = float(max_value) if max_value is not None else None
-            step_to_use = float(step) if step is not None else 1.0
-        else:
-            val_to_use = int(value)
-            min_to_use = int(min_value) if min_value is not None else 0
-            max_to_use = int(max_value) if max_value is not None else None
-            step_to_use = int(step) if step is not None else 1
-
-    temp_key = widget_key + "_v7_holder"
-    text_color = _get_dynamic_color_by_label(label)
-    
-    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
-    with col1:
-        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
-    with col2:
-        res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
-    with col3:
-        formatted_display = _format_compact_value(res, display_unit)
-        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
-        
-    final_res = float(res) / 100.0 if is_percentage_fraction else res
-    st.query_params[widget_key] = str(final_res)
-    return final_res
+    # שימוש ב-compact_number_input לביצוע ההזנה בפועל
+    return compact_number_input(label, value, min_value, max_value, step, unit=display_unit)
