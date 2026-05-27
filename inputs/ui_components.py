@@ -32,7 +32,7 @@ def format_shekel(amount):
 def show_net_summary(title, amount):
     """מציג תיבת סיכום מעוצבת להון נטו"""
     st.markdown(
-        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8aEdge;'>"
+        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8a;'>"
         f"<span style='font-weight:600; color:#1e3a8a;'>{title}:</span> "
         f"<span style='font-weight:700; color:#0f172a;'>{format_shekel(amount)}</span>"
         f"</div>", 
@@ -79,14 +79,16 @@ def get_boolean_style(val_str):
     return "color: #16a34a; font-weight: bold;" if "✅" in val_str else "color: #dc2626; font-weight: bold;"
 
 # ==============================================================================
-# 🧱 רכיבי הזנת נתונים - מונעי שגיאות טיפוסים (Mixed Types Fix)
+# 🧱 רכיבי הזנת נתונים - תיקון יישור ויזואלי בשורה אחת חלק ללא קפיצות
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
+    """
+    מציג שורת קלט מעוצבת קומפקטית: טקסט מימין, ותיבת קלט עם יחידת מידה משמאל (באותו קו).
+    """
     col1, col2 = st.columns([3, 2])
     with col1:
-        st.markdown(f"<div style='line-height: 2.5; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
     with col2:
-        # 🟢 יישור טיפוסים מוחלט: אם ה-step או הערך הם עשרוניים, נהפוך את כל הרכיב לעשרוני
         if isinstance(step, float) or isinstance(value, float):
             val_to_use = float(value)
             min_to_use = float(min_value) if min_value is not None else None
@@ -97,23 +99,30 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             min_to_use = int(min_value) if min_value is not None else None
             max_to_use = int(max_value) if max_value is not None else None
             step_to_use = int(step)
-        
-        res = st.number_input(
-            label,
-            min_value=min_to_use, 
-            max_value=max_to_use, 
-            value=val_to_use, 
-            step=step_to_use,
-            label_visibility="collapsed"
-        )
-        if unit:
-            st.caption(f"יחידות: {unit}")
+
+        # שימוש במבנה עמודות פנימי דק למניעת ירידת שורה של יחידת המידה
+        sub_col1, sub_col2 = st.columns([4, 1])
+        with sub_col1:
+            res = st.number_input(
+                label,
+                min_value=min_to_use, 
+                max_value=max_to_use, 
+                value=val_to_use, 
+                step=step_to_use,
+                label_visibility="collapsed"
+            )
+        with sub_col2:
+            if unit:
+                st.markdown(f"<div style='line-height: 2.6; font-weight: 600; color: #4b5563; white-space: nowrap;'>{unit}</div>", unsafe_allow_html=True)
     return res
 
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
+    """
+    מציג רכיב מספרים חכם שהומר מסליידר ושומר על מבנה נקי בקו אחד עם היחידה המתאימה (%, שנים).
+    """
     col1, col2 = st.columns([3, 2])
     with col1:
-        st.markdown(f"<div style='line-height: 2.5; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
     with col2:
         is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
         
@@ -122,6 +131,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             min_to_use = float(min_value) * 100.0
             max_to_use = float(max_value) * 100.0
             step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
+            display_unit = "%"
         else:
             if isinstance(step, float) or '.' in str(value) or isinstance(value, float):
                 val_to_use = float(value)
@@ -133,8 +143,9 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
                 min_to_use = int(min_value)
                 max_to_use = int(max_value)
                 step_to_use = int(step)
+            display_unit = unit if unit else ""
 
-        sub_col1, sub_col2 = st.columns([3, 1])
+        sub_col1, sub_col2 = st.columns([4, 1])
         with sub_col1:
             raw_input = st.number_input(
                 label,
@@ -145,8 +156,8 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
                 label_visibility="collapsed"
             )
         with sub_col2:
-            display_unit = "%" if (format and "%" in format) or unit == "%" else (unit if unit else "")
-            st.markdown(f"<div style='line-height: 2.5; font-weight: 600; color: #4b5563;'>{display_unit}</div>", unsafe_allow_html=True)
+            if display_unit:
+                st.markdown(f"<div style='line-height: 2.6; font-weight: 600; color: #4b5563; white-space: nowrap;'>{display_unit}</div>", unsafe_allow_html=True)
             
         res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
         
