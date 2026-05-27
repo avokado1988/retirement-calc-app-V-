@@ -1,25 +1,22 @@
 import streamlit as st
-from inputs.ui_components import DEFAULTS
+from inputs.ui_components import compact_number_input, DEFAULTS
 
 def render_timeline_inputs():
     st.subheader("⏳ נתוני זמנים וגילאים")
     
-    start_age = st.number_input(
+    start_age = compact_number_input(
         "גיל התחלת השקעה (תחילת סימולציה)", 
-        min_value=50.0, max_value=100.0, 
-        value=float(DEFAULTS["start_age"]), step=0.5, format="%.1f"
+        value=DEFAULTS["start_age"], min_value=50.0, step=0.5, unit="שנים"
     )
     
-    retirement_age = st.number_input(
+    retirement_age = compact_number_input(
         "גיל פרישה (הפסקת עבודה)", 
-        min_value=50.0, max_value=100.0, 
-        value=float(DEFAULTS["retirement_age"]), step=0.5, format="%.1f"
+        value=DEFAULTS["retirement_age"], min_value=50.0, step=0.5, unit="שנים"
     )
     
-    check_age = st.number_input(
+    check_age = compact_number_input(
         "גיל יעד לבדיקת סימולציה", 
-        min_value=70.0, max_value=120.0, 
-        value=float(DEFAULTS["check_age"]), step=1.0, format="%.1f"
+        value=DEFAULTS["check_age"], min_value=70.0, step=1.0, unit="שנים"
     )
     
     retirement_years = check_age - retirement_age
