@@ -26,47 +26,72 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🪄 מנוע עיצוב מתקדמת - הפיכת עמודות סטרימליט לשורת טקסט הדוקה וזורמת
+# 🎨 מנוע עיצוב מתקדם - הצמדה מוחלטת, מירכוז אנכית ומרווחי שורות יוקרתיים
 # ==============================================================================
 st.markdown("""
 <style>
-    /* הפיכת שורת הרכיבים בתפריט הצד למבנה רציף וצפוף */
+    /* 1. מרווח נקי ואסתטי בין שורה לשורה בתפריט הצד */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
-        gap: 10px !important; /* מרחק קבוע וקטן בין המילים, התיבה והערך */
-        align-items: center !important;
+        flex-direction: row !important;
+        align-items: center !important; /* מירכוז אנכית מושלם של כל השורה */
+        gap: 0px !important;
+        margin-bottom: 18px !important; /* המרווח האופטימלי בין השורות */
+        padding: 2px 0 !important;
     }
-    
-    /* עמודה 1: הכותרת מימין - גמישה, ללא חיתוך טקסט */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(1) {
+
+    /* 2. עמודה ימנית (כותרת): מקבלת מרחב גמיש וממורכזת */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
         flex: 1 1 auto !important;
         width: auto !important;
         min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important; /* מירכוז הכותרת מול האמצע של התיבה */
+        justify-content: flex-start !important;
     }
-    
-    /* עמודה 2: תיבת ההקלדה באמצע - נעולה על גודל קומפקטי ואחיד */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(2) {
-        flex: 0 0 auto !important;
-        width: 90px !important;
-    }
-    
-    /* עמודה 3: הערך הצבעוני משמאל - נצמד ישירות לתיבה לפי אורך המילה */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(3) {
+
+    /* 3. עמודה שמאלית (תיבה + ערך צבעוני): נעולים יחד בהצמדה מלאה */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
         flex: 0 0 auto !important;
         width: auto !important;
-        min-width: max-content !important;
+        display: flex !important;
+        flex-direction: row !important; /* זרימה אופקית רציפה משמין לשמאל */
+        align-items: center !important;
+        gap: 8px !important; /* 🟢 המרחק המדויק והצמוד בין חלון ההזנה למספר הצבעוני! */
+        justify-content: flex-start !important;
     }
-    
-    /* כיוונון תיבת ה-number_input עצמה שתתאים בדיוק לרווח הצר */
+
+    /* 4. עיצוב טקסט הכותרת הלבנה */
+    .custom-sidebar-label {
+        font-size: 14.5px !important;
+        font-weight: 500 !important;
+        color: #ffffff !important;
+        line-height: 1.3 !important;
+        text-align: right !important;
+    }
+
+    /* 5. קיבוע ואיזון גודל תיבת חלון ההזנה הלבנה/שחורה */
     [data-testid="stSidebar"] .stNumberInput {
-        width: 90px !important;
+        width: 85px !important; /* רוחב מהודק וקומפקטי */
+        margin: 0 !important;
     }
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
-        height: 32px !important;
+        height: 30px !important;
+        border-radius: 4px !important;
     }
     [data-testid="stSidebar"] .stNumberInput input {
-        padding: 4px 6px !important;
+        padding: 2px 4px !important;
+        font-size: 13.5px !important;
+        text-align: center !important;
+    }
+
+    /* 6. עיצוב הערכים הצבעוניים המקוצרים */
+    .custom-sidebar-badge {
         font-size: 14px !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        direction: rtl !important;
+        text-align: right !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -87,7 +112,7 @@ def show_net_summary(title, amount):
 def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
-# פונקציות הסטייל האקטואריות לטבלאות
+# פונקציות הסטייל האקטואריות לטבלאות המרכזיות
 def get_withdrawal_style(pct):
     val = float(pct)
     if val <= 3.5: return "color: #16a34a; font-weight: bold;"
@@ -118,10 +143,10 @@ def get_boolean_style(val_str):
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    if "חירום" in lbl: return "#fb923c" # כתום
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" # אדום
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" # ירוק
-    return "#38bdf8" # תכלת
+    if "חירום" in lbl: return "#fb923c" # כתום קרן חירום
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" # אדום שחיקה
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" # ירוק צמיחה
+    return "#38bdf8" # תכלת זמנים וגילאים
 
 def _format_compact_value(val, unit):
     val = float(val)
@@ -145,7 +170,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה אולטרה-פרובוקטיביים - סגירת כל המרווחים באופן אחיד
+# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 2 עמודות צמודות וממורכזות
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -167,22 +192,22 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
         max_to_use = int(max_value) if max_value is not None else None
         step_to_use = int(step)
 
-    temp_key = widget_key + "_v5_holder"
+    temp_key = widget_key + "_v6_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # יצירת 3 עמודות גנריות - ה-CSS למעלה משתלט עליהן ומכווץ אותן הרמטית
-    col1, col2, col3 = st.columns(3)
+    # 🟢 שינוי דרמטי: חלוקה ל-2 עמודות בלבד
+    col1, col2 = st.columns([5.5, 4.5])
     with col1:
-        st.markdown(f"<div style='font-weight: 500; color: #ffffff; text-align: right;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
         
     with col2:
+        # חלון ההזנה והערך רצים ביחד באותה עמודה משמאל לימין (צמודים לחלוטין!)
         res = st.number_input(
             label, min_value=min_to_use, max_value=max_to_use, 
             value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
         )
-    with col3:
         formatted_display = _format_compact_value(res, unit)
-        st.markdown(f"<div style='font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl;'>{formatted_display}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
     
     st.query_params[widget_key] = str(res)
     return res
@@ -216,21 +241,21 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             step_to_use = int(step)
         display_unit = unit if unit else ""
 
-    temp_key = widget_key + "_v5_holder"
+    temp_key = widget_key + "_v6_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    col1, col2, col3 = st.columns(3)
+    # 🟢 חלוקה ל-2 עמודות בלבד
+    col1, col2 = st.columns([5.5, 4.5])
     with col1:
-        st.markdown(f"<div style='font-weight: 500; color: #ffffff; text-align: right;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
 
     with col2:
         raw_input = st.number_input(
             label, min_value=min_to_use, max_value=max_to_use, 
             value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
         )
-    with col3:
         formatted_display = _format_compact_value(raw_input, display_unit)
-        st.markdown(f"<div style='font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl;'>{formatted_display}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
         
     res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
     st.query_params[widget_key] = str(res)
