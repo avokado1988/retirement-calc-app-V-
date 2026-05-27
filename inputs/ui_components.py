@@ -104,13 +104,9 @@ def wrap_html_style(text, style_str):
 # ==============================================================================
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    # כתום: קרן חירום
     if "חירום" in lbl or "מזומן" in lbl: return "#fb923c" 
-    # אדום: הוצאות, אינפלציה, עזרה לילדים, דמי ניהול, מס
     if any(x in lbl for x in ["הוצאה", "הוצאות", "אינפלציה", "עזרה", "ניהול", "עלות", "מס"]): return "#f87171" 
-    # ירוק: הכנסות, קצבאות, חסכונות, תשואה, נטו ממכירה, שווי נדל"ן
     if any(x in lbl for x in ["הכנסה", "קצבה", "חיסכון", "חסכונות", "תשואה", "מכירה", "נדלן", "נדל\"ן", "הון"]): return "#4ade80" 
-    # לבן: גילאים וזמנים
     return "#ffffff" 
 
 def _format_compact_value(val, unit):
@@ -125,11 +121,11 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי ההזנה - מבנה 3 עמודות צפוף ללא סליידר
+# 🧱 רכיבי ההזנה - מבנה 3 עמודות צפוף ללא סליידרים (באג ה-NameError תוקן)
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float))
+    is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
     
     if widget_key in st.query_params:
         try:
@@ -137,30 +133,80 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             value = float(stored_val) if is_float else int(float(stored_val))
         except: pass
 
-    val_to_use = float(value) if is_float else int(value)
-    min_to_use = float(min_value) if min_value is not None else (0.0 if is_float else 0)
-    step_to_use = float(step) if is_float else int(step)
+    # 🟢 הגדרה הרמטית של כל המשתנים כולל max_to_use כדי למנוע קריסות!
+    if is_float:
+        val_to_use = float(value) if value is not None else 0.0
+        min_to_use = float(min_value) if min_value is not None else 0.0
+        max_to_use = float(max_value) if max_value is not None else None
+        step_to_use = float(step) if step is not None else 1.0
+    else:
+        val_to_use = int(value) if value is not None else 0
+        min_to_use = int(min_value) if min_value is not None else 0
+        max_to_use = int(max_value) if max_value is not None else None
+        step_to_use = int(step) if step is not None else 1
 
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # יחס עמודות חדש וצפוף: [ערך צבעוני] [חלונית] [תגית]
-    col1, col2, col3 = st.columns([5.5, 1.8, 2.7])
-    with col3:
+    # 🟢 מבנה העמודות המדויק שסיכמנו: [תגית לבנה] [חלון הזנה] [ערך צבעוני]
+    col1, col2, col3 = st.columns([5.5, 2.0, 2.5])
+    with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
         res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
-    with col1:
+    with col3:
         formatted_display = _format_compact_value(res, unit)
         st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
     
     st.query_params[widget_key] = str(res)
     return res
 
+
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
-    # הסבה של פונקציית ה"סליידר" להזנה בלבד כדי לשמור על אחידות המערכת
-    is_pct = format is not None and "%" in format
-    display_unit = "%" if is_pct else (unit if unit else "")
+    widget_key = f"saved_v3_{label.replace(' ', '_')}"
+    is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
     
-    # שימוש ב-compact_number_input לביצוע ההזנה בפועל
-    return compact_number_input(label, value, min_value, max_value, step, unit=display_unit)
+    if widget_key in st.query_params:
+        try:
+            stored_val = float(st.query_params[widget_key])
+            value = stored_val
+        except: pass
+
+    if is_percentage_fraction:
+        val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
+        min_to_use = float(min_value) * 100.0
+        max_to_use = float(max_value) * 100.0 if max_value is not None else None
+        step_to_use = float(step) * 100.0 if step is not None else 1.0
+        display_unit = "%"
+    else:
+        display_unit = unit if unit else ""
+        is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
+        
+        # 🟢 הגדרה הרמטית של כל המשתנים כולל max_to_use!
+        if is_float:
+            val_to_use = float(value) if value is not None else 0.0
+            min_to_use = float(min_value) if min_value is not None else 0.0
+            max_to_use = float(max_value) if max_value is not None else None
+            step_to_use = float(step) if step is not None else 1.0
+        else:
+            val_to_use = int(value) if value is not None else 0
+            min_to_use = int(min_value) if min_value is not None else 0
+            max_to_use = int(max_value) if max_value is not None else None
+            step_to_use = int(step) if step is not None else 1
+
+    temp_key = widget_key + "_v7_holder"
+    text_color = _get_dynamic_color_by_label(label)
+    
+    # 🟢 מבנה העמודות המדויק שסיכמנו: [תגית לבנה] [חלון הזנה מומר] [ערך צבעוני]
+    col1, col2, col3 = st.columns([5.5, 2.0, 2.5])
+    with col1:
+        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
+    with col2:
+        res = st.number_input(label, min_value=min_to_use, max_value=max_to_use, value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key)
+    with col3:
+        formatted_display = _format_compact_value(res, display_unit)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
+        
+    final_res = float(res) / 100.0 if is_percentage_fraction else res
+    st.query_params[widget_key] = str(final_res)
+    return final_res
