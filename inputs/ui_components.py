@@ -28,134 +28,134 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב ברזל - מרווחים מדוייקים, מניעת שבירות וכפיית יישור לימין
+# 🎨 פונקציית הזרקת העיצוב הגלובלית - תופסת גם את הסרגל הצידי וגם את המסך הראשי
 # ==============================================================================
-st.markdown("""
-<style>
-    /* 1. הגדרת השורה כולה כמכלול אופקי קשיח ללא יכולת קיפול או שבירה */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
-        align-items: center !important; /* מירכוז אנכי מושלם */
-        direction: rtl !important; 
-        margin-bottom: 14px !important; 
-        padding: 0 !important;
-        width: 100% !important;
-    }
+def inject_design_system():
+    st.markdown("""
+    <style>
+        /* ------------------- עיצוב תפריט הצד (Sidebar) ------------------- */
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
+            align-items: center !important; /* מירכוז אנכי מושלם */
+            direction: rtl !important; 
+            margin-bottom: 14px !important; 
+            padding: 0 !important;
+            width: 100% !important;
+        }
 
-    /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
 
-    /* עמודה 1: הכותרת הלבנה מימין */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
-        flex: 1 1 auto !important;
-        min-width: 0 !important;
-        text-align: right !important;
-        margin-left: 10px !important;
-    }
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            text-align: right !important;
+            margin-left: 10px !important;
+        }
 
-    /* עמודה 2: חלון ההזנה הלבן באמצע */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
-        flex: 0 0 80px !important;
-        width: 80px !important;
-        min-width: 80px !important;
-    }
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
+            flex: 0 0 80px !important;
+            width: 80px !important;
+            min-width: 80px !important;
+        }
 
-    /* עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
-        flex: 0 0 auto !important;
-        min-width: max-content !important;
-        text-align: right !important;
-        margin-right: 8px !important;
-    }
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
+            flex: 0 0 auto !important;
+            min-width: max-content !important;
+            text-align: right !important;
+            margin-right: 8px !important;
+        }
 
-    /* ביטול מוחלט של שבירת פסקאות מרקדאון */
-    [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
-    .custom-sidebar-label p, 
-    .custom-sidebar-badge p {
-        display: inline !important;
-        white-space: nowrap !important;
-        word-break: keep-all !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
+        [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
+        .custom-sidebar-label p, 
+        .custom-sidebar-badge p {
+            display: inline !important;
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
 
-    .custom-sidebar-label {
-        font-size: 14px !important;
-        font-weight: 500 !important;
-        color: #ffffff !important;
-        white-space: nowrap !important;
-    }
+        .custom-sidebar-label {
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            color: #ffffff !important;
+            white-space: nowrap !important;
+        }
 
-    .custom-sidebar-badge {
-        font-size: 14px !important;
-        font-weight: 700 !important;
-        white-space: nowrap !important;
-        direction: rtl !important;
-    }
+        .custom-sidebar-badge {
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+            direction: rtl !important;
+        }
 
-    .custom-sidebar-badge, .custom-sidebar-badge * {
-        color: inherit !important;
-    }
+        .custom-sidebar-badge, .custom-sidebar-badge * {
+            color: inherit !important;
+        }
 
-    /* קיבוע חלון ההזנה הלבן/שחור */
-    [data-testid="stSidebar"] .stNumberInput {
-        width: 80px !important;
-        margin: 0 !important;
-    }
-    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
-        height: 30px !important;
-        border-radius: 4px !important;
-    }
-    [data-testid="stSidebar"] .stNumberInput input {
-        padding: 2px 4px !important;
-        font-size: 13.5px !important;
-        text-align: center !important;
-    }
+        [data-testid="stSidebar"] .stNumberInput {
+            width: 80px !important;
+            margin: 0 !important;
+        }
+        [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
+            height: 30px !important;
+            border-radius: 4px !important;
+        }
+        [data-testid="stSidebar"] .stNumberInput input {
+            padding: 2px 4px !important;
+            font-size: 13.5px !important;
+            text-align: center !important;
+        }
 
-    /* ------------------- 🎯 עיצוב טבלאות דוחות מרכזיות (.styled-table) - יישור קשיח לימין ------------------- */
-    .styled-table { 
-        width: 100% !important; 
-        border-collapse: collapse !important; 
-        margin: 25px 0 !important; 
-        font-family: sans-serif; 
-        background-color: #1e293b !important; 
-        border: 1px solid #334155 !important;
-        border-radius: 8px !important;
-        overflow: hidden !important;
-    }
-    
-    /* 🟢 נעילה הרמטית: כפיית כיווניות מימין לשמאל ויישור לימין על כל רכיב פנימי בטבלה כדי לבטל את החטיפה של פנדס */
-    .styled-table, 
-    .styled-table th, 
-    .styled-table td, 
-    .styled-table tr,
-    .styled-table tbody,
-    .styled-table thead {
-        text-align: right !important;
-        direction: rtl !important;
-    }
-    
-    .styled-table th { 
-        background-color: #334155 !important; 
-        color: #ffffff !important; 
-        padding: 14px 16px !important; 
-        font-weight: bold !important; 
-        border-bottom: 3px solid #475569 !important; 
-        font-size: 14.5px !important;
-    }
-    .styled-table td { 
-        padding: 12px 16px !important; 
-        border-bottom: 1px solid #334155 !important; 
-        color: #ffffff; 
-        font-size: 14px !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+        /* ------------------- עיצוב טבלאות דוחות מרכזיות (.styled-table) ------------------- */
+        .styled-table { 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            margin: 25px 0 !important; 
+            font-family: sans-serif; 
+            background-color: #1e293b !important; /* רקע כהה פרימיום */
+            border: 1px solid #334155 !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+        }
+        
+        /* כפיית כיווניות מימין לשמאל ויישור לימין על כל רכיבי הטבלה במסך המרכזי */
+        .styled-table, 
+        .styled-table th, 
+        .styled-table td, 
+        .styled-table tr,
+        .styled-table tbody,
+        .styled-table thead {
+            text-align: right !important;
+            direction: rtl !important;
+        }
+        
+        .styled-table th { 
+            background-color: #334155 !important; 
+            color: #ffffff !important; 
+            padding: 14px 16px !important; 
+            font-weight: bold !important; 
+            border-bottom: 3px solid #475569 !important; 
+            font-size: 14.5px !important;
+        }
+        .styled-table td { 
+            padding: 12px 16px !important; 
+            border-bottom: 1px solid #334155 !important; 
+            color: #ffffff !important; 
+            font-size: 14px !important;
+        }
+        
+        /* וידוא שצבעי הרמזור הפנימיים לא יימחקו ללבן */
+        .styled-table td span {
+            color: inherit !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 
 def format_shekel(amount):
@@ -173,9 +173,7 @@ def show_net_summary(title, amount):
 def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
-# ==============================================================================
-# 🚥 פונקציות הרמזור האקטואריות
-# ==============================================================================
+# פונקציות הרמזור
 def get_withdrawal_style(pct):
     val = float(pct)
     if val <= 3.5: return "color: #4ade80; font-weight: bold;"
@@ -232,93 +230,35 @@ def _format_compact_value(val, unit):
         
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
-# ==============================================================================
-# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 3 עמודות מאוזנות
-# ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    
     if widget_key in st.query_params:
-        try:
-            stored_val = st.query_params[widget_key]
-            value = float(stored_val) if isinstance(step, float) or isinstance(value, float) else int(stored_val)
+        try: value = int(st.query_params[widget_key])
         except: pass
-
-    if isinstance(step, float) or isinstance(value, float):
-        val_to_use = float(value)
-        min_to_use = float(min_value) if min_value is not None else None
-        max_to_use = float(max_value) if max_value is not None else None
-        step_to_use = float(step)
-    else:
-        val_to_use = int(value)
-        min_to_use = int(min_value) if min_value is not None else None
-        max_to_use = int(max_value) if max_value is not None else None
-        step_to_use = int(step)
-
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
     col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
-    with col1:
-        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
-        
-    with col2:
-        res = st.number_input(
-            label, min_value=min_to_use, max_value=max_to_use, 
-            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
-        )
-    with col3:
-        formatted_display = _format_compact_value(res, unit)
-        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
-    
+    with col1: st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
+    with col2: res = st.number_input(label, min_value=min_value, max_value=max_value, value=int(value), step=int(step), label_visibility="collapsed", key=temp_key)
+    with col3: st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{_format_compact_value(res, unit)}</div>", unsafe_allow_html=True)
     st.query_params[widget_key] = str(res)
     return res
 
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
-    
+    is_pct = format is not None and "%" in format and float(value) <= 1.0
     if widget_key in st.query_params:
-        try:
-            stored_val = float(st.query_params[widget_key])
-            value = stored_val if is_percentage_fraction else (float(stored_val) if isinstance(step, float) else int(stored_val))
+        try: value = float(st.query_params[widget_key])
         except: pass
-
-    if is_percentage_fraction:
-        val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
-        min_to_use = float(min_value) * 100.0
-        max_to_use = float(max_value) * 100.0
-        step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
-        display_unit = "%"
-    else:
-        if isinstance(step, float) or '.' in str(value) or isinstance(value, float):
-            val_to_use = float(value)
-            min_to_use = float(min_value)
-            max_to_use = float(max_value)
-            step_to_use = float(step)
-        else:
-            val_to_use = int(value)
-            min_to_use = int(min_value)
-            max_to_use = int(max_value)
-            step_to_use = int(step)
-        display_unit = unit if unit else ""
-
+    val_to_use = float(value) * 100.0 if is_pct else float(value)
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
-    
-    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
-    with col1:
-        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
 
-    with col2:
-        raw_input = st.number_input(
-            label, min_value=min_to_use, max_value=max_to_use, 
-            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
-        )
-    with col3:
-        formatted_display = _format_compact_value(raw_input, display_unit)
-        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
-        
-    res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
+    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
+    with col1: st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
+    with col2: raw_input = st.number_input(label, min_value=float(min_value)*100 if is_pct else float(min_value), max_value=float(max_value)*100 if is_pct else float(max_value), value=val_to_use, step=float(step)*100 if is_pct else float(step), label_visibility="collapsed", key=temp_key)
+    res = float(raw_input) / 100.0 if is_pct else raw_input
+    with col3: st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{_format_compact_value(raw_input, '%' if is_pct else unit)}</div>", unsafe_allow_html=True)
     st.query_params[widget_key] = str(res)
     return res
