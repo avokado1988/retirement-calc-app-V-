@@ -1,252 +1,306 @@
 import streamlit as st
-import pandas as pd
-from inputs.ui_components import (
-    format_shekel, wrap_html_style, get_withdrawal_style, get_400_rule_style,
-    get_emergency_style, get_larger_portfolio_style, get_resiliency_style,
-    get_preservation_pct_style, get_boolean_style
-)
 
-def render_qa_section(results, user_inputs):
-    # 🎯 עיצוב גריד טבלה מתקדמת - תואם Dark Mode וחסין דריסות
-    st.markdown("""
-        <style>
-        .styled-table { 
-            width: 100% !important; 
-            direction: rtl !important; 
-            text-align: right !important; 
-            border-collapse: collapse !important; 
-            margin: 25px 0 !important; 
-            font-family: sans-serif; 
-            background-color: #1e293b !important; /* רקע כהה יוקרתי */
-            border: 1px solid #334155 !important;
-            border-radius: 8px !important;
-            overflow: hidden !important;
-        }
-        .styled-table th { 
-            background-color: #334155 !important; 
-            color: #ffffff !important; 
-            text-align: right !important; 
-            padding: 14px 16px !important; 
-            font-weight: bold !important; 
-            border-bottom: 3px solid #475569 !important; 
-            font-size: 14.5px !important;
-        }
-        .styled-table td { 
-            padding: 12px 16px !important; 
-            text-align: right !important; 
-            border-bottom: 1px solid #334155 !important; 
-            color: #ffffff !important; /* כפיית צבע לבן בוהק למספרים הרגילים */
-            font-size: 14px !important;
-        }
-        /* מניעת דריסה של חוקי הרמזור הפנימיים */
-        .styled-table td span {
-            font-size: 14px !important;
-            display: inline-block !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+# מילון ערכי ברירת המחדל המדויקים של האפליקציה
+DEFAULTS = {
+    "start_age": 65.5,
+    "retirement_age": 67.0,
+    "check_age": 87.0,
+    "desired_pension": 5000,
+    "current_expenses": 11000,
+    "expected_inflation": 0.023,
+    "age_75_85_increase": 0.005,
+    "age_85_plus_increase": 0.015,
+    "one_time_expense": 80000,
+    "one_time_frequency": 8,
+    "caregiver_cost": 0,
+    "national_insurance": 2500,
+    "work_income": 0,
+    "net_sale": 0,
+    "existing_savings": 0,
+    "new_apartment_cost": 5800000,
+    "property_appreciation": 0.023,
+    "kids_help": 0,
+    "emergency_fund": 0,
+    "annual_return": 0.05,
+    "management_fee": 0.006
+}
 
-    df_history = results["df"]
-    df_full = results["df_full"]
-    
-    timeline = user_inputs.get("timeline", {})
-    wealth = user_inputs.get("wealth", {})
-    real_tax_25 = user_inputs.get("real_tax_25", {})
-    
-    start_age = float(timeline.get("start_age", 65.5))
-    check_age = float(timeline.get("check_age", 87.0))
-    retire_age = float(timeline.get("retirement_age", start_age))
-    
-    baseline_capital = float(real_tax_25.get("net_for_real_pathway") or 3340000)
-    emergency_fund = float(wealth.get("emergency_fund", 0))
-    property_value_start = float(wealth.get("new_apartment_cost", 0))
-    appreciation_rate = float(wealth.get("property_appreciation", 0))
+# ==============================================================================
+# 🎨 ריכוז חוקי העיצוב הגלובליים (תפריט צד + טבלאות מרכזיות)
+# ==============================================================================
+st.markdown("""
+<style>
+    /* ------------------- עיצוב תפריט הצד (Sidebar) ------------------- */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important; /* מונע נפילת שורות */
+        align-items: center !important; 
+        direction: rtl !important; 
+        margin-bottom: 14px !important; 
+        padding: 0 !important;
+        width: 100% !important;
+    }
 
-    # --- 1. ביום הפרישה ---
-    row_retire = df_full[df_full["גיל"] >= retire_age].iloc[0] if not df_full[df_full["גיל"] >= retire_age].empty else df_history.iloc[-1]
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        text-align: right !important;
+        margin-left: 10px !important;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
+        flex: 0 0 80px !important;
+        width: 80px !important;
+        min-width: 80px !important;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
+        flex: 0 0 auto !important;
+        min-width: max-content !important;
+        text-align: right !important;
+        margin-right: 8px !important;
+    }
+
+    [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
+    .custom-sidebar-label p, 
+    .custom-sidebar-badge p {
+        display: inline !important;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .custom-sidebar-label {
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #ffffff !important;
+    }
+
+    .custom-sidebar-badge {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        direction: rtl !important;
+    }
+
+    .custom-sidebar-badge, .custom-sidebar-badge * {
+        color: inherit !important;
+    }
+
+    [data-testid="stSidebar"] .stNumberInput {
+        width: 80px !important;
+        margin: 0 !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
+        height: 30px !important;
+        border-radius: 4px !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput input {
+        padding: 2px 4px !important;
+        font-size: 13.5px !important;
+        text-align: center !important;
+    }
+
+    /* ------------------- עיצוב טבלאות דוחות מרכזיות (.styled-table) ------------------- */
+    .styled-table { 
+        width: 100% !important; 
+        direction: rtl !important; 
+        text-align: right !important; 
+        border-collapse: collapse !important; 
+        margin: 25px 0 !important; 
+        font-family: sans-serif; 
+        background-color: #1e293b !important; /* רקע כהה פרימיום */
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+    }
+    .styled-table th { 
+        background-color: #334155 !important; 
+        color: #ffffff !important; 
+        text-align: right !important; 
+        padding: 14px 16px !important; 
+        font-weight: bold !important; 
+        border-bottom: 3px solid #475569 !important; 
+        font-size: 14.5px !important;
+    }
+    .styled-table td { 
+        padding: 12px 16px !important; 
+        text-align: right !important; 
+        border-bottom: 1px solid #334155 !important; 
+        color: #ffffff; /* לבן כברירת מחדל כדי שלא יידרס לאפור, ללא !important כדי שהרמזור יעבוד */
+        font-size: 14px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+def format_shekel(amount):
+    return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
+
+def show_net_summary(title, amount):
+    st.markdown(
+        f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; direction: rtl; text-align: right;'> "
+        f"<span style='font-weight:600; color:#ffffff; font-size:15px;'>{title}:</span> "
+        f"<span style='font-weight:700; color:#4ade80; font-size:16px; margin-right:6px;'>{format_shekel(amount)}</span>"
+        f"</div>", 
+        unsafe_allow_html=True
+    )
+
+def wrap_html_style(text, style_str):
+    return f"<span style='{style_str}'>{text}</span>"
+
+# ==============================================================================
+# 🚥 פונקציות הרמזור האקטואריות (ללא !important כדי למנוע התנגשויות)
+# ==============================================================================
+def get_withdrawal_style(pct):
+    val = float(pct)
+    if val <= 3.5: return "color: #4ade80; font-weight: bold;"
+    if val <= 5.0: return "color: #fb923c; font-weight: bold;"
+    return "color: #f87171; font-weight: bold;"
+
+def get_400_rule_style(val_str):
+    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
+    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
+    except: return ""
+
+def get_emergency_style(val_str):
+    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
+    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
+    except: return ""
+
+def get_larger_portfolio_style(is_larger):
+    if is_larger: return "color: #4ade80; font-weight: 700;"
+    return "color: #ffffff; font-weight: 500;"
+
+def get_resiliency_style(val_str):
+    return "color: #4ade80; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #f87171; font-weight: bold;"
+
+def get_preservation_pct_style(pct):
+    return "color: #4ade80; font-weight: bold;" if float(pct) >= 100.0 else "color: #f87171; font-weight: bold;"
+
+def get_boolean_style(val_str):
+    return "color: #4ade80; font-weight: bold;" if "✅" in val_str else "color: #f87171; font-weight: bold;"
+
+def _get_dynamic_color_by_label(label):
+    lbl = label.lower()
+    if "חירום" in lbl: return "#fb923c" 
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" 
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
+    return "#ffffff" 
+
+def _format_compact_value(val, unit):
+    val = float(val)
+    rtl_mark = "\u200f"
+    
+    if unit in ["₪", "שח", "ש\"ח"]:
+        if val >= 1_000_000 or val <= -1_000_000:
+            formatted = f"{val / 1_000_000:.2f}"
+            return f"{rtl_mark}{formatted} מ׳ ₪"
+        if val >= 100_000 or val <= -100_000:
+            return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
+        return f"{rtl_mark}{int(val):,} ₪" # תצוגה מלאה לסכומים קטנים כמו ביטוח לאומי
         
-    exp_retire = float(row_retire["הוצאה נומינלית"])
-    work_retire = float(row_retire["הכנסה מעבודה"])
-    ni_retire = float(row_retire["קצבת ביטוח לאומי"])
-    pension_190_retire = float(row_retire["קצבה מזערית 190"])
-    
-    balance_190_retire = float(row_retire["צבירה תיקון 190"])
-    balance_25_retire = float(row_retire["צבירה מסלול ריאלי"])
-    
-    years_to_retire = retire_age - start_age
-    property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
-
-    net_needed_190_retire = max(0.0, exp_retire - (work_retire + ni_retire + pension_190_retire))
-    net_needed_25_retire = max(0.0, exp_retire - (work_retire + ni_retire))
-    
-    pct_190_retire = (net_needed_190_retire * 12) / balance_190_retire * 100 if balance_190_retire > 0 else 0.0
-    pct_25_retire = (net_needed_25_retire * 12) / balance_25_retire * 100 if balance_25_retire > 0 else 0.0
+    if unit == "שנים":
+        return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
         
-    rule400_190_retire = f"{balance_190_retire / (net_needed_190_retire * 400):.2f}" if net_needed_190_retire > 0 else "∞"
-    emer_190_retire = f"{emergency_fund / (net_needed_190_retire * 12):.1f}" if net_needed_190_retire > 0 else "∞"
+    if unit == "%":
+        return f"{rtl_mark}{val:.1f}%"
         
-    rule400_25_retire = f"{balance_25_retire / (net_needed_25_retire * 400):.2f}" if net_needed_25_retire > 0 else "∞"
-    emer_25_retire = f"{emergency_fund / (net_needed_25_retire * 12):.1f}" if net_needed_25_retire > 0 else "∞"
+    return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
-    total_wealth_190_retire = balance_190_retire + property_value_retire + emergency_fund
-    total_wealth_25_retire = balance_25_retire + property_value_retire + emergency_fund
+# ==============================================================================
+# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 3 עמודות מאוזנות
+# ==============================================================================
+def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
+    widget_key = f"saved_v3_{label.replace(' ', '_')}"
+    
+    if widget_key in st.query_params:
+        try:
+            stored_val = st.query_params[widget_key]
+            value = float(stored_val) if isinstance(step, float) or isinstance(value, float) else int(stored_val)
+        except: pass
 
-    # --- 2. בגיל הנבדק ---
-    row_check = df_full[df_full["גיל"] >= check_age].iloc[0] if not df_full[df_full["גיל"] >= check_age].empty else df_history.iloc[-1]
+    if isinstance(step, float) or isinstance(value, float):
+        val_to_use = float(value)
+        min_to_use = float(min_value) if min_value is not None else None
+        max_to_use = float(max_value) if max_value is not None else None
+        step_to_use = float(step)
+    else:
+        val_to_use = int(value)
+        min_to_use = int(min_value) if min_value is not None else None
+        max_to_use = int(max_value) if max_value is not None else None
+        step_to_use = int(step)
+
+    temp_key = widget_key + "_v7_holder"
+    text_color = _get_dynamic_color_by_label(label)
+
+    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
+    with col1:
+        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
         
-    exp_check = float(row_check["הוצאה נומינלית"])
-    work_check = float(row_check["הכנסה מעבודה"])
-    ni_check = float(row_check["קצבת ביטוח לאומי"])
-    pension_190_check = float(row_check["קצבה מזערית 190"])
+    with col2:
+        res = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
+    with col3:
+        formatted_display = _format_compact_value(res, unit)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
     
-    balance_190_check = float(row_check["צבירה תיקון 190"])
-    balance_25_check = float(row_check["צבירה מסלול ריאלי"])
-    
-    years_passed_check = check_age - start_age
-    property_value_check = property_value_start * ((1 + appreciation_rate) ** years_passed_check)
+    st.query_params[widget_key] = str(res)
+    return res
 
-    net_needed_190_check = max(0.0, exp_check - (work_check + ni_check + pension_190_check))
-    net_needed_25_check = max(0.0, exp_check - (work_check + ni_check))
+def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
+    widget_key = f"saved_v3_{label.replace(' ', '_')}"
+    is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
     
-    pct_190_check = (net_needed_190_check * 12) / balance_190_check * 100 if balance_190_check > 0 else 0.0
-    pct_25_check = (net_needed_25_check * 12) / balance_25_check * 100 if balance_25_check > 0 else 0.0
+    if widget_key in st.query_params:
+        try:
+            stored_val = float(st.query_params[widget_key])
+            value = stored_val if is_percentage_fraction else (float(stored_val) if isinstance(step, float) else int(stored_val))
+        except: pass
+
+    if is_percentage_fraction:
+        val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
+        min_to_use = float(min_value) * 100.0
+        max_to_use = float(max_value) * 100.0
+        step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
+        display_unit = "%"
+    else:
+        if isinstance(step, float) or '.' in str(value) or isinstance(value, float):
+            val_to_use = float(value)
+            min_to_use = float(min_value)
+            max_to_use = float(max_value)
+            step_to_use = float(step)
+        else:
+            val_to_use = int(value)
+            min_to_use = int(min_value)
+            max_to_use = int(max_value)
+            step_to_use = int(step)
+        display_unit = unit if unit else ""
+
+    temp_key = widget_key + "_v7_holder"
+    text_color = _get_dynamic_color_by_label(label)
+    
+    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
+    with col1:
+        st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
+
+    with col2:
+        raw_input = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
+    with col3:
+        formatted_display = _format_compact_value(raw_input, display_unit)
+        st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
         
-    rule400_190_check = f"{balance_190_check / (net_needed_190_check * 400):.2f}" if net_needed_190_check > 0 else "∞"
-    rule400_25_check = f"{balance_25_check / (net_needed_25_check * 400):.2f}" if net_needed_25_check > 0 else "∞"
-        
-    bool_preserve_190 = "✅ כן" if balance_190_check > baseline_capital else "❌ לא"
-    bool_preserve_25 = "✅ כן" if balance_25_check > baseline_capital else "❌ לא"
-    
-    total_wealth_190_check = balance_190_check + property_value_check + emergency_fund
-    total_wealth_25_check = balance_25_check + property_value_check + emergency_fund
-
-    # --- 3. סריקות מתקדמות ---
-    intersection_age = "לא משתווים"
-    for idx in range(len(df_full)):
-        if df_full.iloc[idx]["צבירה תיקון 190"] >= df_full.iloc[idx]["צבירה מסלול ריאלי"] and df_full.iloc[idx]["גיל"] > retire_age + 2:
-            intersection_age = f"{df_full.iloc[idx]['גיל']:.1f}"
-            break
-
-    recovery_age_190 = "לא עובר"
-    for idx in range(len(df_full)):
-        if df_full.iloc[idx]["צבירה תיקון 190"] > baseline_capital and df_full.iloc[idx]["גיל"] > start_age:
-            recovery_age_190 = f"{df_full.iloc[idx]['גיל']:.1f}"
-            break
-            
-    recovery_age_25 = "לא עובר"
-    for idx in range(len(df_full)):
-        if df_full.iloc[idx]["צבירה מסלול ריאלי"] > baseline_capital and df_full.iloc[idx]["גיל"] > start_age:
-            recovery_age_25 = f"{df_full.iloc[idx]['גיל']:.1f}"
-            break
-
-    empty_age_190 = 120.0
-    empty_age_25 = 120.0
-    for idx in range(len(df_full)):
-        if float(df_full.iloc[idx]["צבירה תיקון 190"]) <= 0:
-            empty_age_190 = float(df_full.iloc[idx]["גיל"])
-            break
-    for idx in range(len(df_full)):
-        if float(df_full.iloc[idx]["צבירה מסלול ריאלי"]) <= 0:
-            empty_age_25 = float(df_full.iloc[idx]["גיל"])
-            break
-
-    empty_190_str = "105+ (חסין)" if empty_age_190 >= 105.0 else f"גיל {empty_age_190:.1f}"
-    empty_25_str = "105+ (חסין)" if empty_age_25 >= 105.0 else f"גיל {empty_age_25:.1f}"
-
-    df_97 = df_full[df_full["גיל"] >= 97.0]
-    row_97 = df_97.iloc[0] if not df_97.empty else df_full.iloc[-1]
-    balance_at_97_190 = float(row_97["צבירה תיקון 190"])
-    balance_at_97_25 = float(row_97["צבירה מסלול ריאלי"])
-    
-    ratio_190_str = f"{(balance_at_97_190 / max(1.0, baseline_capital)) * 100:.2f}%"
-    ratio_25_str = f"{(balance_at_97_25 / max(1.0, baseline_capital)) * 100:.2f}%"
-
-    ratio_190_pct = (balance_at_97_190 / max(1.0, baseline_capital)) * 100
-    ratio_25_pct = (balance_at_97_25 / max(1.0, baseline_capital)) * 100
-
-    is_190_larger = balance_190_check > balance_25_check
-
-    # טבלאות תצוגה
-    st.subheader(f"📊 מצב ביום הפרישה (גיל {retire_age:.1f})")
-    df_start_table = pd.DataFrame({
-        "שאלה": [
-            "מה גודל התיק שלי בגיל פרישה?",
-            "מה שווי הנדלן שלי בפרישה?",
-            "גובה קצבאות בפרישה (ב\"ל + פנסיה מ-190)",
-            "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
-            "פי כמה גדול ההון ממה שצריך (חוק ה-400)?",
-            "כמה שנים ניתן לחיות מקרן החירום?",
-            "קצב המשיכה באחוזים בפרישה?",
-            "מה שווי כלל הנכסים שלי (הון + נדלן + חירום)?"
-        ],
-        "מסלול תיקון 190": [
-            format_shekel(balance_190_retire),
-            format_shekel(property_value_retire),
-            format_shekel(ni_retire + pension_190_retire),
-            format_shekel(net_needed_190_retire),
-            wrap_html_style(rule400_190_retire, get_400_rule_style(rule400_190_retire)),
-            wrap_html_style(emer_190_retire, get_emergency_style(emer_190_retire)),
-            wrap_html_style(f"{pct_190_retire:.2f}%", get_withdrawal_style(pct_190_retire)),
-            format_shekel(total_wealth_190_retire)
-        ],
-        "מסלול 25% מס ריאלי": [
-            format_shekel(balance_25_retire),
-            format_shekel(property_value_retire),
-            format_shekel(ni_retire),
-            format_shekel(net_needed_25_retire),
-            wrap_html_style(rule400_25_retire, get_400_rule_style(rule400_25_retire)),
-            wrap_html_style(emer_25_retire, get_emergency_style(emer_25_retire)),
-            wrap_html_style(f"{pct_25_retire:.2f}%", get_withdrawal_style(pct_25_retire)),
-            format_shekel(total_wealth_25_retire)
-        ]
-    })
-    st.markdown(df_start_table.set_index("שאלה").to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
-
-    st.subheader(f"🔮 מצב בגיל נבדק בסימולציה (גיל {check_age:.1f})")
-    df_check_table = pd.DataFrame({
-        "שאלה": [
-            "כמה כסף נזיל יישאר לי בתיק?",
-            "כמה כסף נטו אצטרך למשוך מהתיק בכל חודש?",
-            "מה שיעור המשיכה בגיל הנבדק?",
-            "האם ישאר לי יותר כסף ממה שהתחלתי איתו?",
-            "גיל שבו התיקים משתווים",
-            "גיל שבו התיקים עוברים את ההון ההתחלתי",
-            "מה שווי כלל הנכסים שלי (הון + נדלן + חירום)?"
-        ],
-        "מסלול תיקון 190": [
-            wrap_html_style(format_shekel(balance_190_check), get_larger_portfolio_style(is_190_larger)),
-            format_shekel(net_needed_190_check),
-            wrap_html_style(f"{pct_190_check:.2f}%", get_withdrawal_style(pct_190_check)),
-            wrap_html_style(bool_preserve_190, get_boolean_style(bool_preserve_190)),
-            intersection_age,
-            recovery_age_190,
-            format_shekel(total_wealth_190_check)
-        ],
-        "מסלול 25% מס ריאלי": [
-            wrap_html_style(format_shekel(balance_25_check), get_larger_portfolio_style(not is_190_larger)),
-            format_shekel(net_needed_25_check),
-            wrap_html_style(f"{pct_25_check:.2f}%", get_withdrawal_style(pct_25_check)),
-            wrap_html_style(bool_preserve_25, get_boolean_style(bool_preserve_25)),
-            intersection_age,
-            recovery_age_25,
-            format_shekel(total_wealth_25_check)
-        ]
-    })
-    st.markdown(df_check_table.set_index("שאלה").to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
-
-    st.subheader("🏁 שורה תחתונה וחסינות אקטוארית")
-    df_bottom_table = pd.DataFrame({
-        "שורה תחתונה": [
-            "עד איזה גיל הכסף יחזיק (חסינות)?",
-            "כמה אחוז מההון ההתחלתי נשמר בגיל 97??"
-        ],
-        "מסלול תיקון 190": [
-            wrap_html_style(empty_190_str, get_resiliency_style(empty_190_str)),
-            wrap_html_style(f"{ratio_190_str}", get_preservation_pct_style(ratio_190_pct))
-        ],
-        "מסלול 25% מס ריאלי": [
-            wrap_html_style(empty_25_str, get_resiliency_style(empty_25_str)),
-            wrap_html_style(f"{ratio_25_str}", get_preservation_pct_style(ratio_25_pct))
-        ]
-    })
-    st.markdown(df_bottom_table.set_index("שורה תחתונה").to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
+    res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
+    st.query_params[widget_key] = str(res)
+    return res
