@@ -1,52 +1,56 @@
 import streamlit as st
 
-# מילון ערכי ברירת המחדל המדויקים של האפליקציה
+# ==============================================================================
+# 🎯 מילון ערכי ברירת המחדל החדשים והקבועים של הלקוח
+# ==============================================================================
 DEFAULTS = {
     "start_age": 65.5,
     "retirement_age": 67.0,
-    "check_age": 87.0,
+    "check_age": 95.0,                  # עודכן מגיל 87 לגיל 95
     "desired_pension": 5000,
     "current_expenses": 11000,
     "expected_inflation": 0.023,
-    "age_75_85_increase": 0.005,
+    "age_75_85_increase": 0.0,          # עודכן מ-0.5% ל-0.0%
     "age_85_plus_increase": 0.015,
     "one_time_expense": 80000,
     "one_time_frequency": 8,
     "caregiver_cost": 0,
-    "national_insurance": 2500,
+    "national_insurance": 2587,         # עודכן מ-2,500 ₪ ל-2,587 ₪
     "work_income": 0,
     "net_sale": 0,
-    "existing_savings": 0,
+    "existing_savings": 9440000,        # מחושב כדי להשאיר 3,340,000 ₪ פנויים במסלול
     "new_apartment_cost": 5800000,
     "property_appreciation": 0.023,
     "kids_help": 0,
-    "emergency_fund": 0,
-    "annual_return": 0.05,
-    "management_fee": 0.006
+    "emergency_fund": 300000,           # עודכן מ-0 ₪ ל-300,000 ₪
+    "annual_return": 0.055,             # עודכן מ-5.0% ל-5.5%
+    "management_fee": 0.0001            # עודכן מ-0.6% ל-0.01% (0.0001)
 }
 
 # ==============================================================================
-# 🎨 ריכוז חוקי העיצוב הגלובליים (תפריט צד + טבלאות מרכזיות)
+# 🎨 מנוע עיצוב ברזל - מרווחים מדוייקים ומניעת שבירות שורות בתפריט הצד
 # ==============================================================================
 st.markdown("""
 <style>
-    /* ------------------- עיצוב תפריט הצד (Sidebar) ------------------- */
+    /* 1. הגדרת השורה כולה כמכלול אופקי קשיח ללא יכולת קיפול או שבירה */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important; /* מונע נפילת שורות */
-        align-items: center !important; 
+        flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
+        align-items: center !important; /* מירכוז אנכי מושלם */
         direction: rtl !important; 
         margin-bottom: 14px !important; 
         padding: 0 !important;
         width: 100% !important;
     }
 
+    /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         padding: 0 !important;
         margin: 0 !important;
     }
 
+    /* עמודה 1: הכותרת הלבנה מימין */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
         flex: 1 1 auto !important;
         min-width: 0 !important;
@@ -54,12 +58,14 @@ st.markdown("""
         margin-left: 10px !important;
     }
 
+    /* עמודה 2: חלון ההזנה הלבן באמצע */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
         flex: 0 0 80px !important;
         width: 80px !important;
         min-width: 80px !important;
     }
 
+    /* עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
         flex: 0 0 auto !important;
         min-width: max-content !important;
@@ -67,6 +73,7 @@ st.markdown("""
         margin-right: 8px !important;
     }
 
+    /* ביטול מוחלט של שבירת פסקאות מרקדאון */
     [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
     .custom-sidebar-label p, 
     .custom-sidebar-badge p {
@@ -81,11 +88,13 @@ st.markdown("""
         font-size: 14px !important;
         font-weight: 500 !important;
         color: #ffffff !important;
+        white-space: nowrap !important;
     }
 
     .custom-sidebar-badge {
         font-size: 14px !important;
         font-weight: 700 !important;
+        white-space: nowrap !important;
         direction: rtl !important;
     }
 
@@ -93,6 +102,7 @@ st.markdown("""
         color: inherit !important;
     }
 
+    /* קיבוע חלון ההזנה הלבן/שחור */
     [data-testid="stSidebar"] .stNumberInput {
         width: 80px !important;
         margin: 0 !important;
@@ -115,7 +125,7 @@ st.markdown("""
         border-collapse: collapse !important; 
         margin: 25px 0 !important; 
         font-family: sans-serif; 
-        background-color: #1e293b !important; /* רקע כהה פרימיום */
+        background-color: #1e293b !important; 
         border: 1px solid #334155 !important;
         border-radius: 8px !important;
         overflow: hidden !important;
@@ -133,7 +143,7 @@ st.markdown("""
         padding: 12px 16px !important; 
         text-align: right !important; 
         border-bottom: 1px solid #334155 !important; 
-        color: #ffffff; /* לבן כברירת מחדל כדי שלא יידרס לאפור, ללא !important כדי שהרמזור יעבוד */
+        color: #ffffff; 
         font-size: 14px !important;
     }
 </style>
@@ -156,7 +166,7 @@ def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
 # ==============================================================================
-# 🚥 פונקציות הרמזור האקטואריות (ללא !important כדי למנוע התנגשויות)
+# 🚥 פונקציות הרמזור האקטואריות
 # ==============================================================================
 def get_withdrawal_style(pct):
     val = float(pct)
@@ -204,7 +214,7 @@ def _format_compact_value(val, unit):
             return f"{rtl_mark}{formatted} מ׳ ₪"
         if val >= 100_000 or val <= -100_000:
             return f"{rtl_mark}{val / 1_000:.0f} א׳ ₪"
-        return f"{rtl_mark}{int(val):,} ₪" # תצוגה מלאה לסכומים קטנים כמו ביטוח לאומי
+        return f"{rtl_mark}{int(val):,} ₪" 
         
     if unit == "שנים":
         return f"{rtl_mark}{val:.1f} שנים" if val % 1 != 0 else f"{rtl_mark}{int(val)} שנים"
