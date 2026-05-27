@@ -119,11 +119,14 @@ st.markdown("""
 def format_shekel(amount):
     return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
 
+# ==============================================================================
+# 🟢 🪄 תיקון כרטיס הסיכום המרכזי - ללא רקע אפור דהוי, צבעים זוהרים וקריאות 100%
+# ==============================================================================
 def show_net_summary(title, amount):
     st.markdown(
-        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8a;'>"
-        f"<span style='font-weight:600; color:#1e3a8a;'>{title}:</span> "
-        f"<span style='font-weight:700; color:#0f172a;'>{format_shekel(amount)}</span>"
+        f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; border-right:5px solid #4ade80; direction: rtl; text-align: right;'>"
+        f"<span style='font-weight:600; color:#ffffff; font-size:15px;'>{title}:</span> "
+        f"<span style='font-weight:700; color:#4ade80; font-size:16px; margin-right:6px;'>{format_shekel(amount)}</span>"
         f"</div>", 
         unsafe_allow_html=True
     )
@@ -164,7 +167,6 @@ def _get_dynamic_color_by_label(label):
     lbl = label.lower()
     if "חירום" in lbl: return "#fb923c" 
     if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" 
-    # 🟢 הוספת מילים ספציפיות להון נזיל כדי שייצבעו בירוק פיננסי בוהק ומובחן
     if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
     return "#38bdf8" 
 
