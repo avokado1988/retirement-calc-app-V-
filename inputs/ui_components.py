@@ -26,47 +26,41 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב קשיח - נעילת 3 עמודות בשורה אחת צפופה וממורכזת
+# 🎨 מנוע עיצוב מתקדם - תיקון ירידת שורה
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. הגדרת השורה כולה כמכלול אופקי ממורכז עם רווח שורות אסתטי */
+    /* 1. מניעת ירידת שורה בתפריט הצד */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        align-items: center !important; /* מירכוז אנכי מוחלט של כל האלמנטים */
-        gap: 8px !important; /* מרחק קטן וקבוע בין המילים, התיבה והמספר */
-        margin-bottom: 14px !important; /* מרווח אסתטי בין שורה לשורה */
-        padding: 0 !important;
+        align-items: center !important; /* מירכוז אנכי מושלם */
+        gap: 0px !important;
+        margin-bottom: 20px !important; /* רווח נשימה נקי בין שורה לשורה */
     }
 
-    /* ביטול פדינגים פנימיים מובנים של עמודות סטרימליט כדי למנוע ריחוק */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* 2. עמודה 1: הכותרת הלבנה מימין (תופסת את שאר המרחב בצורה גמישה) */
+    /* 2. עמודה ימנית (כותרת): מקבלת מרחב גמיש */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
         flex: 1 1 auto !important;
         width: auto !important;
         min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important; /* מירכוז הכותרת מול האמצע של התיבה */
+        justify-content: flex-start !important;
     }
 
-    /* 3. עמודה 2: חלון ההזנה הלבן (נעול הרמטית על 85 פיקסלים) */
+    /* 3. עמודה שמאלית (תיבה + ערך צבעוני): נעולים יחד */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
-        flex: 0 0 85px !important;
-        width: 85px !important;
-    }
-
-    /* 4. עמודה 3: הערך הפיננסי הצבעוני (נצמד אופטית לחלון ההזנה) */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
         flex: 0 0 auto !important;
         width: auto !important;
-        min-width: max-content !important;
+        display: flex !important;
+        flex-direction: row !important; /* זרימה אופקית רציפה משמין לשמאל */
+        align-items: center !important;
+        gap: 5px !important; /* 🟢 המרחק המדויק והצמוד בין חלון ההזנה למספר הצבעוני! */
+        justify-content: flex-start !important;
     }
 
-    /* 5. עיצוב טקסט הכותרת הלבנה */
+    /* 4. עיצוב טקסט הכותרת הלבנה */
     .custom-sidebar-label {
         font-size: 14px !important;
         font-weight: 500 !important;
@@ -75,9 +69,9 @@ st.markdown("""
         text-align: right !important;
     }
 
-    /* 6. קיבוע ואיזון חלון ההזנה הלבן */
+    /* 5. קיבוע ואיזון גודל תיבת חלון ההזנה הלבנה/שחורה */
     [data-testid="stSidebar"] .stNumberInput {
-        width: 85px !important;
+        width: 85px !important; /* רוחב מהודק וקומפקטי */
         margin: 0 !important;
     }
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
@@ -90,7 +84,7 @@ st.markdown("""
         text-align: center !important;
     }
 
-    /* 7. עיצוב הערך הפיננסי הצבעוני */
+    /* 6. עיצוב הערכים הצבעוניים המקוצרים */
     .custom-sidebar-badge {
         font-size: 14px !important;
         font-weight: 700 !important;
@@ -107,7 +101,7 @@ def format_shekel(amount):
 
 def show_net_summary(title, amount):
     st.markdown(
-        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8aEdge;'>"
+        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8a;'>"
         f"<span style='font-weight:600; color:#1e3a8a;'>{title}:</span> "
         f"<span style='font-weight:700; color:#0f172a;'>{format_shekel(amount)}</span>"
         f"</div>", 
@@ -175,7 +169,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 3 עמודות פיזיות - מונע קריסה ונפילת שורות
+# 🧱 רכיבי הזנה אולטרה-פרובוקטיביים - סגירת כל המרווחים באופן אחיד
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -197,11 +191,11 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
         max_to_use = int(max_value) if max_value is not None else None
         step_to_use = int(step)
 
-    temp_key = widget_key + "_v7_holder"
+    temp_key = widget_key + "_v5_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🟢 פיצול ל-3 עמודות: מונע מסטרימליט את היכולת לדחוף את הרכיבים למטה!
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # יצירת 2 עמודות - ה-CSS למעלה משתלט עליהן ומכווץ אותן הרמטית
+    col1, col2 = st.columns([5.5, 4.5])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
         
@@ -210,7 +204,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             label, min_value=min_to_use, max_value=max_to_use, 
             value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
         )
-    with col3:
         formatted_display = _format_compact_value(res, unit)
         st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
     
@@ -246,11 +239,10 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             step_to_use = int(step)
         display_unit = unit if unit else ""
 
-    temp_key = widget_key + "_v7_holder"
+    temp_key = widget_key + "_v5_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    # 🟢 פיצול ל-3 עמודות
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2 = st.columns([5.5, 4.5])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
 
@@ -259,7 +251,6 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
             label, min_value=min_to_use, max_value=max_to_use, 
             value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
         )
-    with col3:
         formatted_display = _format_compact_value(raw_input, display_unit)
         st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color};'>{formatted_display}</div>", unsafe_allow_html=True)
         
