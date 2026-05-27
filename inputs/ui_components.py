@@ -26,27 +26,29 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב קשיח - נעילת 3 עמודות בשורה אחת צפופה, ממורכזת וללא שבירות
+# 🎨 מנוע עיצוב ברזל - שורה אחת רציפה ללא שבירות טקסט (No-Wrap)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. הגדרת השורה כולה כמכלול אופקי ממורכז עם רווח שורות אופטימלי */
+    /* 1. הגדרת השורה כולה כבלוק אופקי קשיח ללא יכולת שבירה או קיפול */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        align-items: center !important; /* מירכוז אנכי מושלם של כל האלמנטים בשורה */
-        gap: 6px !important; /* מרחק קבוע וקטן בין חלקי השורה */
-        margin-bottom: 14px !important; /* מרווח אופטימלי בין שורה לשורה */
+        flex-wrap: nowrap !important; /* 🟢 מונע לחלוטין ירידת שורה של הרכיבים! */
+        align-items: center !important; /* מירכוז אנכי מושלם */
+        gap: 6px !important; /* מרחק הדוק קבוע בין הרכיבים */
+        margin-bottom: 12px !important; /* מרווח אסתטי בין שורה לשורה */
         padding: 0 !important;
+        width: 100% !important;
     }
 
-    /* ניקוי שוליים מובנים של עמודות סטרימליט כדי למנוע ריחוק ופיזור */
+    /* ניקוי שוליים מובנים של עמודות סטרימליט */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         padding: 0 !important;
         margin: 0 !important;
     }
 
-    /* 2. עמודה 1: הכותרת הלבנה מימין (תופסת את שאר המרחב בצורה גמישה וממורכזת) */
+    /* 2. עמודה 1: הכותרת הלבנה מימין */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
         flex: 1 1 auto !important;
         width: auto !important;
@@ -55,13 +57,13 @@ st.markdown("""
         align-items: center !important;
     }
 
-    /* 3. עמודה 2: חלון ההזנה הלבן (נעול הרמטית על 85 פיקסלים כדי שלא יתרחב) */
+    /* 3. עמודה 2: חלון ההזנה הלבן (מכווץ ל-75 פיקסלים כדי לחסוך מקום בשורה) */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
-        flex: 0 0 85px !important;
-        width: 85px !important;
+        flex: 0 0 75px !important;
+        width: 75px !important;
     }
 
-    /* 4. עמודה 3: הערך הפיננסי הצבעוני משמאל (נצמד אופטית לחלון ההזנה) */
+    /* 4. עמודה 3: הערך הפיננסי הצבעוני משמאל */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
         flex: 0 0 auto !important;
         width: auto !important;
@@ -70,35 +72,42 @@ st.markdown("""
         align-items: center !important;
     }
 
-    /* 5. עיצוב טקסט הכותרת הלבנה */
+    /* 5. מניעת שבירת מילים מוחלטת בתוך ה-HTML */
+    [data-testid="stSidebar"] .custom-sidebar-label p,
+    [data-testid="stSidebar"] .custom-sidebar-badge p {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 6. עיצוב טקסט הכותרת הלבנה עם פקודת נעילת שורה */
     .custom-sidebar-label {
-        font-size: 14px !important;
+        font-size: 13.5px !important; /* הקטנה קלה כדי שהכל ייכנס פיקס בשורה */
         font-weight: 500 !important;
         color: #ffffff !important;
-        line-height: 1.3 !important;
+        white-space: nowrap !important; /* 🟢 מונע מהכותרת להישבר או לרדת שורה! */
         text-align: right !important;
     }
 
-    /* 6. קיבוע ואיזון חלון ההזנה הלבן */
+    /* 7. קיבוע חלון ההזנה הלבן הגמיש */
     [data-testid="stSidebar"] .stNumberInput {
-        width: 85px !important;
+        width: 75px !important;
         margin: 0 !important;
     }
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
-        height: 30px !important;
+        height: 28px !important;
         border-radius: 4px !important;
     }
     [data-testid="stSidebar"] .stNumberInput input {
         padding: 2px 4px !important;
-        font-size: 13.5px !important;
+        font-size: 13px !important;
         text-align: center !important;
     }
 
-    /* 7. עיצוב הערך הפיננסי הצבעוני */
+    /* 8. עיצוב הערך הפיננסי הצבעוני עם פקודת נעילת שורה */
     .custom-sidebar-badge {
-        font-size: 14px !important;
+        font-size: 13.5px !important;
         font-weight: 700 !important;
-        white-space: nowrap !important;
+        white-space: nowrap !important; /* 🟢 מונע מהמספר והמטבע להישבר שורה! */
         direction: rtl !important;
         text-align: right !important;
     }
@@ -111,7 +120,7 @@ def format_shekel(amount):
 
 def show_net_summary(title, amount):
     st.markdown(
-        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8a;' division='rtl'>"
+        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8a;'>"
         f"<span style='font-weight:600; color:#1e3a8a;'>{title}:</span> "
         f"<span style='font-weight:700; color:#0f172a;'>{format_shekel(amount)}</span>"
         f"</div>", 
@@ -163,7 +172,6 @@ def _format_compact_value(val, unit):
     
     if unit in ["₪", "שח", "ש\"ח"]:
         if val >= 1_000_000:
-            # 🟢 קבוע: תמיד 2 ספרות אחרי הנקודה עבור מיליונים (למשל: 1.62 מ׳ ₪ או 10.00 מ׳ ₪)
             formatted = f"{val / 1_000_000:.2f}"
             return f"{rtl_mark}{formatted} מ׳ ₪"
         if val >= 1_000:
@@ -179,7 +187,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 3 עמודות פיזיות קשיחות
+# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 3 עמודות פיזיות קשיחות ללא שבירה
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -204,7 +212,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🟢 שימוש ב-3 עמודות פיזיות כדי למנוע מסטרימליט את היכולת לשבור שורה!
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
@@ -253,7 +260,6 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    # 🟢 שימוש ב-3 עמודות פיזיות
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
