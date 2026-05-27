@@ -25,6 +25,53 @@ DEFAULTS = {
     "management_fee": 0.006
 }
 
+# ==============================================================================
+# 🪄 מנוע עיצוב מתקדמת - הפיכת עמודות סטרימליט לשורת טקסט הדוקה וזורמת
+# ==============================================================================
+st.markdown("""
+<style>
+    /* הפיכת שורת הרכיבים בתפריט הצד למבנה רציף וצפוף */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        gap: 10px !important; /* מרחק קבוע וקטן בין המילים, התיבה והערך */
+        align-items: center !important;
+    }
+    
+    /* עמודה 1: הכותרת מימין - גמישה, ללא חיתוך טקסט */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(1) {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
+    
+    /* עמודה 2: תיבת ההקלדה באמצע - נעולה על גודל קומפקטי ואחיד */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(2) {
+        flex: 0 0 auto !important;
+        width: 90px !important;
+    }
+    
+    /* עמודה 3: הערך הצבעוני משמאל - נצמד ישירות לתיבה לפי אורך המילה */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] [data-testid="stColumn"]:nth-child(3) {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: max-content !important;
+    }
+    
+    /* כיוונון תיבת ה-number_input עצמה שתתאים בדיוק לרווח הצר */
+    [data-testid="stSidebar"] .stNumberInput {
+        width: 90px !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
+        height: 32px !important;
+    }
+    [data-testid="stSidebar"] .stNumberInput input {
+        padding: 4px 6px !important;
+        font-size: 14px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 def format_shekel(amount):
     return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
 
@@ -71,10 +118,10 @@ def get_boolean_style(val_str):
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    if "חירום" in lbl: return "#fb923c"
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171"
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80"
-    return "#38bdf8"
+    if "חירום" in lbl: return "#fb923c" # כתום
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" # אדום
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" # ירוק
+    return "#38bdf8" # תכלת
 
 def _format_compact_value(val, unit):
     val = float(val)
@@ -98,7 +145,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה אולטרה-הדוקים - הצמדה מלאה מימין לשמאל ללא בורות אוויר
+# 🧱 רכיבי הזנה אולטרה-פרובוקטיביים - סגירת כל המרווחים באופן אחיד
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -123,10 +170,10 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v5_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🟢 פטנט הצמדה: חלוקה ל-3 עמודות רצופות, כאשר הרכיבים נדחפים מימין לשמאל
-    col1, col2, col3 = st.columns([4.5, 1.8, 3.7])
+    # יצירת 3 עמודות גנריות - ה-CSS למעלה משתלט עליהן ומכווץ אותן הרמטית
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap; text-align: right;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-weight: 500; color: #ffffff; text-align: right;'>{label}</div>", unsafe_allow_html=True)
         
     with col2:
         res = st.number_input(
@@ -135,8 +182,7 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
         )
     with col3:
         formatted_display = _format_compact_value(res, unit)
-        # הצמדה ישירה לדופן שמאל של תיבת המספרים
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl;'>{formatted_display}</div>", unsafe_allow_html=True)
     
     st.query_params[widget_key] = str(res)
     return res
@@ -173,10 +219,9 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
     temp_key = widget_key + "_v5_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    # 🟢 פטנט הצמדה
-    col1, col2, col3 = st.columns([4.5, 1.8, 3.7])
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap; text-align: right;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-weight: 500; color: #ffffff; text-align: right;'>{label}</div>", unsafe_allow_html=True)
 
     with col2:
         raw_input = st.number_input(
@@ -185,7 +230,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
         )
     with col3:
         formatted_display = _format_compact_value(raw_input, display_unit)
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl;'>{formatted_display}</div>", unsafe_allow_html=True)
         
     res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
     st.query_params[widget_key] = str(res)
