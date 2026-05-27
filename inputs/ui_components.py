@@ -98,7 +98,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מיושרים עם חלוקת ספייסים סימטרית ומרווחת
+# 🧱 רכיבי הזנה אולטרה-הדוקים - הצמדה מלאה מימין לשמאל ללא בורות אוויר
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -123,23 +123,20 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v5_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🟢 שינוי יחס עמודות ל-50/50 כדי לתת לכותרת מימין את כל המרחב שהיא צריכה
-    col1, col2 = st.columns([5.0, 5.0])
+    # 🟢 פטנט הצמדה: חלוקה ל-3 עמודות רצופות, כאשר הרכיבים נדחפים מימין לשמאל
+    col1, col2, col3 = st.columns([4.5, 1.8, 3.7])
     with col1:
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap; text-align: right;'>{label}</div>", unsafe_allow_html=True)
         
     with col2:
-        # 🟢 הידוק תת-העמודות משמאל: התיבה מקבלת יותר מקום, והערך מוצמד אליה בלי רווח מיותר
-        sub_col1, sub_col2 = st.columns([2.4, 2.6])
-        with sub_col1:
-            res = st.number_input(
-                label, min_value=min_to_use, max_value=max_to_use, 
-                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
-            )
-        with sub_col2:
-            formatted_display = _format_compact_value(res, unit)
-            # padding-right קטן של 8 פיקסלים בשביל הצמדה אופטית מושלמת לדופן התיבה
-            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 8px; direction: rtl; text-align: right;'>{formatted_display}</div>", unsafe_allow_html=True)
+        res = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
+    with col3:
+        formatted_display = _format_compact_value(res, unit)
+        # הצמדה ישירה לדופן שמאל של תיבת המספרים
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
     
     st.query_params[widget_key] = str(res)
     return res
@@ -176,22 +173,19 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
     temp_key = widget_key + "_v5_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    # 🟢 שינוי יחס עמודות ל-50/50
-    col1, col2 = st.columns([5.0, 5.0])
+    # 🟢 פטנט הצמדה
+    col1, col2, col3 = st.columns([4.5, 1.8, 3.7])
     with col1:
-        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap;'>{label}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 500; color: #ffffff; white-space: nowrap; text-align: right;'>{label}</div>", unsafe_allow_html=True)
 
     with col2:
-        # 🟢 הידוק תת-העמודות משמאל להצמדת הערך הצבעוני
-        sub_col1, sub_col2 = st.columns([2.4, 2.6])
-        with sub_col1:
-            raw_input = st.number_input(
-                label, min_value=min_to_use, max_value=max_to_use, 
-                value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
-            )
-        with sub_col2:
-            formatted_display = _format_compact_value(raw_input, display_unit)
-            st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 8px; direction: rtl; text-align: right;'>{formatted_display}</div>", unsafe_allow_html=True)
+        raw_input = st.number_input(
+            label, min_value=min_to_use, max_value=max_to_use, 
+            value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
+        )
+    with col3:
+        formatted_display = _format_compact_value(raw_input, display_unit)
+        st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; text-align: right; direction: rtl; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
         
     res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
     st.query_params[widget_key] = str(res)
