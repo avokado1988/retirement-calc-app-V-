@@ -26,64 +26,65 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב ברזל - שורה אופקית אחת, ללא שבירות פסקאות (Inline Nowrap)
+# 🎨 מנוע עיצוב מתקדם - איזון מרווחים אופטימלי והצמדה פיננסית
 # ==============================================================================
 st.markdown("""
 <style>
-    /* 1. הגדרת השורה כולה כחץ אופקי קשיח ללא יכולת שבירה או קיפול */
+    /* 1. הגדרת השורה כולה כמכלול אופקי ממורכז בכיווניות עברית מלאה */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important; /* מונע לחלוטין ירידת שורה של העמודות */
-        align-items: center !important; /* מירכוז אנכי מושלם */
-        gap: 6px !important; /* מרחק הדוק קבוע בין הרכיבים */
-        margin-bottom: 12px !important; /* מרווח אסתטי בין שורה לשורה */
+        flex-wrap: nowrap !important; /* חוסם לחלוטין נפילת שורות */
+        align-items: center !important; /* מירכוז אנכי מושלם מול תיבת ההזנה */
+        direction: rtl !important; /* כפיית כיווניות מימין לשמאל */
+        margin-bottom: 14px !important; /* מרווח אסתטי ונקי בין שורה לשורה */
         padding: 0 !important;
         width: 100% !important;
     }
 
-    /* ניקוי שוליים וביטול חישובי אחוזים מובנים של עמודות סטרימליט */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div {
-        width: auto !important;
-        max-width: none !important;
-        min-width: max-content !important;
-        flex: 0 0 auto !important;
+    /* ניקוי שוליים ופדינגים כפולים של עמודות סטרימליט */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {
         padding: 0 !important;
         margin: 0 !important;
     }
 
-    /* עמודה 1: הכותרת הלבנה מימין - מקבלת עדיפות למרחב מבלי להישבר */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:nth-child(1) {
+    /* 2. עמודה 1: הכותרת הלבנה מימין - מתרחבת באופן דינמי לפי המרחב הפנוי */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
         flex: 1 1 auto !important;
         min-width: 0 !important;
         text-align: right !important;
+        margin-left: 10px !important; /* מרווח קבוע בין סוף הטקסט לחלונית הלבנה */
     }
 
-    /* עמודה 2: חלון ההזנה הלבן - נעול על רוחב קומפקטי של 75 פיקסלים */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:nth-child(2) {
-        flex: 0 0 75px !important;
-        width: 75px !important;
-        min-width: 75px !important;
+    /* 3. עמודה 2: חלון ההזנה הלבן באמצע - נעול קשיח ליצירת גריד אנכי ישר ונקי */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(2) {
+        flex: 0 0 80px !important;
+        width: 80px !important;
+        min-width: 80px !important;
     }
 
-    /* עמודה 3: הערך הפיננסי הצבעוני משמאל */
-    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:nth-child(3) {
+    /* 4. עמודה 3: הערך הפיננסי הצבעוני משמאל - מוצמד הדוק לחלונית ההזנה */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(3) {
         flex: 0 0 auto !important;
+        min-width: max-content !important;
         text-align: right !important;
+        margin-right: 8px !important; /* הצמדה מדויקת ואסתטית של 8 פיקסלים משמאל לתיבה! */
     }
 
-    /* 🟢 התיקון ההרמטי: הפיכת פסקאות סטרימליט לאלמנט אינליין ומניעת שבירה */
-    .custom-sidebar-label p, .custom-sidebar-badge p {
-        display: inline !important; /* מנטרל את התנהגות הבלוק היורד שורה */
-        white-space: nowrap !important; /* מונע מהטקסט להישבר אופקית */
+    /* 5. ביטול מוחלט של שבירת פסקאות המרקדאון המובנות */
+    [data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] p,
+    .custom-sidebar-label p, 
+    .custom-sidebar-badge p {
+        display: inline !important;
+        white-space: nowrap !important;
         word-break: keep-all !important;
         margin: 0 !important;
         padding: 0 !important;
     }
 
-    /* עיצוב טקסט הכותרת הלבנה */
+    /* עיצוב טקסט הכותרת הלבנה מימין */
     .custom-sidebar-label {
-        font-size: 13.5px !important;
+        font-size: 14px !important;
         font-weight: 500 !important;
         color: #ffffff !important;
         white-space: nowrap !important;
@@ -91,24 +92,24 @@ st.markdown("""
 
     /* עיצוב הערך הפיננסי הצבעוני */
     .custom-sidebar-badge {
-        font-size: 13.5px !important;
+        font-size: 14px !important;
         font-weight: 700 !important;
         white-space: nowrap !important;
         direction: rtl !important;
     }
 
-    /* קיבוע חלון ההזנה הלבן/שחור */
+    /* קיבוע חלון ההזנה הלבן/שחור לרמת גימור יוקרתית */
     [data-testid="stSidebar"] .stNumberInput {
-        width: 75px !important;
+        width: 80px !important;
         margin: 0 !important;
     }
     [data-testid="stSidebar"] .stNumberInput div[data-baseweb="input"] {
-        height: 28px !important;
+        height: 30px !important;
         border-radius: 4px !important;
     }
     [data-testid="stSidebar"] .stNumberInput input {
         padding: 2px 4px !important;
-        font-size: 13px !important;
+        font-size: 13.5px !important;
         text-align: center !important;
     }
 </style>
@@ -163,7 +164,8 @@ def _get_dynamic_color_by_label(label):
     lbl = label.lower()
     if "חירום" in lbl: return "#fb923c" 
     if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" 
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" 
+    # 🟢 הוספת מילים ספציפיות להון נזיל כדי שייצבעו בירוק פיננסי בוהק ומובחן
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
     return "#38bdf8" 
 
 def _format_compact_value(val, unit):
@@ -187,7 +189,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מבוססי ארכיטקטורת 3 עמודות פיזיות קשיחות ללא שבירה
+# 🧱 רכיבי הזנה מאוזנים אופטית
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -212,7 +214,7 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
         
@@ -260,7 +262,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3 = st.columns([5.4, 2.0, 2.6])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
 
