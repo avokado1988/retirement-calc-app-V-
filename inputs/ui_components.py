@@ -1,7 +1,7 @@
 import streamlit as st
 
 # ==============================================================================
-# 🎯 מילון ערכי ברירת המחדל
+# 🎯 מילון ערכי ברירת המחדל - נשמר בדיוק כפי שסיכמנו!
 # ==============================================================================
 DEFAULTS = {
     "start_age": 65.5,
@@ -28,7 +28,7 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע העיצוב המדויק - צבעים, יישור וצמצום רווחים
+# 🎨 מנוע העיצוב הגלובלי - צמצום רווחים והצמדת הערך השמאלי לחלונית
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
@@ -38,7 +38,7 @@ def inject_design_system():
             gap: 0px !important;
             align-items: center !important; 
             direction: rtl !important; 
-            margin-bottom: 10px !important; 
+            margin-bottom: 12px !important; 
         }
 
         /* תווית לבנה מימין */
@@ -51,17 +51,17 @@ def inject_design_system():
             padding-left: 5px;
         }
 
-        /* ערך צבעוני משמאל - מוצמד לחלונית */
+        /* ערך צבעוני משמאל - מיושר לימין כדי שייצמד לחלונית ההזנה! */
         .custom-sidebar-badge {
-            font-size: 14px !important;
+            font-size: 14.5px !important;
             font-weight: 700 !important;
             direction: rtl !important;
-            text-align: right !important; /* יישור לימין בתוך העמודה השמאלית להצמדה */
+            text-align: right !important; 
             white-space: nowrap !important;
-            margin-right: 2px !important;
+            margin-right: 4px !important;
         }
 
-        /* כפיית צבע על הילדים של ה-badge */
+        /* כפיית צבע דינמי חסין */
         .custom-sidebar-badge * {
             color: inherit !important;
         }
@@ -78,7 +78,7 @@ def inject_design_system():
         [data-testid="stSidebar"] .stNumberInput input {
             color: #000000 !important;
             padding: 2px !important;
-            font-size: 13px !important;
+            font-size: 13.5px !important;
             text-align: center !important;
         }
     </style>
@@ -100,7 +100,39 @@ def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
 # ==============================================================================
-# 🚥 לוגיקת הצבעים שסיכמנו
+# 🚥 פונקציות הרמזור לדו"ח המרכזי
+# ==============================================================================
+def get_withdrawal_style(pct):
+    val = float(pct)
+    if val <= 3.5: return "color: #4ade80 !important; font-weight: bold !important;"
+    if val <= 5.0: return "color: #fb923c !important; font-weight: bold !important;"
+    return "color: #f87171 !important; font-weight: bold !important;"
+
+def get_400_rule_style(val_str):
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
+    except: return ""
+
+def get_emergency_style(val_str):
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
+    except: return ""
+
+def get_larger_portfolio_style(is_larger):
+    if is_larger: return "color: #4ade80 !important; font-weight: 700 !important;"
+    return "color: #ffffff !important; font-weight: 500 !important;"
+
+def get_resiliency_style(val_str):
+    return "color: #4ade80 !important; font-weight: bold !important;" if "חסין" in val_str or "105" in val_str else "color: #f87171 !important; font-weight: bold !important;"
+
+def get_preservation_pct_style(pct):
+    return "color: #4ade80 !important; font-weight: bold !important;" if float(pct) >= 100.0 else "color: #f87171 !important; font-weight: bold !important;"
+
+def get_boolean_style(val_str):
+    return "color: #4ade80 !important; font-weight: bold !important;" if "✅" in val_str else "color: #f87171 !important; font-weight: bold !important;"
+
+# ==============================================================================
+# 🚥 לוגיקת הצבעים של סרגל הצד - עובד נקי
 # ==============================================================================
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
@@ -121,7 +153,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי ההזנה - מבנה 3 עמודות צפוף ללא סליידרים (באג ה-NameError תוקן)
+# 🧱 רכיבי ההזנה - חלוניות בלבד, ללא סליידרים! (באג המתמטיקה תוקן)
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -133,7 +165,6 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
             value = float(stored_val) if is_float else int(float(stored_val))
         except: pass
 
-    # 🟢 הגדרה הרמטית של כל המשתנים כולל max_to_use כדי למנוע קריסות!
     if is_float:
         val_to_use = float(value) if value is not None else 0.0
         min_to_use = float(min_value) if min_value is not None else 0.0
@@ -148,8 +179,8 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
 
-    # 🟢 מבנה העמודות המדויק שסיכמנו: [תגית לבנה] [חלון הזנה] [ערך צבעוני]
-    col1, col2, col3 = st.columns([5.5, 2.0, 2.5])
+    # 🟢 סדר העמודות: תגית (ימין), חלונית (אמצע), ערך שמוצמד לחלונית (שמאל)
+    col1, col2, col3 = st.columns([5.5, 2.5, 2.0])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
@@ -161,44 +192,31 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
     st.query_params[widget_key] = str(res)
     return res
 
-
 def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
-    is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
+    is_pct = format is not None and "%" in format
     
+    # 🟢 תיקון קריטי: אם זה אחוז, הקלט מהדפדפן או מהדיפולט מכוון לערך השלם (למשל 2.3)
     if widget_key in st.query_params:
         try:
             stored_val = float(st.query_params[widget_key])
-            value = stored_val
+            value = stored_val * 100.0 if is_pct else stored_val
         except: pass
-
-    if is_percentage_fraction:
-        val_to_use = float(value) * 100.0 if float(value) <= 1.0 else float(value)
-        min_to_use = float(min_value) * 100.0
-        max_to_use = float(max_value) * 100.0 if max_value is not None else None
-        step_to_use = float(step) * 100.0 if step is not None else 1.0
-        display_unit = "%"
     else:
-        display_unit = unit if unit else ""
-        is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
-        
-        # 🟢 הגדרה הרמטית של כל המשתנים כולל max_to_use!
-        if is_float:
-            val_to_use = float(value) if value is not None else 0.0
-            min_to_use = float(min_value) if min_value is not None else 0.0
-            max_to_use = float(max_value) if max_value is not None else None
-            step_to_use = float(step) if step is not None else 1.0
-        else:
-            val_to_use = int(value) if value is not None else 0
-            min_to_use = int(min_value) if min_value is not None else 0
-            max_to_use = int(max_value) if max_value is not None else None
-            step_to_use = int(step) if step is not None else 1
+        # אם זה בא מהדיפולט, נניח שהקבצים האחרים כבר הכפילו ב-100 ולכן הערך מוכן לתצוגה
+        pass
+
+    val_to_use = float(value) if value is not None else 0.0
+    min_to_use = float(min_value) * 100.0 if is_pct and min_value is not None else float(min_value) if min_value is not None else 0.0
+    max_to_use = float(max_value) * 100.0 if is_pct and max_value is not None else float(max_value) if max_value is not None else None
+    step_to_use = float(step) * 100.0 if is_pct and step is not None else float(step) if step is not None else 1.0
+    display_unit = "%" if is_pct else (unit if unit else "")
 
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
     
-    # 🟢 מבנה העמודות המדויק שסיכמנו: [תגית לבנה] [חלון הזנה מומר] [ערך צבעוני]
-    col1, col2, col3 = st.columns([5.5, 2.0, 2.5])
+    # 🟢 מבנה זהה - חלונית הזנה בלבד ללא שום סליידרים
+    col1, col2, col3 = st.columns([5.5, 2.5, 2.0])
     with col1:
         st.markdown(f"<div class='custom-sidebar-label'>{label}</div>", unsafe_allow_html=True)
     with col2:
@@ -207,6 +225,6 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
         formatted_display = _format_compact_value(res, display_unit)
         st.markdown(f"<div class='custom-sidebar-badge' style='color: {text_color} !important;'>{formatted_display}</div>", unsafe_allow_html=True)
         
-    final_res = float(res) / 100.0 if is_percentage_fraction else res
+    final_res = float(res) / 100.0 if is_pct else res
     st.query_params[widget_key] = str(final_res)
     return final_res
