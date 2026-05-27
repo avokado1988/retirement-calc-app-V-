@@ -1,157 +1,111 @@
 import streamlit as st
 
-# ==============================================================================
-# ⚙️ קבועים וערכי ברירת מחדל מרוכזים (System Defaults)
-# ==============================================================================
+# 🟢 מילון ערכי ברירת המחדל המדויקים והמיושרים של האפליקציה שלך
 DEFAULTS = {
     "start_age": 65.5,
     "retirement_age": 67.0,
     "check_age": 87.0,
-    "expected_inflation": 0.023,
+    "desired_pension": 5000,
     "current_expenses": 11000,
-    "caregiver_cost": 3500,
+    "expected_inflation": 0.023,
+    "age_75_85_increase": 0.005,
+    "age_85_plus_increase": 0.015,
     "one_time_expense": 80000,
     "one_time_frequency": 8,
-    "work_income": 0,
-    "desired_pension": 5000,
+    "caregiver_cost": 0,
     "national_insurance": 2500,
-    "annual_return": 0.05,
-    "management_fee": 0.006,
-    "net_sale": 10000000,
-    "existing_savings": 440000,
+    "work_income": 0,
+    "net_sale": 0,
+    "existing_savings": 0,
     "new_apartment_cost": 5800000,
-    "kids_help": 1000000,
-    "emergency_fund": 300000,
     "property_appreciation": 0.023,
-    "age_75_85_increase": 0.005,
-    "age_85_plus_increase": 0.015
+    "kids_help": 0,
+    "emergency_fund": 0,
+    "annual_return": 0.05,
+    "management_fee": 0.006
 }
 
-# ==============================================================================
-# 📊 1. פונקציות פירמוט והצגה בסיסיות
-# ==============================================================================
-
-def format_shekel(val):
-    """מפרמט מספר לשקלים עם פסיקים: ₪1,000,000"""
-    try:
-        return f"₪{int(val):,}"
-    except:
-        return f"₪{val}"
-
-def format_percent(val_decimal):
-    """מפרמט שבר עשרוני לאחוז: 2.3%"""
-    try:
-        return f"{float(val_decimal) * 100:.1f}%"
-    except:
-        return val_decimal
+def format_shekel(amount):
+    """פונקציית עזר גלובלית לעיצוב מטבע שקלי"""
+    return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
 
 def show_net_summary(title, amount):
-    """מציג את קוביית הסיכום הירוקה האחידה בכל המסלולים"""
-    st.success(f"💰 **{title}:** {format_shekel(amount)}")
+    """מציג תיבת סיכום מעוצבת להון נטו"""
+    st.markdown(
+        f"<div style='padding:10px; background-color:#f1f5f9; border-radius:5px; margin:10px 0; border-right:4px solid #1e3a8a;'>"
+        f"<span style='font-weight:600; color:#1e3a8a;'>{title}:</span> "
+        f"<span style='font-weight:700; color:#0f172a;'>{format_shekel(amount)}</span>"
+        f"</div>", 
+        unsafe_allow_html=True
+    )
 
-
-# ==============================================================================
-# 🎨 2. לוגיקת עיצוב מותנה (Conditional Styling) ורמזורים - טבלאות
-# ==============================================================================
-
-def get_withdrawal_style(rate):
-    try:
-        r = float(rate)
-        if r < 3.0: color = "#99FF99"
-        elif r <= 4.0: color = "#FFCC99"
-        else: color = "#FF9999"
-        return f"background-color: {color}; font-weight: bold; color: #1f2937;"
-    except: return ""
-
-def get_400_rule_style(multiplier_str):
-    if str(multiplier_str) == "∞": return "background-color: #99FF99; font-weight: bold; color: #1f2937;"
-    try:
-        val = float(multiplier_str)
-        if val < 1.0: color = "#FF9999"
-        elif val <= 1.3: color = "#FFCC99"
-        else: color = "#99FF99"
-        return f"background-color: {color}; font-weight: bold; color: #1f2937;"
-    except: return ""
-
-def get_emergency_style(years_str):
-    if str(years_str) == "∞": return "background-color: #99FF99; font-weight: bold; color: #1f2937;"
-    try:
-        val = float(years_str)
-        if val < 2.0: color = "#FF9999"
-        elif val <= 3.5: color = "#FFCC99"
-        else: color = "#99FF99"
-        return f"background-color: {color}; font-weight: bold; color: #1f2937;"
-    except: return ""
-
-def get_larger_portfolio_style(is_larger):
-    if is_larger: return "background-color: #99FF99; font-weight: bold; color: #1f2937;"
-    return ""
-
-def get_resiliency_style(age_str):
-    if "105+" in str(age_str) or "חסין" in str(age_str): color = "#99FF99"
-    else: color = "#FF9999"
-    return f"background-color: {color}; font-weight: bold; color: #1f2937;"
-
-def get_preservation_pct_style(ratio_pct):
-    try:
-        val = float(ratio_pct)
-        if val < 75.0: color = "#FF9999"
-        elif val <= 90.0: color = "#FFCC99"
-        else: color = "#99FF99"
-        return f"background-color: {color}; font-weight: bold; border: 1px solid #c5c5c5; color: #1f2937;"
-    except: return ""
-
-def get_boolean_style(val_str):
-    if "כן" in str(val_str): return "color: #006600; font-weight: bold;"
-    else: return "color: #990000; font-weight: bold;"
-
-def wrap_html_style(val_str, style_str):
-    if not style_str: return str(val_str)
-    full_style = f"padding: 6px 10px; border-radius: 4px; display: block; text-align: right; {style_str}"
-    return f"<div style='{full_style}'>{val_str}</div>"
-
-
-# ==============================================================================
-# 💎 3. רכיבי ממשק משופרים והיברידיים (UX קומפקטי, דינמי ומוגן מפני קריסות)
-# ==============================================================================
-
-def compact_number_input(label, value, min_value=None, max_value=None, step=1, help_text=None, unit="₪"):
-    col1, col2 = st.columns([2.5, 1.5])
+def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
+    """
+    מציג שורת קלט מעוצבת: טקסט מימין, ותיבת הקלדה קטנה משמאל.
+    """
+    col1, col2 = st.columns([3, 2])
     with col1:
-        v = st.number_input(label, value=value, min_value=min_value, max_value=max_value, step=step, help=help_text)
-    
+        st.markdown(f"<div style='line-height: 2.5; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
     with col2:
-        # פירמוט נקי בהתאם לסוג היחידה
-        if unit == "₪": 
-            formatted = format_shekel(v)
-        elif unit == "%": 
-            formatted = f"{float(v):.1f}%"
-        elif unit: 
-            formatted = f"{float(v):.1f} {unit}" if isinstance(v, float) else f"{v} {unit}"
-        else: 
-            formatted = f"{float(v):.1f}" if isinstance(v, float) else f"{v}"
+        val_to_use = float(value) if isinstance(value, float) or isinstance(step, float) else int(value)
+        min_to_use = float(min_value) if min_value is not None else None
+        max_to_use = float(max_value) if max_value is not None else None
         
-        # ID דינמי (id='num_{v}') מכריח את הדפדפן לרנדר את הטקסט מחדש ומונע קיפאון!
-        st.markdown(f"<div id='num_{v}' style='padding-top: 28px; font-weight: bold; color: #2ca02c; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
-    return v
+        # בניית סיומת יחידה לצד התיבה (למשל חיווי של ש"ח)
+        suffix = f" {unit}" if unit else ""
+        res = st.number_input(
+            label,
+            min_value=min_to_use, 
+            max_value=max_to_use, 
+            value=val_to_use, 
+            step=step,
+            label_visibility="collapsed"
+        )
+        if unit:
+            st.caption(f"יחידות: {unit}")
+    return res
 
-
-def labeled_slider_with_value(key_label, min_value, max_value, value, step, format=None, help_text=None, unit=None):
-    col1, col2 = st.columns([2.5, 1.5])
+def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, format=None, unit=None):
+    """
+    🔄 הוסב באופן מלא להזנת מספרים תוך שמירה על הערכים והחיוויים האסתטיים בצד שמאל של השורה!
+    """
+    col1, col2 = st.columns([3, 2])
     with col1:
-        val = st.slider(key_label, min_value=min_value, max_value=max_value, value=value, step=step, format=format, help=help_text)
-    
+        st.markdown(f"<div style='line-height: 2.5; font-weight: 500;'>{label}</div>", unsafe_allow_html=True)
     with col2:
-        # פירמוט עשרוני מוגן מפני Floating Point Bug
-        if unit == "₪": 
-            formatted = format_shekel(val)
-        elif unit == "%": 
-            formatted = f"{float(val):.1f}%"
-        elif unit: 
-            formatted = f"{float(val):.1f} {unit}" if isinstance(val, float) else f"{val} {unit}"
-        else: 
-            formatted = f"{float(val):.1f}" if isinstance(val, float) else f"{val}"
+        # בדיקה האם מדובר באחוזים קטנים מ-1 (כמו 0.05 שמייצג 5%)
+        is_percentage_fraction = format is not None and "%" in format and float(value) <= 1.0
         
-        # ID דינמי (id='slider_{val}') מכריח את הדפדפן לרנדר את הטקסט מחדש ומונע קיפאון!
-        st.markdown(f"<div id='slider_{val}' style='padding-top: 28px; font-weight: bold; color: #1f77b4; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
-    return val
+        # התאמת הערכים להקלדה נוחה
+        if is_percentage_fraction:
+            # הופך את ה-0.05 ל-5.0 לצורך הקלדה נוחה של המשתמש
+            val_to_use = float(value) * 100.0
+            min_to_use = float(min_value) * 100.0
+            max_to_use = float(max_value) * 100.0
+            step_to_use = float(step) * 100.0 if float(step) <= 1.0 else float(step)
+        else:
+            val_to_use = float(value) if isinstance(step, float) or '.' in str(value) else int(value)
+            min_to_use = float(min_value) if isinstance(min_value, float) else int(min_value)
+            max_to_use = float(max_value) if isinstance(max_value, float) else int(max_value)
+            step_to_use = step
+
+        # יצירת שתי עמודות פנימיות קטנות: אחת לשדה המספר ואחת לסימון (%, שנים, ₪) באותו הגובה
+        sub_col1, sub_col2 = st.columns([3, 1])
+        with sub_col1:
+            raw_input = st.number_input(
+                label,
+                min_value=min_to_use,
+                max_value=max_to_use,
+                value=val_to_use,
+                step=step_to_use,
+                label_visibility="collapsed"
+            )
+        with sub_col2:
+            # קביעת הסימון שיופיע בצד שמאל בדיוק באותו קו
+            display_unit = "%" if (format and "%" in format) or unit == "%" else (unit if unit else "")
+            st.markdown(f"<div style='line-height: 2.5; font-weight: 600; color: #4b5563;'>{display_unit}</div>", unsafe_allow_html=True)
+            
+        # החזרת הערך לקוד בצורה הנכונה (אם זה היה שבר אחוזים, נחלק חזרה ב-100)
+        res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
+        
+    return res
