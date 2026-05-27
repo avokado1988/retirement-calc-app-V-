@@ -7,39 +7,41 @@ from inputs.ui_components import (
 )
 
 def render_qa_section(results, user_inputs):
-    # 🎯 שדרוג ה-CSS של הטבלה המרכזית ללוק פריריום כהה, קריא וחסין לחלוטין
+    # 🎯 עיצוב גריד טבלה מתקדמת - תואם Dark Mode וחסין דריסות
     st.markdown("""
         <style>
         .styled-table { 
             width: 100% !important; 
             direction: rtl !important; 
             text-align: right !important; 
-            border-collapse: collapse; 
-            margin: 20px 0; 
+            border-collapse: collapse !important; 
+            margin: 25px 0 !important; 
             font-family: sans-serif; 
-            background-color: #1e293b !important; /* רקע כהה יוקרתי לטבלה */
-            color: #ffffff !important; /* כפיית טקסט לבן בוהק לכל התאים */
+            background-color: #1e293b !important; /* רקע כהה יוקרתי */
+            border: 1px solid #334155 !important;
             border-radius: 8px !important;
-            overflow: hidden;
-            border: 1px solid #334155;
+            overflow: hidden !important;
         }
         .styled-table th { 
-            background-color: #334155; 
+            background-color: #334155 !important; 
             color: #ffffff !important; 
             text-align: right !important; 
-            padding: 12px !important; 
-            font-weight: bold; 
-            border-bottom: 3px solid #475569; 
+            padding: 14px 16px !important; 
+            font-weight: bold !important; 
+            border-bottom: 3px solid #475569 !important; 
+            font-size: 14.5px !important;
         }
         .styled-table td { 
-            padding: 10px !important; 
+            padding: 12px 16px !important; 
             text-align: right !important; 
-            border-bottom: 1px solid #334155; 
-            color: #ffffff !important; /* מונע מהטקסט להפוך לאפור */
+            border-bottom: 1px solid #334155 !important; 
+            color: #ffffff !important; /* כפיית צבע לבן בוהק למספרים הרגילים */
+            font-size: 14px !important;
         }
-        /* וידוא שגם תגיות פנימיות שגוגל או דפדפנים מזריקים יישארו לבנות */
-        .styled-table td span, .styled-table td font {
-            color: inherit !important;
+        /* מניעת דריסה של חוקי הרמזור הפנימיים */
+        .styled-table td span {
+            font-size: 14px !important;
+            display: inline-block !important;
         }
         </style>
     """, unsafe_allow_html=True)
