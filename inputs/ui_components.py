@@ -28,7 +28,7 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 פונקציית הזרקת העיצוב הגלובלית - תפריט צד + טבלאות
+# 🎨 פונקציית הזרקת העיצוב הגלובלית - תפריט צด 
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
@@ -146,12 +146,8 @@ def inject_design_system():
         .styled-table td { 
             padding: 12px 16px !important; 
             border-bottom: 1px solid #334155 !important; 
-            color: #ffffff !important; 
+            color: #ffffff; /* לבן כברירת מחדל, ללא important כדי שהרמזור הדינמי ינצח! */
             font-size: 14px !important;
-        }
-        
-        .styled-table td span {
-            color: inherit !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -172,35 +168,37 @@ def show_net_summary(title, amount):
 def wrap_html_style(text, style_str):
     return f"<span style='{style_str}'>{text}</span>"
 
-# פונקציות הרמזור
+# ==============================================================================
+# 🚥 פונקציות הרמזור האקטואריות - כפיית צבע קשיחה עם important!
+# ==============================================================================
 def get_withdrawal_style(pct):
     val = float(pct)
-    if val <= 3.5: return "color: #4ade80; font-weight: bold;"
-    if val <= 5.0: return "color: #fb923c; font-weight: bold;"
-    return "color: #f87171; font-weight: bold;"
+    if val <= 3.5: return "color: #4ade80 !important; font-weight: bold !important;"
+    if val <= 5.0: return "color: #fb923c !important; font-weight: bold !important;"
+    return "color: #f87171 !important; font-weight: bold !important;"
 
 def get_400_rule_style(val_str):
-    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
-    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
     except: return ""
 
 def get_emergency_style(val_str):
-    if val_str == "∞": return "color: #4ade80; font-weight: bold;"
-    try: return "color: #4ade80; font-weight: bold;" if float(val_str) >= 1.0 else "color: #f87171; font-weight: bold;"
+    if val_str == "∞": return "color: #4ade80 !important; font-weight: bold !important;"
+    try: return "color: #4ade80 !important; font-weight: bold !important;" if float(val_str) >= 1.0 else "color: #f87171 !important; font-weight: bold !important;"
     except: return ""
 
 def get_larger_portfolio_style(is_larger):
-    if is_larger: return "color: #4ade80; font-weight: 700;"
-    return "color: #ffffff; font-weight: 500;"
+    if is_larger: return "color: #4ade80 !important; font-weight: 700 !important;"
+    return "color: #ffffff !important; font-weight: 500 !important;"
 
 def get_resiliency_style(val_str):
-    return "color: #4ade80; font-weight: bold;" if "חסין" in val_str or "105" in val_str else "color: #f87171; font-weight: bold;"
+    return "color: #4ade80 !important; font-weight: bold !important;" if "חסין" in val_str or "105" in val_str else "color: #f87171 !important; font-weight: bold !important;"
 
 def get_preservation_pct_style(pct):
-    return "color: #4ade80; font-weight: bold;" if float(pct) >= 100.0 else "color: #f87171; font-weight: bold;"
+    return "color: #4ade80 !important; font-weight: bold !important;" if float(pct) >= 100.0 else "color: #f87171 !important; font-weight: bold !important;"
 
 def get_boolean_style(val_str):
-    return "color: #4ade80; font-weight: bold;" if "✅" in val_str else "color: #f87171; font-weight: bold;"
+    return "color: #4ade80 !important; font-weight: bold !important;" if "✅" in val_str else "color: #f87171 !important; font-weight: bold !important;"
 
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
@@ -230,7 +228,7 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה חסינים - פתרון אבסולוטי לשגיאות טיפוסים ומשתנים לא מוגדרים
+# 🧱 רכיבי הזנה חסינים - פתרון אבסולוטי לשגיאות טיפוסים
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -289,7 +287,6 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
         step_to_use = float(step) * 100.0 if step is not None else 1.0
         display_unit = "%"
     else:
-        # 🎯 התיקון הקשיח: הגדרת יחידת התצוגה מראש כדי שלא תהיה Unbound באף מסלול עשרוני
         display_unit = unit if unit else ""
         is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
         if is_float:
