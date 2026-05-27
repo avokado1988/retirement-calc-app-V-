@@ -28,7 +28,7 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 פונקציית הזרקת העיצוב הגלובלית - תפריט צד + טבלאות
+# 🎨 פונקציית הזרקת העיצוב הגלובלית - תפריט צד + כפיית יישור לימין בטבלאות
 # ==============================================================================
 def inject_design_system():
     st.markdown("""
@@ -118,7 +118,7 @@ def inject_design_system():
             text-align: center !important;
         }
 
-        /* ------------------- עיצוב טבלאות דוחות מרכזיות (.styled-table) ------------------- */
+        /* ------------------- עיצוב טבלאות דוחות מרכזיות (.styled-table) - יישור לימין ------------------- */
         .styled-table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
@@ -130,7 +130,7 @@ def inject_design_system():
             overflow: hidden !important;
         }
         
-        .styled-table th, .styled-table td {
+        .styled-table, .styled-table th, .styled-table td, .styled-table tr {
             text-align: right !important;
             direction: rtl !important;
         }
@@ -230,28 +230,28 @@ def _format_compact_value(val, unit):
     return f"{rtl_mark}{val} {unit}" if unit else f"{rtl_mark}{val}"
 
 # ==============================================================================
-# 🧱 רכיבי הזנה אקטואריים חסינים - נעילת סוגי נתונים אבסולוטית למניעת קריסות
+# 🧱 רכיבי הזנה חסינים - נעילת סוגי נתונים דינמית ואבסולוטית למניעת קריסות
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
     
-    # 🟢 בדיקה דינמית: האם אחד מהפרמטרים שהגיעו הוא שבר (float)?
+    # 🟢 זיהוי אוטומטי: בודק אם לפחות אחד מהפרמטרים שהגיעו הוא float
     is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
 
     if widget_key in st.query_params:
         try:
             stored_val = st.query_params[widget_key]
-            value = float(stored_val) if is_float else int(stored_val)
+            value = float(stored_val) if is_float else int(float(stored_val))
         except: pass
 
-    # 🟢 התאמה קשיחה של כל הפרמטרים לאותו הסוג בדיוק! (מונע שגיאות סוגים מעורבים בסטרימליט)
+    # 🟢 נעילת כל ארבעת הפרמטרים לאותו סוג נתונים בדיוק למניעת השגיאה!
     if is_float:
-        val_to_use = float(value)
+        val_to_use = float(value) if value is not None else 0.0
         min_to_use = float(min_value) if min_value is not None else 0.0
         max_to_use = float(max_value) if max_value is not None else None
         step_to_use = float(step) if step is not None else 1.0
     else:
-        val_to_use = int(value)
+        val_to_use = int(value) if value is not None else 0
         min_to_use = int(min_value) if min_value is not None else 0
         max_to_use = int(max_value) if max_value is not None else None
         step_to_use = int(step) if step is not None else 1
@@ -282,7 +282,7 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
     if widget_key in st.query_params:
         try:
             stored_val = float(st.query_params[widget_key])
-            value = stored_val if is_percentage_fraction else (float(stored_val) if isinstance(step, float) else int(stored_val))
+            value = stored_val
         except: pass
 
     if is_percentage_fraction:
@@ -295,15 +295,15 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
         is_float = isinstance(value, float) or isinstance(step, float) or (min_value is not None and isinstance(min_value, float)) or (max_value is not None and isinstance(max_value, float))
         if is_float:
             val_to_use = float(value)
-            min_to_use = float(min_value)
-            max_to_use = float(max_value)
+            min_to_use = float(min_value) if min_value is not None else 0.0
+            max_to_use = float(max_value) if max_value is not None else None
             step_to_use = float(step) if step is not None else 1.0
         else:
             val_to_use = int(value)
-            min_to_use = int(min_value)
-            max_to_use = int(max_value)
+            min_to_use = int(min_value) if min_value is not None else 0
+            max_to_use = int(max_value) if max_value is not None else None
             step_to_use = int(step) if step is not None else 1
-        display_unit = unit if unit else ""
+            display_unit = unit if unit else ""
 
     temp_key = widget_key + "_v7_holder"
     text_color = _get_dynamic_color_by_label(label)
