@@ -26,7 +26,7 @@ DEFAULTS = {
 }
 
 # ==============================================================================
-# 🎨 מנוע עיצוב מתקדם - איזון מרווחים אופטימלי והצמדה פיננסית
+# 🎨 מנוע עיצוב מתקדם - תיקון צבעים והצמדה אופטית
 # ==============================================================================
 st.markdown("""
 <style>
@@ -48,12 +48,12 @@ st.markdown("""
         margin: 0 !important;
     }
 
-    /* 2. עמודה 1: הכותרת הלבנה מימין - מתרחבת באופן דינמי לפי המרחב הפנוי */
+    /* 2. עמודה 1: הכותרת הלבנה מימין */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:nth-child(1) {
         flex: 1 1 auto !important;
         min-width: 0 !important;
         text-align: right !important;
-        margin-left: 10px !important; /* מרווח קבוע בין סוף הטקסט לחלונית הלבנה */
+        margin-left: 10px !important;
     }
 
     /* 3. עמודה 2: חלון ההזנה הלבן באמצע - נעול קשיח ליצירת גריד אנכי ישר ונקי */
@@ -68,7 +68,7 @@ st.markdown("""
         flex: 0 0 auto !important;
         min-width: max-content !important;
         text-align: right !important;
-        margin-right: 8px !important; /* הצמדה מדויקת ואסתטית של 8 פיקסלים משמאל לתיבה! */
+        margin-right: 8px !important;
     }
 
     /* 5. ביטול מוחלט של שבירת פסקאות המרקדאון המובנות */
@@ -98,6 +98,12 @@ st.markdown("""
         direction: rtl !important;
     }
 
+    /* 🎯 התיקון ההרמטי: הכרחת כל התגיות הפנימיות של סטרימליט לרשת את הצבע הדינמי שהגדרנו */
+    .custom-sidebar-badge,
+    .custom-sidebar-badge * {
+        color: inherit !important;
+    }
+
     /* קיבוע חלון ההזנה הלבן/שחור לרמת גימור יוקרתית */
     [data-testid="stSidebar"] .stNumberInput {
         width: 80px !important;
@@ -119,12 +125,9 @@ st.markdown("""
 def format_shekel(amount):
     return f"{int(amount):,} ₪" if amount is not None else "0 ₪"
 
-# ==============================================================================
-# 🟢 🪄 תיקון כרטיס הסיכום המרכזי - ללא רקע אפור דהוי, צבעים זוהרים וקריאות 100%
-# ==============================================================================
 def show_net_summary(title, amount):
     st.markdown(
-        f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; border-right:5px solid #4ade80; direction: rtl; text-align: right;'>"
+        f"<div style='padding:12px; background-color:#1e293b; border:1px solid #334155; border-radius:6px; margin:14px 0; border-right:5px solid #4ade80; direction: rtl; text-align: right;'> "
         f"<span style='font-weight:600; color:#ffffff; font-size:15px;'>{title}:</span> "
         f"<span style='font-weight:700; color:#4ade80; font-size:16px; margin-right:6px;'>{format_shekel(amount)}</span>"
         f"</div>", 
@@ -168,7 +171,7 @@ def _get_dynamic_color_by_label(label):
     if "חירום" in lbl: return "#fb923c" 
     if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" 
     if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך", "נזיל", "תיק", "יישאר"]): return "#4ade80" 
-    return "#38bdf8" 
+    return "#ffffff" # 🎯 שינוי ללבן בוהק כברירת מחדל כדי למנוע מראה אפור ודהוי
 
 def _format_compact_value(val, unit):
     val = float(val)
