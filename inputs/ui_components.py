@@ -69,29 +69,37 @@ def get_preservation_pct_style(pct):
 def get_boolean_style(val_str):
     return "color: #16a34a; font-weight: bold;" if "✅" in val_str else "color: #dc2626; font-weight: bold;"
 
-# ==============================================================================
-# 🎨 פונקציית עזר פרטית מעודכנת לצביעה דינמית מדויקת לפי הדרישות החדשות
-# ==============================================================================
 def _get_dynamic_color_by_label(label):
     lbl = label.lower()
-    
-    # 🟠 קרן חירום (כתום בוהק)
-    if "חירום" in lbl:
-        return "#fb923c"
-        
-    # 🔴 הוצאות, עלויות, אינפלציה ודמי ניהול (אדום בוהק)
-    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]):
-        return "#f87171"
-        
-    # 🟢 הכנסות, קצבאות, חסכונות ותשואות (ירוק פיננסי בוהק)
-    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]):
-        return "#4ade80"
-        
-    # 🔵 זמנים, גילאים, מקדמי המרה ותנאים אקטואריים (תכלת/כחול)
-    return "#38bdf8"
+    if "חירום" in lbl: return "#fb923c" # כתום
+    if any(x in lbl for x in ["הוצאה", "הוצאות", "מס", "עלות", "אינפלציה", "עזרה", "ניהול", "גירעון"]): return "#f87171" # אדום
+    if any(x in lbl for x in ["הכנסה", "הכנסות", "קצבה", "קצבת", "חיסכון", "חסכונות", "תשואה", "מכירה", "עליה ערך"]): return "#4ade80" # ירוק
+    return "#38bdf8" # תכלת
 
 # ==============================================================================
-# 🧱 רכיבי הזנה מעוצבים עם צביעה דינמית חכמה
+# 🪄 🟢 פונקציית עזר חכמה לקיצור מספרים פיננסיים (מ׳ ₪, א׳ ₪)
+# ==============================================================================
+def _format_compact_value(val, unit):
+    """הופכת מספרים גדולים לקיצורים קריאים בשילוב יחידות המידה"""
+    val = float(val)
+    
+    # טיפול במטבע שקלי (₪ / שח)
+    if unit in ["₪", "שח", "ש\"ח"]:
+        if val >= 1_000_000:
+            return f"{val / 1_000_000:.1f} מ׳ ₪".replace(".0 ", " ")
+        if val >= 1_000:
+            return f"{val / 1_000:.0f} א׳ ₪"
+        return f"{int(val)} ₪"
+        
+    # טיפול ביחידות של שנים
+    if unit == "שנים":
+        return f"{val:.1f} שנים" if val % 1 != 0 else f"{int(val)} שנים"
+        
+    # ברירת מחדל לכל שאר היחידות (כמו אחוזים %)
+    return f"{val:.1f}%" if unit == "%" else (f"{val} {unit}" if unit else f"{val}")
+
+# ==============================================================================
+# 🧱 רכיבי הזנה מעוצבים ומקוצרים
 # ==============================================================================
 def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit="₪"):
     widget_key = f"saved_v3_{label.replace(' ', '_')}"
@@ -128,13 +136,8 @@ def compact_number_input(label, value, min_value=0, max_value=None, step=1, unit
                 value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
             )
         with sub_col2:
-            if unit == "₪" or unit == "שח":
-                formatted_display = f"{int(res):,} ₪"
-            elif unit == "שנים":
-                formatted_display = f"{res:.1f} שנים" if isinstance(step, float) else f"{int(res)} שנים"
-            else:
-                formatted_display = f"{res} {unit}" if unit else f"{res}"
-                
+            # 🟢 שימוש במנגנון הקיצור החכם
+            formatted_display = _format_compact_value(res, unit)
             st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
     
     st.query_params[widget_key] = str(res)
@@ -184,15 +187,8 @@ def labeled_slider_with_value(label, min_value, max_value, value, step=1.0, form
                 value=val_to_use, step=step_to_use, label_visibility="collapsed", key=temp_key
             )
         with sub_col2:
-            if display_unit == "%":
-                formatted_display = f"{raw_input:.1f}%"
-            elif display_unit == "שנים":
-                formatted_display = f"{raw_input:.1f} שנים" if isinstance(step, float) else f"{int(raw_input)} שנים"
-            elif display_unit == "₪" or display_unit == "שח":
-                formatted_display = f"{int(raw_input):,} ₪"
-            else:
-                formatted_display = f"{raw_input} {display_unit}" if display_unit else f"{raw_input}"
-                
+            # 🟢 שימוש במנגנון הקיצור החכם
+            formatted_display = _format_compact_value(raw_input, display_unit)
             st.markdown(f"<div style='line-height: 2.6; font-weight: 700; color: {text_color}; white-space: nowrap; padding-right: 5px;'>{formatted_display}</div>", unsafe_allow_html=True)
         
     res = float(raw_input) / 100.0 if is_percentage_fraction else raw_input
