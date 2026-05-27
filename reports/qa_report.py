@@ -7,11 +7,40 @@ from inputs.ui_components import (
 )
 
 def render_qa_section(results, user_inputs):
+    # 🎯 שדרוג ה-CSS של הטבלה המרכזית ללוק פריריום כהה, קריא וחסין לחלוטין
     st.markdown("""
         <style>
-        .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 15px 0; font-family: sans-serif; }
-        .styled-table th { background-color: #f3f4f6; color: #1f2937; text-align: right !important; padding: 10px !important; font-weight: bold; border-bottom: 2px solid #e5e7eb; }
-        .styled-table td { padding: 8px !important; text-align: right !important; border-bottom: 1px solid #f3f4f6; }
+        .styled-table { 
+            width: 100% !important; 
+            direction: rtl !important; 
+            text-align: right !important; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            font-family: sans-serif; 
+            background-color: #1e293b !important; /* רקע כהה יוקרתי לטבלה */
+            color: #ffffff !important; /* כפיית טקסט לבן בוהק לכל התאים */
+            border-radius: 8px !important;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+        .styled-table th { 
+            background-color: #334155; 
+            color: #ffffff !important; 
+            text-align: right !important; 
+            padding: 12px !important; 
+            font-weight: bold; 
+            border-bottom: 3px solid #475569; 
+        }
+        .styled-table td { 
+            padding: 10px !important; 
+            text-align: right !important; 
+            border-bottom: 1px solid #334155; 
+            color: #ffffff !important; /* מונע מהטקסט להפוך לאפור */
+        }
+        /* וידוא שגם תגיות פנימיות שגוגל או דפדפנים מזריקים יישארו לבנות */
+        .styled-table td span, .styled-table td font {
+            color: inherit !important;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -37,7 +66,7 @@ def render_qa_section(results, user_inputs):
     exp_retire = float(row_retire["הוצאה נומינלית"])
     work_retire = float(row_retire["הכנסה מעבודה"])
     ni_retire = float(row_retire["קצבת ביטוח לאומי"])
-    pension_190_retire = float(row_retire["קצבה מזערית 190"]) # 🟢 מותאם למפתח החדש
+    pension_190_retire = float(row_retire["קצבה מזערית 190"])
     
     balance_190_retire = float(row_retire["צבירה תיקון 190"])
     balance_25_retire = float(row_retire["צבירה מסלול ריאלי"])
@@ -66,7 +95,7 @@ def render_qa_section(results, user_inputs):
     exp_check = float(row_check["הוצאה נומינלית"])
     work_check = float(row_check["הכנסה מעבודה"])
     ni_check = float(row_check["קצבת ביטוח לאומי"])
-    pension_190_check = float(row_check["קצבה מזערית 190"]) # 🟢 מותאם למפתח החדש
+    pension_190_check = float(row_check["קצבה מזערית 190"])
     
     balance_190_check = float(row_check["צבירה תיקון 190"])
     balance_25_check = float(row_check["צבירה מסלול ריאלי"])
