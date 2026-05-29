@@ -65,12 +65,11 @@ def run_simulation(user_inputs):
 
         curr_work_inc = work_income_static if current_age < work_end_age else 0.0
         
+        ni_indexed = ni_base * inflation_factor
         if current_age >= retirement_age:
             p_indexed = pension_base * retirement_inflation_factor
-            ni_indexed = ni_base * inflation_factor
         else:
             p_indexed = 0.0
-            ni_indexed = 0.0
             
         # 🟢 הכנסת בסיס בלבד (עבודה + ב"ל)
         base_income = curr_work_inc + ni_indexed
