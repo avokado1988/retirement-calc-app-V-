@@ -40,10 +40,10 @@ def render_qa_section(results, user_inputs):
     row_retire = get_row(retire_age)
     row_check = get_row(check_age)
 
-    years_to_retire = retire_age - start_age
-    years_to_check = check_age - start_age
-    property_value_retire = property_value_start * ((1 + appreciation_rate) ** years_to_retire)
-    property_value_check = property_value_start * ((1 + appreciation_rate) ** years_to_check)
+    # Read property value directly from engine column to stay in sync to the shekel
+    # (engine compounds monthly from m=0; recomputing here would drift by ~1 month).
+    property_value_retire = float(row_retire.get("שווי נדלן", property_value_start))
+    property_value_check = float(row_check.get("שווי נדלן", property_value_start))
 
     # -------------------------------------------------------
     # Extract values at retirement
