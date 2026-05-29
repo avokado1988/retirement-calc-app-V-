@@ -91,7 +91,8 @@ def run_simulation(user_inputs):
 
         # --- Income ---
         curr_work_inc = work_income_static if current_age < work_end_age else 0.0
-        ni_indexed = ni_base * inflation_factor
+        # NI is indexed via inflation_factor from start_age, but paid only from retirement_age
+        ni_indexed = ni_base * inflation_factor if current_age >= retirement_age else 0.0
         p_indexed = pension_base * retirement_inflation_factor if current_age >= retirement_age else 0.0
         base_income = curr_work_inc + ni_indexed
 

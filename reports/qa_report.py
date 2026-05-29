@@ -78,9 +78,9 @@ def render_qa_section(results, user_inputs):
     inherit_190_r = b190_r + pension_asset_retire
     inherit_h_r = bh_r + pension_asset_retire
 
-    tw_190_r = b190_r + property_value_retire + emergency_fund
+    tw_190_r = b190_r + pension_asset_retire + property_value_retire + emergency_fund
     tw_25_r = b25_r + property_value_retire + emergency_fund
-    tw_h_r = bh_r + property_value_retire + emergency_fund
+    tw_h_r = bh_r + pension_asset_retire + property_value_retire + emergency_fund
     tw_rent_r = br_r + float(row_retire.get("שווי נדלן מסלול 4", property_value_retire)) + emergency_fund
 
     # -------------------------------------------------------
@@ -112,9 +112,9 @@ def render_qa_section(results, user_inputs):
     inherit_190_c = b190_c + pension_asset_check
     inherit_h_c = bh_c + pension_asset_check
 
-    tw_190_c = b190_c + property_value_check + emergency_fund
+    tw_190_c = b190_c + pension_asset_check + property_value_check + emergency_fund
     tw_25_c = b25_c + property_value_check + emergency_fund
-    tw_h_c = bh_c + property_value_check + emergency_fund
+    tw_h_c = bh_c + pension_asset_check + property_value_check + emergency_fund
     tw_rent_c = br_c + float(row_check.get("שווי נדלן מסלול 4", property_value_check)) + emergency_fund
 
     bool_preserve = lambda bal: "✅ כן" if bal > baseline_capital else "❌ לא"

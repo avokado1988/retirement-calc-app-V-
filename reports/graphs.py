@@ -53,42 +53,52 @@ def render_charts(df_history):
     # =========================================================
     # Graph 2: Cash flow puzzle (tracks 1 and 3 — pension-based)
     # =========================================================
-    st.subheader("⚖️ 2. פאזל מימון המחיה — מסלולי הקצבה (1 ו-3)")
-    st.markdown("מאיפה מגיע הכסף? הכנסות קבועות (ירוק), קצבה (כחול), **גירעון שנמשך מהחסכונות (אדום)**.")
-    fig2 = go.Figure()
+    st.subheader("⚖️ 2. פאזל מימון המחיה — השוואת מסלולים")
 
-    fig2.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["הכנסה נומינלית"],
-        mode='none', name='הכנסה קבועה (ב"ל / עבודה)',
-        fill='tozeroy', stackgroup='one', fillcolor='rgba(44, 160, 44, 0.6)'
-    ))
-    fig2.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["הכנסה מקצבה מזערית"],
-        mode='none', name='קצבת תיקון 190 / היברידי',
-        fill='tonexty', stackgroup='one', fillcolor='rgba(31, 119, 180, 0.6)'
-    ))
+    tab_c1, tab_c2 = st.tabs(["מסלולים 1 ו-3 (קצבה)", "מסלול 4 (שכירות)"])
 
-    gap = (df_history["הוצאה נומינלית"] - (df_history["הכנסה נומינלית"] + df_history["הכנסה מקצבה מזערית"])).clip(lower=0)
-    fig2.add_trace(go.Scatter(
-        x=df_history["גיל"], y=gap,
-        mode='none', name='משיכה מחסכונות (גירעון)',
-        fill='tonexty', stackgroup='one', fillcolor='rgba(214, 39, 40, 0.5)'
-    ))
-    fig2.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["הוצאה נומינלית"],
-        mode='lines', name='סך ההוצאות',
-        line=dict(color='black', width=2, dash='dot')
-    ))
+    with tab_c1:
+        st.markdown("הכנסות קבועות (ירוק), קצבה (כחול), **גירעון שנמשך מחסכונות (אדום)**.")
+        fig2a = go.Figure()
+        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=df_history["הכנסה נומינלית"],
+            mode='none', name='הכנסה קבועה (ב"ל / עבודה)',
+            fill='tozeroy', stackgroup='one', fillcolor='rgba(44, 160, 44, 0.6)'))
+        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=df_history["הכנסה מקצבה מזערית"],
+            mode='none', name='קצבת תיקון 190 / היברידי',
+            fill='tonexty', stackgroup='one', fillcolor='rgba(31, 119, 180, 0.6)'))
+        gap1 = (df_history["הוצאה נומינלית"] - (df_history["הכנסה נומינלית"] + df_history["הכנסה מקצבה מזערית"])).clip(lower=0)
+        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=gap1,
+            mode='none', name='משיכה מחסכונות (גירעון)',
+            fill='tonexty', stackgroup='one', fillcolor='rgba(214, 39, 40, 0.5)'))
+        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=df_history["הוצאה נומינלית"],
+            mode='lines', name='סך הוצאות', line=dict(color='black', width=2, dash='dot')))
+        max_y1 = df_history["הוצאה נומינלית"].quantile(0.95) * 1.3
+        fig2a.update_layout(xaxis_title="גיל", yaxis_title="סכום חודשי (₪)",
+            yaxis=dict(range=[0, max_y1]), hovermode="x unified", template="plotly_white",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+        fig2a.update_traces(hovertemplate="%{y:,.0f} ₪")
+        st.plotly_chart(fig2a, use_container_width=True)
 
-    max_y_view = df_history["הוצאה נומינלית"].quantile(0.95) * 1.3
-    fig2.update_layout(
-        xaxis_title="גיל", yaxis_title="סכום חודשי (₪)",
-        yaxis=dict(range=[0, max_y_view]),
-        hovermode="x unified", template="plotly_white",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-    )
-    fig2.update_traces(hovertemplate="%{y:,.0f} ₪")
-    st.plotly_chart(fig2, use_container_width=True)
+    with tab_c2:
+        st.markdown("הכנסות (ירוק = ב\"ל + שכירות נטו), **גירעון (אדום) = הוצאות מחיה + שכירות תשלום פחות הכנסות**.")
+        fig2b = go.Figure()
+        total_income_4 = df_history["הכנסה נומינלית"] + df_history.get("הכנסת שכירות נטו", 0)
+        total_expense_4 = df_history["הוצאה נומינלית"] + df_history.get("הוצאת שכירות", 0)
+        fig2b.add_trace(go.Scatter(x=df_history["גיל"], y=total_income_4,
+            mode='none', name='סך הכנסות (ב"ל + שכירות נטו)',
+            fill='tozeroy', stackgroup='one', fillcolor='rgba(44, 160, 44, 0.6)'))
+        gap4 = (total_expense_4 - total_income_4).clip(lower=0)
+        fig2b.add_trace(go.Scatter(x=df_history["גיל"], y=gap4,
+            mode='none', name='גירעון — משיכה מחסכונות',
+            fill='tonexty', stackgroup='one', fillcolor='rgba(214, 39, 40, 0.5)'))
+        fig2b.add_trace(go.Scatter(x=df_history["גיל"], y=total_expense_4,
+            mode='lines', name='סך הוצאות (מחיה + שכירות)', line=dict(color='black', width=2, dash='dot')))
+        max_y2 = total_expense_4.quantile(0.95) * 1.3
+        fig2b.update_layout(xaxis_title="גיל", yaxis_title="סכום חודשי (₪)",
+            yaxis=dict(range=[0, max_y2]), hovermode="x unified", template="plotly_white",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+        fig2b.update_traces(hovertemplate="%{y:,.0f} ₪")
+        st.plotly_chart(fig2b, use_container_width=True)
 
     st.divider()
 
