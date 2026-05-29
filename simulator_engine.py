@@ -67,7 +67,7 @@ def run_simulation(user_inputs):
         
         if current_age >= retirement_age:
             p_indexed = pension_base * retirement_inflation_factor
-            ni_indexed = ni_base * retirement_inflation_factor
+            ni_indexed = ni_base * inflation_factor
         else:
             p_indexed = 0.0
             ni_indexed = 0.0
