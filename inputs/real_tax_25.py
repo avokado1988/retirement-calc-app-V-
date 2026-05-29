@@ -23,8 +23,26 @@ def render_25_inputs(remaining_for_gimel):
         format="%.2f%%", unit="%"
     ) / 100
     
+    st.divider()
+    st.subheader("📊 מסלול 3 — קצבה + 25% מס ריאלי (היברידי)")
+    st.caption("🔗 נתוני הקצבה (גובה, מקדם, הון שנוכה) נלקחים אוטומטית ממסלול תיקון 190.")
+    st.caption("ההון הנותר לאחר רכישת הקצבה מנוהל כאן בשיטת 25% מס ריאלי.")
+
+    annual_return_hybrid = labeled_slider_with_value(
+        "תשואה שנתית — מסלול היברידי (%)",
+        min_value=0.0, max_value=15.0, value=DEFAULTS["annual_return"] * 100, step=0.1,
+        format="%.1f%%", unit="%"
+    ) / 100
+    management_fee_hybrid = labeled_slider_with_value(
+        "דמי ניהול — מסלול היברידי (%)",
+        min_value=0.0, max_value=2.0, value=DEFAULTS["management_fee"] * 100, step=0.05,
+        format="%.2f%%", unit="%"
+    ) / 100
+
     return {
         "net_for_real_pathway": net_for_real_pathway,
         "annual_return_25": annual_return_25,
-        "management_fee_25": management_fee_25
+        "management_fee_25": management_fee_25,
+        "annual_return_hybrid": annual_return_hybrid,
+        "management_fee_hybrid": management_fee_hybrid
     }

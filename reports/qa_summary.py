@@ -55,6 +55,11 @@ def render_qa_summary_page(results, user_inputs):
     row_100 = df_100.iloc[0] if not df_100.empty else df_full.iloc[-1]
     balance_190_at_100 = float(row_100["צבירה תיקון 190"])
     balance_25_at_100 = float(row_100["צבירה מסלול ריאלי"])
+    balance_hybrid_at_100 = float(row_100.get("צבירה מסלול היברידי", 0))
+    balance_rental_at_100 = float(row_100.get("צבירה מסלול שכירות", 0))
+
+    balance_hybrid_retire = float(row_retire.get("צבירה מסלול היברידי", 0))
+    balance_rental_retire = float(row_retire.get("צבירה מסלול שכירות", 0))
 
     # הצגה ויזואלית בממשק
     st.subheader("📋 כלי סיכום נתונים להעתקה מהירה (QA)")
@@ -80,10 +85,14 @@ def render_qa_summary_page(results, user_inputs):
 - שווי נדל"ן התחלתי: {property_value_start:,.0f} ש"ח
 
 [תוצאות שווי התיק הנזיל - נקודות מפתח]
-- מסלול תיקון 190 בגיל פרישה ({retire_age:.1f}): {balance_190_retire:,.0f} ש"ח
-- מסלול 25% מס ריאלי בגיל פרישה ({retire_age:.1f}): {balance_25_retire:,.0f} ש"ח
-- מסלול תיקון 190 בגיל 100: {balance_190_at_100:,.0f} ש"ח
-- מסלול 25% מס ריאלי בגיל 100: {balance_25_at_100:,.0f} ש"ח
+- מסלול 1 — תיקון 190 בגיל פרישה ({retire_age:.1f}): {balance_190_retire:,.0f} ש"ח
+- מסלול 2 — 25% מס ריאלי בגיל פרישה ({retire_age:.1f}): {balance_25_retire:,.0f} ש"ח
+- מסלול 3 — קצבה + 25% ריאלי בגיל פרישה ({retire_age:.1f}): {balance_hybrid_retire:,.0f} ש"ח
+- מסלול 4 — שכירות בגיל פרישה ({retire_age:.1f}): {balance_rental_retire:,.0f} ש"ח
+- מסלול 1 — תיקון 190 בגיל 100: {balance_190_at_100:,.0f} ש"ח
+- מסלול 2 — 25% מס ריאלי בגיל 100: {balance_25_at_100:,.0f} ש"ח
+- מסלול 3 — קצבה + 25% ריאלי בגיל 100: {balance_hybrid_at_100:,.0f} ש"ח
+- מסלול 4 — שכירות בגיל 100: {balance_rental_at_100:,.0f} ש"ח
 ============================================"""
 
     st.code(copy_text, language="text")
@@ -91,8 +100,10 @@ def render_qa_summary_page(results, user_inputs):
     st.write("---")
     st.markdown("**🔍 מבט מהיר על תוצאות התיק הנזיל:**")
     df_summary_row = pd.DataFrame({
-        "נקודת זמן בסימולציה": [f"גיל פרישה ({retire_age:.1f})", "גיל 100.0"],
-        "תיקון 190": [format_shekel(balance_190_retire), format_shekel(balance_190_at_100)],
-        "מסלול 25% מס ריאלי": [format_shekel(balance_25_retire), format_shekel(balance_25_at_100)]
+        "נקודת זמן": [f"גיל פרישה ({retire_age:.1f})", "גיל 100.0"],
+        "מסלול 1 — 190": [format_shekel(balance_190_retire), format_shekel(balance_190_at_100)],
+        "מסלול 2 — 25% ריאלי": [format_shekel(balance_25_retire), format_shekel(balance_25_at_100)],
+        "מסלול 3 — היברידי": [format_shekel(balance_hybrid_retire), format_shekel(balance_hybrid_at_100)],
+        "מסלול 4 — שכירות": [format_shekel(balance_rental_retire), format_shekel(balance_rental_at_100)]
     })
-    st.table(df_summary_row.set_index("נקודת זמן בסימולציה"))
+    st.table(df_summary_row.set_index("נקודת זמן"))
