@@ -65,12 +65,11 @@ def run_simulation(user_inputs):
 
         curr_work_inc = work_income_static if current_age < work_end_age else 0.0
         
+        ni_indexed = ni_base * inflation_factor
         if current_age >= retirement_age:
             p_indexed = pension_base * retirement_inflation_factor
-            ni_indexed = ni_base * inflation_factor
         else:
             p_indexed = 0.0
-            ni_indexed = 0.0
             
         # 🟢 הכנסת בסיס בלבד (עבודה + ב"ל)
         base_income = curr_work_inc + ni_indexed
@@ -95,7 +94,6 @@ def run_simulation(user_inputs):
 
         # --- משיכה 25% ---
         tax_25 = 0.0
-        if m > 0: basis_25 *= (1 + i_monthly) 
         if net_needed_25 > 0 and balance_25 > 0:
             rpr = max(0.0, (balance_25 - basis_25) / balance_25)
             gross25 = net_needed_25 / (1 - (rpr * 0.25))
@@ -103,6 +101,7 @@ def run_simulation(user_inputs):
             tax_25 = pull25 * rpr * 0.25
             basis_25 *= (1 - (pull25 / balance_25))
             balance_25 -= pull25
+        if m > 0: basis_25 *= (1 + i_monthly)
 
         if balance_190 > 0: balance_190 *= (1 + r_monthly_190)
         if balance_25 > 0: balance_25 *= (1 + r_monthly_25)

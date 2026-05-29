@@ -23,10 +23,10 @@ def render_qa_summary_page(results, user_inputs):
     # שליפת הערכים המדויקים מהסליידרים
     inflation = float(expenses.get("expected_inflation", 0.023))
     yield_190 = float(amendment_190.get("annual_return_190", 0.05))
-    fee_190 = float(amendment_190.get("management_fee_190", 0.005))
-    
+    fee_190 = float(amendment_190.get("management_fee_190", 0.006))
+
     yield_25 = float(real_tax_25.get("annual_return_25", 0.05))
-    fee_25 = float(real_tax_25.get("management_fee_25", 0.005))
+    fee_25 = float(real_tax_25.get("management_fee_25", 0.006))
     
     initial_capital_190 = float(amendment_190.get("net_for_190") or 0)
     initial_capital_25 = float(real_tax_25.get("net_for_real_pathway") or 0)
@@ -34,10 +34,10 @@ def render_qa_summary_page(results, user_inputs):
     base_exp = float(expenses.get("current_expenses", 11000))
     work_inc = float(expenses.get("work_income", 0))
     work_end_age = float(expenses.get("work_end_age", retire_age))
-    base_inc_ni = float(wealth.get("national_insurance", 2591))
-    
-    # שליפת נתוני מטפלת סיעודית מהממשק
-    care_age = float(wealth.get("care_age", 85.0))
+    base_inc_ni = float(wealth.get("national_insurance", 2500))
+
+    # care_age hardcoded to 85.0 - matches simulator_engine.py line 58
+    care_age = 85.0
     care_cost = float(expenses.get("caregiver_cost", 3500))
     
     property_value_start = float(wealth.get("new_apartment_cost") or 0)
