@@ -1,53 +1,53 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, DEFAULTS
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_BLUE, COLOR_RED, DEFAULTS
 
 def render_190_inputs(remaining_for_gimel):
     st.subheader("📑 מסלול תיקון 190 וחישוב קצבה")
     st.caption(f"הון התחלתי זמין לקופת גמל: {format_shekel(remaining_for_gimel)}")
-    
+
     st.markdown("##### 🎯 הגדרת קצבה רצויה לרכישה")
     desired_pension = compact_number_input(
-        "קצבה רצויה לרכישה (₪ חודשי)", 
-        value=DEFAULTS["desired_pension"], min_value=0, step=50, unit="₪"
+        "קצבה רצויה לרכישה (₪ חודשי)",
+        value=DEFAULTS["desired_pension"], min_value=0, step=50, unit="₪", color=COLOR_GREEN
     )
-    
+
     st.divider()
     st.markdown("##### 🎲 תנאים אקטואריים (מודל שוק ריאלי)")
     securing_years = compact_number_input(
         "תקופת אבטחה בשנים (חודשי הבטחה ליורשים)",
-        value=20, min_value=0, max_value=35, step=1, unit="שנים"
+        value=20, min_value=0, max_value=35, step=1, unit="שנים", color=COLOR_BLUE
     )
     base_coefficient = compact_number_input(
         "מקדם המרה בסיסי לקצבה (ללא אבטחה)",
-        value=200.0, min_value=150.0, max_value=300.0, step=1.0, unit=None
+        value=200.0, min_value=150.0, max_value=300.0, step=1.0, unit=None, color=COLOR_BLUE
     )
-    
+
     adjusted_coefficient = base_coefficient + (securing_years * 1.0)
     capital_for_pension = int(desired_pension * adjusted_coefficient)
-    
+
     st.divider()
     st.markdown("##### 📊 חישובים אקטואריים אוטומטיים:")
     col1, col2 = st.columns(2)
     with col1: st.metric(label="מקדם המרה משוקלל", value=f"{adjusted_coefficient:.1f}")
     with col2: st.metric(label="הון נדרש שינוכה", value=format_shekel(capital_for_pension))
-    
+
     net_for_190 = max(0, remaining_for_gimel - capital_for_pension)
     if remaining_for_gimel < capital_for_pension:
         st.error(f"⚠️ אזהרה: ההון הנדרש לקצבה גבוה מסך ההון הזמין!")
     else:
         show_net_summary(title="יתרת הון נטו פנויה בתיקון 190", amount=net_for_190)
-    
+
     st.divider()
     st.markdown("##### 📈 תשואה ודמי ניהול ליתרת ההון")
     annual_return_190 = compact_number_input(
         "תשואה שנתית צפויה במסלול 190 (%)",
-        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%"
+        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE
     ) / 100
     management_fee_190 = compact_number_input(
         "דמי ניהול שנתיים מהצבירה במסלול 190 (%)",
-        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%"
+        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
     ) / 100
-    
+
     return {
         "desired_pension": desired_pension, "securing_years": securing_years,
         "base_coefficient": base_coefficient, "adjusted_coefficient": adjusted_coefficient,

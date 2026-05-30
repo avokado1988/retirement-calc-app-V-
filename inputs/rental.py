@@ -1,5 +1,5 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, show_net_summary, format_shekel
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_RED, COLOR_BLUE
 
 def render_rental_inputs(wealth_data):
     existing_savings = float(wealth_data.get("existing_savings", 440000))
@@ -19,29 +19,29 @@ def render_rental_inputs(wealth_data):
     st.markdown("##### 📥 הכנסה מהשכרת הנכס")
     rental_income_monthly = compact_number_input(
         "שכר דירה חודשי — גביה (₪)",
-        value=8000, min_value=0, step=500, unit="₪"
+        value=8000, min_value=0, step=500, unit="₪", color=COLOR_GREEN
     )
     rental_income_growth_pct = compact_number_input(
         "עלייה שנתית בדמי שכירות גביה (%)",
-        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%"
+        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
     )
 
     st.divider()
     st.markdown("##### 📤 הוצאה על שכירות למגורים")
     rent_paid_monthly = compact_number_input(
         "שכר דירה חודשי — תשלום (₪)",
-        value=6000, min_value=0, step=500, unit="₪"
+        value=6000, min_value=0, step=500, unit="₪", color=COLOR_RED
     )
     rent_paid_growth_pct = compact_number_input(
         "עלייה שנתית בדמי שכירות תשלום (%)",
-        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%"
+        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
     )
 
     st.divider()
     st.markdown("##### 🧾 מיסוי על הכנסת שכירות")
     rental_tax_pct = compact_number_input(
         "שיעור מס אפקטיבי על שכירות (%)",
-        value=10.0, min_value=0.0, max_value=50.0, step=0.5, unit="%"
+        value=10.0, min_value=0.0, max_value=50.0, step=0.5, unit="%", color=COLOR_RED
     )
     st.caption("ברירת מחדל 10% — מסלול סעיף 122 (ללא ניכוי הוצאות). ניתן להתאים.")
 

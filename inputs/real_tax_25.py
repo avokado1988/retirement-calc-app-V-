@@ -1,5 +1,5 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, DEFAULTS
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_BLUE, COLOR_RED, DEFAULTS
 
 def render_25_inputs(remaining_for_gimel):
     st.subheader("📉 מסלול 25% מס ריאלי")
@@ -13,12 +13,12 @@ def render_25_inputs(remaining_for_gimel):
 
     annual_return_25 = compact_number_input(
         "תשואה שנתית צפויה במסלול ריאלי (%)",
-        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%"
+        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE
     ) / 100
 
     management_fee_25 = compact_number_input(
         "דמי ניהול שנתיים מהצבירה במסלול ריאלי (%)",
-        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%"
+        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
     ) / 100
 
     st.divider()
@@ -28,11 +28,11 @@ def render_25_inputs(remaining_for_gimel):
 
     annual_return_hybrid = compact_number_input(
         "תשואה שנתית — מסלול היברידי (%)",
-        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%"
+        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE
     ) / 100
     management_fee_hybrid = compact_number_input(
         "דמי ניהול — מסלול היברידי (%)",
-        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%"
+        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
     ) / 100
 
     return {

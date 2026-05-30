@@ -115,24 +115,27 @@ def wrap_html_style(val_str, style_str):
 # 💎 3. רכיבי ממשק משופרים והיברידיים (UX קומפקטי, דינמי ומוגן מפני קריסות)
 # ==============================================================================
 
-def compact_number_input(label, value, min_value=None, max_value=None, step=1, help_text=None, unit="₪"):
+COLOR_RED    = "#d62728"   # הוצאות
+COLOR_GREEN  = "#2ca02c"   # הכנסות
+COLOR_BLUE   = "#1565c0"   # פרמטרים אקטואריים / זמנים
+COLOR_ORANGE = "#e67e22"   # קרן חירום
+
+def compact_number_input(label, value, min_value=None, max_value=None, step=1, help_text=None, unit="₪", color=COLOR_GREEN):
     col1, col2 = st.columns([2.5, 1.5])
     with col1:
         v = st.number_input(label, value=value, min_value=min_value, max_value=max_value, step=step, help=help_text)
-    
+
     with col2:
-        # פירמוט נקי בהתאם לסוג היחידה
-        if unit == "₪": 
+        if unit == "₪":
             formatted = format_shekel(v)
-        elif unit == "%": 
+        elif unit == "%":
             formatted = f"{float(v):.1f}%"
-        elif unit: 
+        elif unit:
             formatted = f"{float(v):.1f} {unit}" if isinstance(v, float) else f"{v} {unit}"
-        else: 
+        else:
             formatted = f"{float(v):.1f}" if isinstance(v, float) else f"{v}"
-        
-        # ID דינמי (id='num_{v}') מכריח את הדפדפן לרנדר את הטקסט מחדש ומונע קיפאון!
-        st.markdown(f"<div id='num_{v}' style='padding-top: 28px; font-weight: bold; color: #2ca02c; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
+
+        st.markdown(f"<div id='num_{v}' style='padding-top: 28px; font-weight: bold; color: {color}; text-align: left; direction: ltr;'>{formatted}</div>", unsafe_allow_html=True)
     return v
 
 
