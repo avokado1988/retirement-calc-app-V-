@@ -6,7 +6,7 @@ import streamlit as st
 DEFAULTS = {
     "start_age": 65.5,
     "retirement_age": 67.0,
-    "check_age": 87.0,
+    "check_age": 97.0,
     "expected_inflation": 0.023,
     "current_expenses": 11000,
     "caregiver_cost": 3500,
@@ -15,7 +15,7 @@ DEFAULTS = {
     "work_income": 0,
     "desired_pension": 5000,
     "national_insurance": 2500,
-    "annual_return": 0.05,
+    "annual_return": 0.055,
     "management_fee": 0.006,
     "net_sale": 10000000,
     "existing_savings": 440000,

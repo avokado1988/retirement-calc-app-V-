@@ -80,16 +80,25 @@ st.sidebar.divider()
 # ==============================================================================
 
 # 2. טעינת תפריט הצד המבוזר וקבלת מילון הנתונים המאוחד
+# (חייב לרוץ תמיד — כדי לשמור ערכים ב-URL)
 user_inputs = inputs.render_all_sidebar_inputs()
 
-# 3. הפעלת מנוע החישובים בזמן אמת על בסיס נתוני המשתמש
-sim_results = run_simulation(user_inputs)
+# 3. כפתור הפעלה — הסימולציה רצה רק בלחיצה (לא על כל שינוי)
+st.sidebar.divider()
+run_clicked = st.sidebar.button("▶️ עדכן סימולציה", use_container_width=True, type="primary")
+
+if run_clicked or "sim_results" not in st.session_state:
+    st.session_state["sim_results"] = run_simulation(user_inputs)
+    st.session_state["last_inputs"] = user_inputs
+
+sim_results = st.session_state["sim_results"]
+display_inputs = st.session_state["last_inputs"]
 
 # 4. חלוקת המסך המרכזי ללשוניות תצוגה מקצועיות
 tab1, tab2, tab3, tab4 = st.tabs(["❓ שאלות ותשובות", "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
 
 with tab1:
-    render_qa_section(sim_results, user_inputs)
+    render_qa_section(sim_results, display_inputs)
 
 with tab2:
     render_charts(sim_results["df"])
@@ -119,4 +128,4 @@ with tab3:
     }), use_container_width=True)
 
 with tab4:
-    render_qa_summary_page(sim_results, user_inputs)
+    render_qa_summary_page(sim_results, display_inputs)
