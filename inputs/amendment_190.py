@@ -1,5 +1,5 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, labeled_slider_with_value, show_net_summary, format_shekel, DEFAULTS
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, DEFAULTS
 
 def render_190_inputs(remaining_for_gimel):
     st.subheader("📑 מסלול תיקון 190 וחישוב קצבה")
@@ -13,13 +13,13 @@ def render_190_inputs(remaining_for_gimel):
     
     st.divider()
     st.markdown("##### 🎲 תנאים אקטואריים (מודל שוק ריאלי)")
-    securing_years = labeled_slider_with_value(
-        "תקופת אבטחה בשנים (חודשי הבטחה ליורשים)", 
-        min_value=0, max_value=35, value=20, step=1, unit="שנים"
+    securing_years = compact_number_input(
+        "תקופת אבטחה בשנים (חודשי הבטחה ליורשים)",
+        value=20, min_value=0, max_value=35, step=1, unit="שנים"
     )
-    base_coefficient = labeled_slider_with_value(
-        "מקדם המרה בסיסי לקצבה (ללא אבטחה)", 
-        min_value=150.0, max_value=300.0, value=200.0, step=1.0, format="%.1f", unit=None
+    base_coefficient = compact_number_input(
+        "מקדם המרה בסיסי לקצבה (ללא אבטחה)",
+        value=200.0, min_value=150.0, max_value=300.0, step=1.0, unit=None
     )
     
     adjusted_coefficient = base_coefficient + (securing_years * 1.0)
@@ -39,15 +39,13 @@ def render_190_inputs(remaining_for_gimel):
     
     st.divider()
     st.markdown("##### 📈 תשואה ודמי ניהול ליתרת ההון")
-    annual_return_190 = labeled_slider_with_value(
-        "תשואה שנתית צפויה במסלול 190 (%)", 
-        min_value=0.0, max_value=15.0, value=DEFAULTS["annual_return"] * 100, step=0.1, 
-        format="%.1f%%", unit="%"
+    annual_return_190 = compact_number_input(
+        "תשואה שנתית צפויה במסלול 190 (%)",
+        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%"
     ) / 100
-    management_fee_190 = labeled_slider_with_value(
-        "דמי ניהול שנתיים מהצבירה במסלול 190 (%)", 
-        min_value=0.0, max_value=2.0, value=DEFAULTS["management_fee"] * 100, step=0.05, 
-        format="%.2f%%", unit="%"
+    management_fee_190 = compact_number_input(
+        "דמי ניהול שנתיים מהצבירה במסלול 190 (%)",
+        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%"
     ) / 100
     
     return {

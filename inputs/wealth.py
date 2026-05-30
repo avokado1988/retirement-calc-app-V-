@@ -1,5 +1,5 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, labeled_slider_with_value, show_net_summary, DEFAULTS
+from inputs.ui_components import compact_number_input, show_net_summary, DEFAULTS
 
 def render_wealth_inputs():
     st.subheader("💰 נתוני הון ונדל\"ן")
@@ -22,11 +22,9 @@ def render_wealth_inputs():
         value=DEFAULTS["new_apartment_cost"], min_value=0, step=100000, unit="₪"
     )
     
-    property_appreciation_pct = labeled_slider_with_value(
-        "עליה ערך נדלן שנתית (%)", 
-        min_value=0.0, max_value=10.0, 
-        value=DEFAULTS["property_appreciation"] * 100, step=0.1, 
-        format="%.1f%%", unit="%"
+    property_appreciation_pct = compact_number_input(
+        "עליה ערך נדלן שנתית (%)",
+        value=DEFAULTS["property_appreciation"] * 100, min_value=0.0, max_value=10.0, step=0.1, unit="%"
     )
     
     st.divider()

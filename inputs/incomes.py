@@ -1,5 +1,5 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, labeled_slider_with_value, DEFAULTS
+from inputs.ui_components import compact_number_input, DEFAULTS
 
 def render_incomes_inputs():
     st.subheader("💼 מקורות הכנסה")
@@ -17,10 +17,9 @@ def render_incomes_inputs():
         value=DEFAULTS["work_income"], min_value=0, step=500, unit="₪"
     )
     
-    work_end_age = labeled_slider_with_value(
-        "גיל הפסקת עבודה בפועל", 
-        min_value=55.0, max_value=85.0, 
-        value=DEFAULTS["retirement_age"], step=0.5, format="%.1f", unit=None
+    work_end_age = compact_number_input(
+        "גיל הפסקת עבודה בפועל",
+        value=DEFAULTS["retirement_age"], min_value=55.0, max_value=85.0, step=0.5, unit=None
     )
     
     return {

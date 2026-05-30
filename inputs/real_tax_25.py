@@ -1,42 +1,38 @@
 import streamlit as st
-from inputs.ui_components import labeled_slider_with_value, show_net_summary, format_shekel, DEFAULTS
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, DEFAULTS
 
 def render_25_inputs(remaining_for_gimel):
     st.subheader("📉 מסלול 25% מס ריאלי")
     st.caption(f"הון התחלתי מועבר למסלול ריאלי: {format_shekel(remaining_for_gimel)}")
-    
+
     net_for_real_pathway = remaining_for_gimel
     show_net_summary(title="סך הון נטו פנוי במסלול 25% מס ריאלי", amount=net_for_real_pathway)
-    
+
     st.divider()
     st.markdown("##### 📈 תשואה ודמי ניהול לתיק")
-    
-    annual_return_25 = labeled_slider_with_value(
-        "תשואה שנתית צפויה במסלול ריאלי (%)", 
-        min_value=0.0, max_value=15.0, value=DEFAULTS["annual_return"] * 100, step=0.1, 
-        format="%.1f%%", unit="%"
+
+    annual_return_25 = compact_number_input(
+        "תשואה שנתית צפויה במסלול ריאלי (%)",
+        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%"
     ) / 100
-    
-    management_fee_25 = labeled_slider_with_value(
-        "דמי ניהול שנתיים מהצבירה במסלול ריאלי (%)", 
-        min_value=0.0, max_value=2.0, value=DEFAULTS["management_fee"] * 100, step=0.05, 
-        format="%.2f%%", unit="%"
+
+    management_fee_25 = compact_number_input(
+        "דמי ניהול שנתיים מהצבירה במסלול ריאלי (%)",
+        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%"
     ) / 100
-    
+
     st.divider()
     st.subheader("📊 מסלול 3 — קצבה + 25% מס ריאלי (היברידי)")
     st.caption("🔗 נתוני הקצבה (גובה, מקדם, הון שנוכה) נלקחים אוטומטית ממסלול תיקון 190.")
     st.caption("ההון הנותר לאחר רכישת הקצבה מנוהל כאן בשיטת 25% מס ריאלי.")
 
-    annual_return_hybrid = labeled_slider_with_value(
+    annual_return_hybrid = compact_number_input(
         "תשואה שנתית — מסלול היברידי (%)",
-        min_value=0.0, max_value=15.0, value=DEFAULTS["annual_return"] * 100, step=0.1,
-        format="%.1f%%", unit="%"
+        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%"
     ) / 100
-    management_fee_hybrid = labeled_slider_with_value(
+    management_fee_hybrid = compact_number_input(
         "דמי ניהול — מסלול היברידי (%)",
-        min_value=0.0, max_value=2.0, value=DEFAULTS["management_fee"] * 100, step=0.05,
-        format="%.2f%%", unit="%"
+        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%"
     ) / 100
 
     return {

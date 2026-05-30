@@ -1,5 +1,5 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, labeled_slider_with_value, show_net_summary, format_shekel
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel
 
 def render_rental_inputs(wealth_data):
     existing_savings = float(wealth_data.get("existing_savings", 440000))
@@ -21,9 +21,9 @@ def render_rental_inputs(wealth_data):
         "שכר דירה חודשי — גביה (₪)",
         value=8000, min_value=0, step=500, unit="₪"
     )
-    rental_income_growth_pct = labeled_slider_with_value(
+    rental_income_growth_pct = compact_number_input(
         "עלייה שנתית בדמי שכירות גביה (%)",
-        min_value=0.0, max_value=10.0, value=3.0, step=0.1, format="%.1f%%", unit="%"
+        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%"
     )
 
     st.divider()
@@ -32,16 +32,16 @@ def render_rental_inputs(wealth_data):
         "שכר דירה חודשי — תשלום (₪)",
         value=6000, min_value=0, step=500, unit="₪"
     )
-    rent_paid_growth_pct = labeled_slider_with_value(
+    rent_paid_growth_pct = compact_number_input(
         "עלייה שנתית בדמי שכירות תשלום (%)",
-        min_value=0.0, max_value=10.0, value=3.0, step=0.1, format="%.1f%%", unit="%"
+        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%"
     )
 
     st.divider()
     st.markdown("##### 🧾 מיסוי על הכנסת שכירות")
-    rental_tax_pct = labeled_slider_with_value(
+    rental_tax_pct = compact_number_input(
         "שיעור מס אפקטיבי על שכירות (%)",
-        min_value=0.0, max_value=50.0, value=10.0, step=0.5, format="%.1f%%", unit="%"
+        value=10.0, min_value=0.0, max_value=50.0, step=0.5, unit="%"
     )
     st.caption("ברירת מחדל 10% — מסלול סעיף 122 (ללא ניכוי הוצאות). ניתן להתאים.")
 
