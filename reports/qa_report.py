@@ -489,40 +489,32 @@ def render_qa_section(results, user_inputs):
     st.markdown("<br/>", unsafe_allow_html=True)
 
     # -------------------------------------------------------
-    # Table helpers
+    # Table helper — st.columns(4) aligned under cards
     # -------------------------------------------------------
-    # Column order for tables: rank1 first = rightmost with RTL CSS
-    ranked_col_order = [TRACK_NAMES[tid] for _, tid, *_ in ranked_order]
-
-    def build_html_table(row_list, data_dict, include_header=True):
-        col_bgs = ["transparent"] + [RANK_CFG[r]["col_bg"] for r, *_ in ranked_order]
-        header_bgs = [RANK_CFG[r]["th_bg"] for r, *_ in ranked_order]
-        header_borders = [RANK_CFG[r]["border"] for r, *_ in ranked_order]
-        badges = [RANK_CFG[r]["badge"] for r, *_ in ranked_order]
-        track_names = [TRACK_NAMES[tid] for _, tid, *_ in ranked_order]
-
-        cg = "<colgroup>" + "".join(f"<col style='background-color:{bg};'>" for bg in col_bgs) + "</colgroup>"
-
-        if include_header:
-            hcells = "<th>שאלה</th>"
-            for i in range(len(ranked_order)):
-                hcells += (
-                    f"<th style='background:{header_bgs[i]};border-bottom:3px solid {header_borders[i]};'>"
-                    f"{badges[i]} {track_names[i]}</th>"
-                )
-            thead = f"<thead><tr>{hcells}</tr></thead>"
-        else:
-            thead = ""
-
-        rows_html = ""
-        for question, key in row_list:
-            cells = f"<th>{question}</th>"
-            for name in ranked_col_order:
-                cells += f"<td>{data_dict[name][key]}</td>"
-            rows_html += f"<tr>{cells}</tr>"
-        tbody = f"<tbody>{rows_html}</tbody>"
-
-        return f"<table class='styled-table'>{cg}{thead}{tbody}</table>"
+    def render_metric_columns(rows, data_dict, show_header=True):
+        tcols = st.columns(4)
+        for col_idx, (rank, track_id, *_) in enumerate(reversed(ranked_order)):
+            rc = RANK_CFG[rank]
+            track_name = TRACK_NAMES[track_id]
+            with tcols[col_idx]:
+                if show_header:
+                    st.markdown(
+                        f"<div style='background:{rc['th_bg']};border-bottom:2px solid {rc['border']};"
+                        f"padding:4px 6px;border-radius:6px 6px 0 0;text-align:center;"
+                        f"font-size:0.72em;font-weight:700;color:{rc['rank_color']};margin-bottom:6px;'>"
+                        f"{rc['badge']} {track_name}</div>",
+                        unsafe_allow_html=True
+                    )
+                for question, key in rows:
+                    val = data_dict.get(track_name, {}).get(key, "—")
+                    st.markdown(
+                        f"<div style='background:{rc['col_bg']};padding:5px 8px;border-radius:5px;"
+                        f"margin-bottom:4px;direction:rtl;border:1px solid #eee;'>"
+                        f"<div style='font-size:0.60em;color:#888;margin-bottom:1px;'>{question}</div>"
+                        f"<div style='font-size:0.88em;font-weight:600;'>{val}</div>"
+                        f"</div>",
+                        unsafe_allow_html=True
+                    )
 
     # -------------------------------------------------------
     # Table 1: At retirement
@@ -594,9 +586,9 @@ def render_qa_section(results, user_inputs):
     ]
 
     with st.expander(f"📊 מצב ביום הפרישה — גיל {retire_age:.1f}", expanded=True):
-        st.markdown(build_html_table(KEY_ROWS_1, t1_cols), unsafe_allow_html=True)
+        render_metric_columns(KEY_ROWS_1, t1_cols, show_header=True)
         with st.expander("פרטים נוספים"):
-            st.markdown(build_html_table(DETAIL_ROWS_1, t1_cols, include_header=False), unsafe_allow_html=True)
+            render_metric_columns(DETAIL_ROWS_1, t1_cols, show_header=False)
 
     # -------------------------------------------------------
     # Table 2: At check_age
@@ -668,6 +660,6 @@ def render_qa_section(results, user_inputs):
     ]
 
     with st.expander(f"🔮 מצב בגיל נבדק — גיל {check_age:.1f}", expanded=True):
-        st.markdown(build_html_table(KEY_ROWS_2, t2_cols), unsafe_allow_html=True)
+        render_metric_columns(KEY_ROWS_2, t2_cols, show_header=True)
         with st.expander("פרטים נוספים"):
-            st.markdown(build_html_table(DETAIL_ROWS_2, t2_cols, include_header=False), unsafe_allow_html=True)
+            render_metric_columns(DETAIL_ROWS_2, t2_cols, show_header=False)
