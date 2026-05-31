@@ -351,7 +351,7 @@ def render_qa_section(results, user_inputs):
         delta_sign = "+" if delta_95 >= 0 else ""
         delta_color = "#4dbb4d" if delta_95 >= 0 else "#ff6666"
         age95_line = f"{format_shekel(int(portfolio_95))}"
-        age95_delta = f"<span style='color:{delta_color}; font-size:0.78em;'>{delta_sign}{format_shekel(int(delta_95))} ({delta_sign}{delta_pct_95:.1f}%) מתוך {format_shekel(int(baseline_capital))}</span>"
+        age95_delta = f"<span style='color:{delta_color};'>{delta_sign}{format_shekel(int(delta_95))} ({delta_sign}{delta_pct_95:.1f}%)</span> <span style='color:#777;'>מ-{format_shekel(int(baseline_capital))}</span>"
 
         with cols[col_idx]:
             st.markdown(f"""
@@ -376,10 +376,16 @@ def render_qa_section(results, user_inputs):
     <div style='font-size: 0.82em; color: #ff8c42;'>⚠️ {pc["con2"]}</div>
   </div>
 
-  <div style='border-top: 1px solid #333; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;'>
-    <div style='font-size: 0.82em; color: {res_color}; font-weight: 600;'>📅 {res_label}</div>
-    <div style='font-size: 0.85em; color: #f0f0f0; font-weight: 600;'>💰 {age95_line}</div>
-    <div>{age95_delta}</div>
+  <div style='border-top: 1px solid #333; padding-top: 10px; display: flex; flex-direction: column; gap: 8px;'>
+    <div>
+      <div style='font-size: 0.68em; color: #888; margin-bottom: 2px;'>⏳ הכסף מחזיק עד</div>
+      <div style='font-size: 0.88em; color: {res_color}; font-weight: 700;'>{res_label}</div>
+    </div>
+    <div>
+      <div style='font-size: 0.68em; color: #888; margin-bottom: 2px;'>💰 גובה התיק בגיל 95</div>
+      <div style='font-size: 0.88em; color: #f0f0f0; font-weight: 700;'>{age95_line}</div>
+      <div style='font-size: 0.75em; margin-top: 2px;'>{age95_delta} ביחס להון ההתחלתי</div>
+    </div>
   </div>
 
 </div>
