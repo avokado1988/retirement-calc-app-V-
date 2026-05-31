@@ -67,29 +67,60 @@ def render_qa_summary_page(results, user_inputs):
     fee_hybrid          = float(real_tax_25.get("management_fee_hybrid", 0.006))
 
     # ─── מסלול 4 — שכירות ────────────────────────────────────────────────────
-    net_for_rental      = float(rental.get("net_for_rental", 0) or 0)
-    rental_inc_monthly  = float(rental.get("rental_income_monthly", 0))
-    rental_inc_growth   = float(rental.get("rental_income_growth_rate", 0.03))
-    rent_paid_monthly   = float(rental.get("rent_paid_monthly", 0))
-    rent_paid_growth    = float(rental.get("rent_paid_growth_rate", 0.03))
-    rental_tax_rate     = float(rental.get("rental_tax_rate", 0.10))
+    net_for_rental          = float(rental.get("net_for_rental", 0) or 0)
+    rental_inc_monthly      = float(rental.get("rental_income_monthly", 0))
+    rental_inc_growth       = float(rental.get("rental_income_growth_rate", 0.03))
+    rent_paid_monthly       = float(rental.get("rent_paid_monthly", 0))
+    rent_paid_growth        = float(rental.get("rent_paid_growth_rate", 0.03))
+    rental_tax_rate         = float(rental.get("rental_tax_rate", 0.10))
+    rental_prop_value       = float(rental.get("current_property_value", wealth.get("net_sale", 0) or 0))
+    rental_appreciation     = float(rental.get("rental_property_appreciation", 0.015))
 
     # ─── שליפת תוצאות מהמנוע ─────────────────────────────────────────────────
-    df_retire = df_history[df_history["גיל"] >= retire_age]
-    row_retire = df_retire.iloc[0] if not df_retire.empty else df_history.iloc[-1]
+    def _row(df, age):
+        sub = df[df["גיל"] >= age]
+        return sub.iloc[0] if not sub.empty else df.iloc[-1]
 
-    df_100 = df_full[df_full["גיל"] >= 100.0]
-    row_100 = df_100.iloc[0] if not df_100.empty else df_full.iloc[-1]
+    row_retire = _row(df_full, retire_age)
+    row_check  = _row(df_full, check_age)
+    row_100    = _row(df_full, 100.0)
 
     b190_ret   = float(row_retire["צבירה תיקון 190"])
     b25_ret    = float(row_retire["צבירה מסלול ריאלי"])
     bhyb_ret   = float(row_retire.get("צבירה מסלול היברידי", 0))
     brent_ret  = float(row_retire.get("צבירה מסלול שכירות", 0))
 
+    b190_chk   = float(row_check["צבירה תיקון 190"])
+    b25_chk    = float(row_check["צבירה מסלול ריאלי"])
+    bhyb_chk   = float(row_check.get("צבירה מסלול היברידי", 0))
+    brent_chk  = float(row_check.get("צבירה מסלול שכירות", 0))
+
     b190_100   = float(row_100["צבירה תיקון 190"])
     b25_100    = float(row_100["צבירה מסלול ריאלי"])
     bhyb_100   = float(row_100.get("צבירה מסלול היברידי", 0))
     brent_100  = float(row_100.get("צבירה מסלול שכירות", 0))
+
+    # ─── תזרים מסלול שכירות ──────────────────────────────────────────────────
+    df_full["rental_cashflow"] = (
+        df_full["הכנסה נומינלית"] + df_full["הכנסת שכירות נטו"]
+        - df_full["הוצאה נומינלית"] - df_full["הוצאת שכירות"]
+    )
+    cf_retire = float(_row(df_full, retire_age)["rental_cashflow"])
+    cf_check  = float(_row(df_full, check_age)["rental_cashflow"])
+
+    df_after_retire = df_full[df_full["גיל"] >= retire_age]
+    neg_rows = df_after_retire[df_after_retire["rental_cashflow"] < 0]
+    flip_age = float(neg_rows.iloc[0]["גיל"]) if not neg_rows.empty else None
+
+    # ─── משיכה חודשית נדרשת (כל מסלול, גיל בדיקה) ───────────────────────────
+    inf_chk    = float(row_check.get("inflation_factor", 1.0))
+    exp_chk    = float(row_check["הוצאה נומינלית"])
+    inc_chk    = float(row_check["הכנסה נומינלית"])
+    pen_chk    = float(row_check.get("הכנסה מקצבה מזערית", 0))
+    nn_190_chk = max(0.0, exp_chk - (inc_chk + pen_chk))
+    nn_25_chk  = max(0.0, exp_chk - inc_chk)
+    nn_hyb_chk = max(0.0, exp_chk - (inc_chk + pen_chk))
+    nn_rent_chk = max(0.0, -cf_check)  # deficit = what must come from portfolio
 
     # =========================================================================
     #  UI
@@ -146,27 +177,64 @@ def render_qa_summary_page(results, user_inputs):
 
 ━━━━━━━━━━  מסלול 4 — שכירות  ━━━━━━━━━━
   הון נזיל           : {net_for_rental:,.0f} ₪
+  שווי דירה מושכרת   : {rental_prop_value:,.0f} ₪  (עליית ערך: {rental_appreciation*100:.1f}%/שנה)
   שכ"ד גביה          : {rental_inc_monthly:,.0f} ₪/חודש (צמיחה: {rental_inc_growth*100:.1f}%/שנה)
   שכ"ד תשלום         : {rent_paid_monthly:,.0f} ₪/חודש (צמיחה: {rent_paid_growth*100:.1f}%/שנה)
   מס שכירות          : {rental_tax_rate*100:.1f}%
+  תזרים בפרישה       : {"+" if cf_retire >= 0 else ""}{cf_retire:,.0f} ₪/חודש
+  תזרים בגיל {check_age:.0f}      : {"+" if cf_check >= 0 else ""}{cf_check:,.0f} ₪/חודש
+  גיל היפוך תזרים    : {f"גיל {flip_age:.1f}" if flip_age else "✅ נשאר חיובי לאורך כל הדרך"}
 
 ━━━━━━━━━━  תוצאות תיק נזיל — נקודות מפתח  ━━━━━━━━━━
-  מסלול 1  | גיל פרישה ({retire_age:.1f}): {b190_ret:>14,.0f} ₪  |  גיל 100: {b190_100:>14,.0f} ₪
-  מסלול 2  | גיל פרישה ({retire_age:.1f}): {b25_ret:>14,.0f} ₪  |  גיל 100: {b25_100:>14,.0f} ₪
-  מסלול 3  | גיל פרישה ({retire_age:.1f}): {bhyb_ret:>14,.0f} ₪  |  גיל 100: {bhyb_100:>14,.0f} ₪
-  מסלול 4  | גיל פרישה ({retire_age:.1f}): {brent_ret:>14,.0f} ₪  |  גיל 100: {brent_100:>14,.0f} ₪
+  מסלול 1  | גיל פרישה ({retire_age:.1f}): {b190_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b190_chk:>14,.0f} ₪  |  גיל 100: {b190_100:>14,.0f} ₪
+  מסלול 2  | גיל פרישה ({retire_age:.1f}): {b25_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b25_chk:>14,.0f} ₪  |  גיל 100: {b25_100:>14,.0f} ₪
+  מסלול 3  | גיל פרישה ({retire_age:.1f}): {bhyb_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {bhyb_chk:>14,.0f} ₪  |  גיל 100: {bhyb_100:>14,.0f} ₪
+  מסלול 4  | גיל פרישה ({retire_age:.1f}): {brent_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {brent_chk:>14,.0f} ₪  |  גיל 100: {brent_100:>14,.0f} ₪
+
+━━━━━━━━━━  משיכה חודשית נדרשת — גיל {check_age:.0f}  ━━━━━━━━━━
+  מסלול 1 (190 + קצבה)  : {nn_190_chk:>10,.0f} ₪/חודש
+  מסלול 2 (25% ריאלי)   : {nn_25_chk:>10,.0f} ₪/חודש
+  מסלול 3 (היברידי)      : {nn_hyb_chk:>10,.0f} ₪/חודש
+  מסלול 4 (שכירות)       : {nn_rent_chk:>10,.0f} ₪/חודש  {"(גירעון תזרים)" if nn_rent_chk > 0 else "(תזרים עצמאי)"}
 ============================================================"""
 
     st.code(copy_text, language="text")
 
     # ─── טבלת תוצאות ויזואלית ────────────────────────────────────────────────
     st.write("---")
-    st.markdown("**🔍 תוצאות תיק נזיל — מבט מהיר:**")
+    st.markdown("**🔍 תיק נזיל — נקודות מפתח:**")
     df_summary = pd.DataFrame({
-        "נקודת זמן": [f"גיל פרישה ({retire_age:.1f})", "גיל 100.0"],
-        "מסלול 1 — 190":        [format_shekel(b190_ret),  format_shekel(b190_100)],
-        "מסלול 2 — 25% ריאלי":  [format_shekel(b25_ret),   format_shekel(b25_100)],
-        "מסלול 3 — היברידי":    [format_shekel(bhyb_ret),  format_shekel(bhyb_100)],
-        "מסלול 4 — שכירות":     [format_shekel(brent_ret), format_shekel(brent_100)],
+        "נקודת זמן": [
+            f"גיל פרישה ({retire_age:.1f})",
+            f"גיל נבדק ({check_age:.1f})",
+            "גיל 100.0",
+        ],
+        "מסלול 1 — 190":        [format_shekel(b190_ret),  format_shekel(b190_chk),  format_shekel(b190_100)],
+        "מסלול 2 — 25% ריאלי":  [format_shekel(b25_ret),   format_shekel(b25_chk),   format_shekel(b25_100)],
+        "מסלול 3 — היברידי":    [format_shekel(bhyb_ret),  format_shekel(bhyb_chk),  format_shekel(bhyb_100)],
+        "מסלול 4 — שכירות":     [format_shekel(brent_ret), format_shekel(brent_chk), format_shekel(brent_100)],
     })
     st.table(df_summary.set_index("נקודת זמן"))
+
+    st.markdown(f"**💸 משיכה חודשית נדרשת — גיל {check_age:.0f}:**")
+    df_withdrawal = pd.DataFrame({
+        "מסלול": [
+            "מסלול 1 — 190 + קצבה",
+            "מסלול 2 — 25% ריאלי",
+            "מסלול 3 — היברידי",
+            "מסלול 4 — שכירות",
+        ],
+        "משיכה חודשית": [
+            format_shekel(nn_190_chk),
+            format_shekel(nn_25_chk),
+            format_shekel(nn_hyb_chk),
+            format_shekel(nn_rent_chk) if nn_rent_chk > 0 else "✅ תזרים עצמאי",
+        ],
+        "הערה": [
+            "הוצאה פחות ב\"ל + קצבה",
+            "הוצאה פחות ב\"ל בלבד",
+            "הוצאה פחות ב\"ל + קצבה",
+            "גירעון תזרים שכ\"ד" if nn_rent_chk > 0 else f"תזרים חיובי +{format_shekel(int(-cf_check))}",
+        ],
+    })
+    st.table(df_withdrawal.set_index("מסלול"))
