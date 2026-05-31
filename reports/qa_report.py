@@ -328,22 +328,44 @@ def render_qa_section(results, user_inputs):
         pc = track_pros_cons[track_id]
         health = get_health_label(score)
         score_color = get_score_color(score)
-        bg_color, border_color = get_card_colors(score)
+        _, border_color = get_card_colors(score)
         res_label = resiliency_label_for_card(empty_age)
+        res_color = "#1a7a1a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#cc0000")
+
+        # Short track name for header
+        track_short = pc["name"].split("—")[1].strip() if "—" in pc["name"] else pc["name"]
+        track_num = pc["name"].split("—")[0].strip()
 
         with cols[col_idx]:
             st.markdown(f"""
-<div style='border: 2px solid {border_color}; border-radius: 12px; padding: 16px; background: {bg_color}; text-align: right; direction: rtl;'>
-    <h4 style='margin:0 0 8px 0;'>{pc["name"]}</h4>
-    <div style='font-size: 2em; font-weight: bold; color: {score_color};'>{score}/100</div>
-    <div style='font-size: 1.2em; margin: 8px 0;'>{health}</div>
-    <hr style='margin: 10px 0;'/>
-    <div>✅ {pc["pro1"]}<br/>✅ {pc["pro2"]}</div>
-    <hr style='margin: 10px 0;'/>
-    <div>⚠️ {pc["con1"]}<br/>⚠️ {pc["con2"]}</div>
-    <hr style='margin: 10px 0;'/>
-    <div>📅 <b>חוסן:</b> {res_label}</div>
-    <div>💰 <b>בגיל 95:</b> {format_shekel(portfolio_95)}</div>
+<div style='border-top: 4px solid {border_color}; border-radius: 8px; padding: 14px 16px 16px 16px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: right; direction: rtl; font-family: sans-serif;'>
+
+  <div style='font-size: 0.75em; color: #888; margin-bottom: 2px;'>{track_num}</div>
+  <div style='font-size: 1em; font-weight: 700; color: #1f2937; margin-bottom: 12px;'>{track_short}</div>
+
+  <div style='display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; direction: ltr; justify-content: flex-end;'>
+    <span style='font-size: 2.2em; font-weight: 800; color: {score_color}; line-height: 1;'>{score}</span>
+    <span style='font-size: 1em; color: #888;'>/100</span>
+  </div>
+  <div style='font-size: 1em; margin-bottom: 14px;'>{health}</div>
+
+  <div style='border-top: 1px solid #e5e7eb; padding-top: 10px; margin-bottom: 10px;'>
+    <div style='font-size: 0.7em; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>יתרונות</div>
+    <div style='font-size: 0.82em; color: #1a7a1a; margin-bottom: 4px;'>✅ {pc["pro1"]}</div>
+    <div style='font-size: 0.82em; color: #1a7a1a;'>✅ {pc["pro2"]}</div>
+  </div>
+
+  <div style='border-top: 1px solid #e5e7eb; padding-top: 10px; margin-bottom: 10px;'>
+    <div style='font-size: 0.7em; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>סיכונים</div>
+    <div style='font-size: 0.82em; color: #cc5500; margin-bottom: 4px;'>⚠️ {pc["con1"]}</div>
+    <div style='font-size: 0.82em; color: #cc5500;'>⚠️ {pc["con2"]}</div>
+  </div>
+
+  <div style='border-top: 1px solid #e5e7eb; padding-top: 10px; display: flex; flex-direction: column; gap: 4px;'>
+    <div style='font-size: 0.82em; color: {res_color}; font-weight: 600;'>📅 {res_label}</div>
+    <div style='font-size: 0.82em; color: #1f2937;'>💰 בגיל 95: <b>{format_shekel(portfolio_95)}</b></div>
+  </div>
+
 </div>
 """, unsafe_allow_html=True)
 
