@@ -113,16 +113,28 @@ def render_charts(df_history):
     st.divider()
 
     # =========================================================
-    # Section 2: Annual tax paid per track
+    # Section 2: Annual tax paid per track (aggregate monthly → yearly)
     # =========================================================
     st.subheader("🧾 מס שנתי ששולם — השוואת מסלולים")
-    st.markdown("כמה מס משלם כל מסלול בכל שנת פרישה — אפקט מגן המס של תיקון 190 אל מול 25% ריאלי.")
+    st.markdown("סך המס ששולם בכל שנת גיל — אפקט מגן המס של תיקון 190 אל מול 25% ריאלי.")
+
+    df_annual = (
+        df.assign(age_floor=df["גיל"].astype(int))
+          .groupby("age_floor", as_index=False)
+          .agg({
+              "מס ששולם 190":     "sum",
+              "מס ששולם 25":      "sum",
+              "מס ששולם היברידי": "sum",
+              "מס ששולם שכירות":  "sum",
+          })
+          .rename(columns={"age_floor": "גיל"})
+    )
 
     fig3 = go.Figure()
-    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם 190"],    mode='lines', name='190 + קצבה מזערית',           line=dict(color=COLORS["190"],    width=2.5)))
-    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם היברידי"], mode='lines', name='25% ריאלי + קצבה מזערית', line=dict(color=COLORS["hybrid"], width=2.5, dash='dash')))
-    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם 25"],     mode='lines', name='25% ריאלי (ללא קצבה)',     line=dict(color=COLORS["25"],     width=2.5)))
-    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם שכירות"], mode='lines', name='שכירות',                   line=dict(color=COLORS["rental"], width=2.5, dash='dot')))
+    fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם 190"],    mode='lines', name='190 + קצבה מזערית',       line=dict(color=COLORS["190"],    width=2.5)))
+    fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם היברידי"], mode='lines', name='25% ריאלי + קצבה מזערית', line=dict(color=COLORS["hybrid"], width=2.5, dash='dash')))
+    fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם 25"],     mode='lines', name='25% ריאלי (ללא קצבה)',    line=dict(color=COLORS["25"],     width=2.5)))
+    fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם שכירות"], mode='lines', name='שכירות',                  line=dict(color=COLORS["rental"], width=2.5, dash='dot')))
     fig3.update_layout(
         xaxis_title="גיל", yaxis_title="מס שנתי (₪)",
         hovermode="x unified", template="plotly_white",
