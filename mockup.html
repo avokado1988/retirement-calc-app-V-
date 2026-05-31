@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>הדמיית עיצוב מסלולי פרישה</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0e1117; color: #e0e0e0; font-family: 'Segoe UI', Arial, sans-serif; padding: 32px 24px; direction: rtl; }
+  h1 { text-align: center; font-size: 1.5em; color: #f0f0f0; margin-bottom: 8px; }
+  .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 32px; }
+
+  /* ===== CARDS ===== */
+  .cards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.55fr 1fr;
+    gap: 14px;
+    margin-bottom: 36px;
+    align-items: start;
+  }
+
+  .card {
+    background: #1e1e2e;
+    border-radius: 10px;
+    padding: 16px;
+    border-top: 4px solid #555;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+
+  .card.winner {
+    border-top: 4px solid #f0c040;
+    box-shadow: 0 0 20px rgba(240,192,64,0.25), 0 2px 12px rgba(0,0,0,0.4);
+    padding: 20px;
+  }
+
+  .card-header { text-align: center; margin-bottom: 14px; }
+  .card-tracknum { font-size: 0.7em; color: #aaa; margin-bottom: 3px; }
+  .card-name { font-size: 0.95em; font-weight: 700; color: #f0f0f0; margin-bottom: 12px; }
+  .card.winner .card-name { font-size: 1.1em; }
+
+  .score-circle {
+    display: inline-block;
+    font-size: 2.8em;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .card.winner .score-circle { font-size: 3.6em; }
+  .score-max { font-size: 0.38em; color: #aaa; font-weight: 400; }
+  .health-label { font-size: 0.95em; color: #e0e0e0; margin-bottom: 4px; }
+  .card.winner .health-label { font-size: 1.1em; }
+
+  .resiliency-line {
+    margin-top: 10px;
+    font-size: 0.82em;
+    color: #4dbb4d;
+    font-weight: 600;
+    padding: 6px 10px;
+    background: rgba(77,187,77,0.1);
+    border-radius: 6px;
+    text-align: center;
+  }
+  .card.winner .resiliency-line { font-size: 0.95em; padding: 8px 12px; }
+
+  /* expander mock */
+  .expander {
+    margin-top: 12px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .expander-toggle {
+    background: #2a2a3e;
+    padding: 7px 12px;
+    font-size: 0.75em;
+    color: #aaa;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .expander-toggle span { color: #666; font-size: 1.1em; }
+  .expander-body {
+    padding: 10px 12px;
+    display: none;
+    font-size: 0.8em;
+    line-height: 1.6;
+  }
+  .expander-body.open { display: block; }
+  .pro { color: #4dbb4d; margin-bottom: 4px; }
+  .con { color: #ff8c42; margin-bottom: 4px; }
+
+  /* ===== TABLES ===== */
+  .section-title {
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin-bottom: 14px;
+    margin-top: 32px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    direction: rtl;
+    font-size: 0.88em;
+    margin-bottom: 8px;
+  }
+  thead th {
+    background: #2a2a3e;
+    color: #e0e0e0;
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 2px solid #444;
+    font-weight: 700;
+  }
+  tbody th {
+    background: #1e1e2e;
+    color: #c0c0c0;
+    padding: 8px 12px;
+    font-weight: 600;
+    text-align: right;
+    border-bottom: 1px solid #2a2a3e;
+    border-left: 2px solid #333;
+  }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #2a2a3e;
+    text-align: right;
+    color: #e0e0e0;
+  }
+
+  .green { background: #1a3a1a; color: #4dbb4d; font-weight: 700; border-radius: 4px; padding: 3px 8px; display: inline-block; }
+  .orange { background: #3a2a10; color: #ffb347; font-weight: 700; border-radius: 4px; padding: 3px 8px; display: inline-block; }
+  .red-val { color: #ff6666; font-weight: 700; }
+  .delta-up { color: #00e676; font-size: 0.85em; }
+  .pension-note { color: #aaa; font-size: 0.78em; display: block; margin-top: 2px; }
+
+  .table-expander {
+    border: 1px solid #333;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .table-expander-toggle {
+    background: #1e1e2e;
+    padding: 8px 14px;
+    font-size: 0.82em;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #333;
+  }
+  .table-expander-toggle:hover { color: #bbb; }
+  .table-expander-body { display: none; }
+  .table-expander-body.open { display: block; }
+  .table-expander-body table { margin: 0; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 700; }
+  .badge-green { background: rgba(77,187,77,0.15); color: #4dbb4d; }
+  .badge-orange { background: rgba(255,179,71,0.15); color: #ffb347; }
+  .badge-red { background: rgba(255,100,100,0.15); color: #ff6666; }
+
+  .winner-badge {
+    display: inline-block;
+    background: rgba(240,192,64,0.15);
+    color: #f0c040;
+    font-size: 0.7em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<h1>סימולטור פרישה השוואתי</h1>
+<p class="subtitle">טעון ב-2 שניות, כל המידע הקריטי נגיש מיד</p>
+
+<!-- CARDS -->
+<div class="cards-row">
+
+  <!-- Track 4 -->
+  <div class="card" style="border-top-color: #e67e22;">
+    <div class="card-header">
+      <div class="card-tracknum">מסלול 4</div>
+      <div class="card-name">שכירות</div>
+      <div class="score-circle" style="color:#e67e22;">52<span class="score-max">/100</span></div>
+      <div class="health-label">🟠 מוגבל</div>
+    </div>
+    <div class="resiliency-line" style="color:#ffb347; background:rgba(255,179,71,0.1);">⏳ הכסף מחזיק עד גיל 98</div>
+    <div class="expander">
+      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
+      <div class="expander-body">
+        <div class="pro">✅ הדירה נשמרת ועולה בערכה</div>
+        <div class="pro">✅ שכ"ד מכסה חלק מההוצאות</div>
+        <div class="con">⚠️ הון נזיל קטן מאוד</div>
+        <div class="con">⚠️ תלות בשוכרים בגיל מבוגר</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track 3 -->
+  <div class="card" style="border-top-color: #1565c0;">
+    <div class="card-header">
+      <div class="card-tracknum">מסלול 3</div>
+      <div class="card-name">היברידי</div>
+      <div class="score-circle" style="color:#1565c0;">71<span class="score-max">/100</span></div>
+      <div class="health-label">🟡 יציב</div>
+    </div>
+    <div class="resiliency-line" style="color:#4dbb4d; background:rgba(77,187,77,0.1);">⏳ הכסף מחזיק עד 105+</div>
+    <div class="expander">
+      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
+      <div class="expander-body">
+        <div class="pro">✅ קצבה קטנה ועוד נזילות</div>
+        <div class="pro">✅ מאזן ביטחון וגמישות</div>
+        <div class="con">⚠️ מורכב לתכנן</div>
+        <div class="con">⚠️ פחות ירושה ממסלול 2</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track 1 — WINNER -->
+  <div class="card winner" style="border-top-color: #f0c040;">
+    <div class="card-header">
+      <div class="winner-badge">🏆 המסלול המומלץ</div>
+      <div class="card-tracknum">מסלול 1</div>
+      <div class="card-name">תיקון 190</div>
+      <div class="score-circle" style="color:#f0c040;">88<span class="score-max">/100</span></div>
+      <div class="health-label">🟢 חסין</div>
+    </div>
+    <div class="resiliency-line">⏳ הכסף מחזיק עד 105+</div>
+    <div class="expander">
+      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
+      <div class="expander-body">
+        <div class="pro">✅ קצבה מובטחת לכל החיים</div>
+        <div class="pro">✅ מיסוי נמוך, 15% נומינלי בלבד</div>
+        <div class="con">⚠️ פחות גמיש לצורכי הוצאה גדולה</div>
+        <div class="con">⚠️ דורש הון גדול לקצבה משמעותית</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track 2 -->
+  <div class="card" style="border-top-color: #2ca02c;">
+    <div class="card-header">
+      <div class="card-tracknum">מסלול 2</div>
+      <div class="card-name">25% ריאלי</div>
+      <div class="score-circle" style="color:#2ca02c;">79<span class="score-max">/100</span></div>
+      <div class="health-label">🟢 חסין</div>
+    </div>
+    <div class="resiliency-line">⏳ הכסף מחזיק עד 105+</div>
+    <div class="expander">
+      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
+      <div class="expander-body">
+        <div class="pro">✅ כל הכסף נזיל בכל עת</div>
+        <div class="pro">✅ ירושה מקסימלית</div>
+        <div class="con">⚠️ אין גיבוי לאריכות ימים</div>
+        <div class="con">⚠️ תלות מלאה בביצועי השוק</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TABLE 1 -->
+<div class="section-title">📊 מצב ביום הפרישה, גיל 67</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>שאלה</th>
+      <th>מסלול 1 — תיקון 190</th>
+      <th>מסלול 2 — 25% ריאלי</th>
+      <th>מסלול 3 — היברידי</th>
+      <th>מסלול 4 — שכירות</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>מה שווי ההון הכולל שלי?</th>
+      <td>₪4,500,000 <span class="pension-note">מתוכם ₪1,200,000 ערך קצבה</span></td>
+      <td>₪3,340,000</td>
+      <td>₪4,100,000 <span class="pension-note">מתוכם ₪900,000 ערך קצבה</span></td>
+      <td>₪440,000</td>
+    </tr>
+    <tr>
+      <th>כמה אצטרך למשוך כל חודש?</th>
+      <td><span class="red-val">−₪2,800</span></td>
+      <td><span class="red-val">−₪5,500</span></td>
+      <td><span class="red-val">−₪2,800</span></td>
+      <td><span class="red-val">−₪1,200</span></td>
+    </tr>
+    <tr>
+      <th>מה קצב המשיכה השנתי?</th>
+      <td><span class="badge badge-green">0.75%</span></td>
+      <td><span class="badge badge-orange">1.97%</span></td>
+      <td><span class="badge badge-green">0.82%</span></td>
+      <td>ל"ר</td>
+    </tr>
+    <tr>
+      <th>מה סך כלל הנכסים שלי?</th>
+      <td>₪15,800,000</td>
+      <td>₪14,600,000</td>
+      <td>₪15,400,000</td>
+      <td>₪12,740,000</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="table-expander">
+  <div class="table-expander-toggle" onclick="toggleTable(this)">
+    ▼ פרטים נוספים — חוק 400, קרן חירום, שווי נדל"ן
+  </div>
+  <div class="table-expander-body">
+    <table>
+      <tbody>
+        <tr>
+          <th>מה מדד החסינות, חוק 400?</th>
+          <td><span class="badge badge-green">∞</span></td>
+          <td><span class="badge badge-green">1.42</span></td>
+          <td><span class="badge badge-green">∞</span></td>
+          <td>ל"ר</td>
+        </tr>
+        <tr>
+          <th>כמה שנים קרן החירום מכסה?</th>
+          <td><span class="badge badge-green">∞</span></td>
+          <td><span class="badge badge-green">4.5 שנים</span></td>
+          <td><span class="badge badge-green">∞</span></td>
+          <td>ל"ר</td>
+        </tr>
+        <tr>
+          <th>מה שווי הנדל"ן בפרישה?</th>
+          <td>₪8,200,000</td>
+          <td>₪8,200,000</td>
+          <td>₪8,200,000</td>
+          <td>₪12,000,000</td>
+        </tr>
+        <tr>
+          <th>מה סך הקצבאות החודשיות?</th>
+          <td>₪9,700</td>
+          <td>₪2,500</td>
+          <td>₪9,700</td>
+          <td>₪2,500</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TABLE 2 -->
+<div class="section-title">🔮 מצב בגיל נבדק, גיל 97</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>שאלה</th>
+      <th>מסלול 1 — תיקון 190</th>
+      <th>מסלול 2 — 25% ריאלי</th>
+      <th>מסלול 3 — היברידי</th>
+      <th>מסלול 4 — שכירות</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>מה שווי ההון הכולל שלי?</th>
+      <td>
+        ₪4,510,000<br>
+        <span class="delta-up">↑+35.0%</span>
+        <span class="pension-note">מתוכם ₪0 ערך קצבה</span>
+      </td>
+      <td>₪3,900,000<br><span class="delta-up">↑+16.8%</span></td>
+      <td>
+        ₪4,200,000<br>
+        <span class="delta-up">↑+25.7%</span>
+        <span class="pension-note">מתוכם ₪0 ערך קצבה</span>
+      </td>
+      <td>₪1,100,000<br><span style="color:#ff5555; font-size:0.85em;">↓−67.1%</span></td>
+    </tr>
+    <tr>
+      <th>כמה אמשוך מהתיק כל חודש?</th>
+      <td><span class="red-val">−₪5,200</span></td>
+      <td><span class="red-val">−₪9,800</span></td>
+      <td><span class="red-val">−₪5,200</span></td>
+      <td><span class="red-val">−₪3,100</span></td>
+    </tr>
+    <tr>
+      <th>מה קצב המשיכה בגיל זה?</th>
+      <td><span class="badge badge-green">1.38%</span></td>
+      <td><span class="badge badge-orange">3.01%</span></td>
+      <td><span class="badge badge-green">1.49%</span></td>
+      <td>ל"ר</td>
+    </tr>
+    <tr>
+      <th>מה סך כלל הנכסים שלי?</th>
+      <td>₪22,100,000</td>
+      <td>₪21,200,000</td>
+      <td>₪21,800,000</td>
+      <td>₪20,400,000</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="table-expander">
+  <div class="table-expander-toggle" onclick="toggleTable(this)">
+    ▼ פרטים נוספים — שימור הון, גיל התאוששות
+  </div>
+  <div class="table-expander-body">
+    <table>
+      <tbody>
+        <tr>
+          <th>האם נשמר ההון עד גיל 95?</th>
+          <td style="color:#4dbb4d; font-weight:700;">✅ כן</td>
+          <td style="color:#4dbb4d; font-weight:700;">✅ כן</td>
+          <td style="color:#4dbb4d; font-weight:700;">✅ כן</td>
+          <td style="color:#ff6666; font-weight:700;">❌ לא</td>
+        </tr>
+        <tr>
+          <th>מאיזה גיל התיק עולה מעל ההון הראשוני?</th>
+          <td>68.5</td>
+          <td>71.2</td>
+          <td>69.8</td>
+          <td>לא עובר</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function toggle(btn) {
+  const body = btn.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open');
+  btn.querySelector('span').textContent = isOpen ? '▼' : '▲';
+}
+function toggleTable(btn) {
+  const body = btn.nextElementSibling;
+  body.classList.toggle('open');
+  btn.textContent = body.classList.contains('open')
+    ? btn.textContent.replace('▼','▲')
+    : btn.textContent.replace('▲','▼');
+}
+</script>
+</body>
+</html>
