@@ -373,29 +373,26 @@ def render_qa_section(results, user_inputs):
         if is_winner:
             shadow = "0 12px 40px rgba(232,160,0,0.30), 0 4px 16px rgba(0,0,0,0.12)"
             border_top = "5px solid #E8A000"
-            margin = "margin-top:-14px; margin-bottom:-14px;"
-            top_padding = "28px"
             outline = "outline: 2px solid #E8A000; outline-offset: 2px;"
-            floating_badge = (
-                f"<div style='position:absolute;top:-14px;left:50%;transform:translateX(-50%);"
-                f"background:linear-gradient(135deg,#E8A000,#f5c842);color:#fff;"
-                f"padding:4px 18px;border-radius:20px;font-size:0.72em;font-weight:800;"
-                f"white-space:nowrap;box-shadow:0 3px 10px rgba(232,160,0,0.45);"
-                f"letter-spacing:0.05em;'>⭐ המסלול המומלץ</div>"
+            winner_ribbon = (
+                f"<div style='text-align:center;margin-bottom:10px;'>"
+                f"<span style='display:inline-block;background:linear-gradient(135deg,#E8A000,#f5c842);"
+                f"color:#fff;padding:4px 18px;border-radius:20px;font-size:0.72em;font-weight:800;"
+                f"white-space:nowrap;box-shadow:0 3px 10px rgba(232,160,0,0.4);letter-spacing:0.05em;'>"
+                f"⭐ המסלול המומלץ</span></div>"
             )
         else:
             shadow = "0 2px 10px rgba(0,0,0,0.07)"
             border_top = f"4px solid {rc['border']}"
-            margin = ""
-            top_padding = "16px"
             outline = ""
-            floating_badge = ""
+            winner_ribbon = "<div style='height:30px;'></div>"
 
         inner_card = (
             f"<div style='background:{rc['bg']};border-top:{border_top};border-radius:12px;"
-            f"padding:{top_padding} 14px 14px 14px;box-shadow:{shadow};{outline}font-family:sans-serif;"
+            f"padding:14px 14px 14px 14px;box-shadow:{shadow};{outline}font-family:sans-serif;"
             f"direction:rtl;text-align:right;height:100%;display:flex;flex-direction:column;justify-content:space-between;'>"
             f"<div>"
+            f"{winner_ribbon}"
             f"<div style='text-align:center;margin-bottom:6px;font-size:1.7em;line-height:1;'>{rc['badge']}</div>"
             f"<div style='text-align:center;font-size:0.72em;font-weight:700;color:{rc['rank_color']};margin-bottom:8px;letter-spacing:0.04em;'>{rc['label']}</div>"
             f"<div style='text-align:center;font-size:0.92em;font-weight:700;color:#1a1a2e;margin-bottom:10px;line-height:1.35;'>{pc['name']}</div>"
@@ -415,8 +412,7 @@ def render_qa_section(results, user_inputs):
         )
 
         card_html = (
-            f"<div style='position:relative;{margin}height:100%;'>"
-            f"{floating_badge}"
+            f"<div style='height:100%;'>"
             f"{inner_card}"
             f"</div>"
         )
