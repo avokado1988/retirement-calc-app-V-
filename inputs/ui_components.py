@@ -9,7 +9,7 @@ DEFAULTS = {
     "check_age": 97.0,
     "expected_inflation": 0.023,
     "current_expenses": 11000,
-    "caregiver_cost": 3500,
+    "caregiver_cost": 0,
     "one_time_expense": 80000,
     "one_time_frequency": 8,
     "work_income": 0,

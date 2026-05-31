@@ -5,15 +5,22 @@ def render_rental_inputs(wealth_data):
     existing_savings = float(wealth_data.get("existing_savings", 440000))
     kids_help = float(wealth_data.get("kids_help", 1000000))
     emergency_fund = float(wealth_data.get("emergency_fund", 300000))
-    property_value = float(wealth_data.get("new_apartment_cost", 5800000))
+    net_sale = float(wealth_data.get("net_sale", 10000000))
 
-    net_for_rental = existing_savings - kids_help - emergency_fund
+    net_for_rental = existing_savings - kids_help
 
     st.subheader("🏠 מסלול 4 — אסטרטגיית שכירות")
     st.caption("במסלול זה הדירה לא נמכרת. ההון הנזיל מגיע מחסכונות קיימים בלבד.")
-    st.caption(f"שווי הדירה הנשמרת כנכס מניב: {format_shekel(property_value)}")
+    st.caption(f"קרן חירום ({format_shekel(emergency_fund)}) נשמרת בנפרד כמזומן — אינה חלק מהתיק המושקע.")
     st.caption("תשואה ודמי ניהול על החסכונות — נלקחים ממסלול 25% ריאלי.")
     show_net_summary("הון נזיל פנוי (חסכונות בלבד)", net_for_rental)
+
+    st.divider()
+    st.markdown("##### 🏡 שווי הנכס המושכר")
+    current_property_value = compact_number_input(
+        "שווי הדירה הנוכחית (₪)",
+        value=int(net_sale), min_value=0, step=100000, unit="₪", color=COLOR_GREEN
+    )
 
     st.divider()
     st.markdown("##### 📥 הכנסה מהשכרת הנכס")
@@ -52,5 +59,5 @@ def render_rental_inputs(wealth_data):
         "rent_paid_monthly": rent_paid_monthly,
         "rent_paid_growth_rate": rent_paid_growth_pct / 100,
         "rental_tax_rate": rental_tax_pct / 100,
-        "property_value_retained": property_value
+        "current_property_value": current_property_value,
     }

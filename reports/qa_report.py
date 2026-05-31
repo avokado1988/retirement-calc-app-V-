@@ -26,10 +26,13 @@ def render_qa_section(results, user_inputs):
     check_age = float(timeline.get("check_age", 87.0))
     retire_age = float(timeline.get("retirement_age", start_age))
 
+    rental_inputs = user_inputs.get("rental", {})
     baseline_capital = float(real_tax_25.get("net_for_real_pathway") or 3340000)
     emergency_fund = float(wealth.get("emergency_fund", 0))
     property_value_start = float(wealth.get("new_apartment_cost", 0))
     appreciation_rate = float(wealth.get("property_appreciation", 0))
+    # Track 4: use user-defined current property value (the retained apartment)
+    rental_property_start = float(rental_inputs.get("current_property_value", wealth.get("net_sale", property_value_start)))
 
     # -------------------------------------------------------
     # Helper: get row at target age
@@ -41,9 +44,14 @@ def render_qa_section(results, user_inputs):
     row_retire = get_row(retire_age)
     row_check = get_row(check_age)
 
-    # Read property value directly from engine column
+    # Read property value directly from engine column (tracks 1-3: new apartment)
     property_value_retire = float(row_retire.get("שווי נדלן", property_value_start))
     property_value_check = float(row_check.get("שווי נדלן", property_value_start))
+    # Track 4: retained apartment, valued independently from user input
+    years_to_retire = retire_age - start_age
+    years_to_check = check_age - start_age
+    rental_prop_retire = rental_property_start * ((1 + appreciation_rate) ** years_to_retire)
+    rental_prop_check = rental_property_start * ((1 + appreciation_rate) ** years_to_check)
 
     # -------------------------------------------------------
     # Extract values at retirement
@@ -94,7 +102,7 @@ def render_qa_section(results, user_inputs):
     tw_190_r = b190_r + pension_asset_retire + property_value_retire + emergency_fund
     tw_25_r = b25_r + property_value_retire + emergency_fund
     tw_h_r = bh_r + pension_asset_retire + property_value_retire + emergency_fund
-    tw_rent_r = br_r + float(row_retire.get("שווי נדלן מסלול 4", property_value_retire)) + emergency_fund
+    tw_rent_r = br_r + rental_prop_retire + emergency_fund
 
     # -------------------------------------------------------
     # Extract values at check_age
@@ -128,7 +136,7 @@ def render_qa_section(results, user_inputs):
     tw_190_c = b190_c + pension_asset_check + property_value_check + emergency_fund
     tw_25_c = b25_c + property_value_check + emergency_fund
     tw_h_c = bh_c + pension_asset_check + property_value_check + emergency_fund
-    tw_rent_c = br_c + float(row_check.get("שווי נדלן מסלול 4", property_value_check)) + emergency_fund
+    tw_rent_c = br_c + rental_prop_check + emergency_fund
 
     bool_preserve = lambda bal: "✅ כן" if bal > baseline_capital else "❌ לא"
 
@@ -445,7 +453,7 @@ def render_qa_section(results, user_inputs):
         "מסלול 4 — שכירות": [
             format_shekel(br_r),
             format_shekel(br_r),
-            format_shekel(float(row_retire.get("שווי נדלן מסלול 4", property_value_retire))),
+            format_shekel(rental_prop_retire),
             format_shekel(base_income_retire),
             fmt_withdrawal(nn_rent_r),
             'ל"ר',
