@@ -23,13 +23,13 @@ def render_all_sidebar_inputs():
 
     remaining_wealth = inputs_dict["wealth"]["remaining_for_gimel"]
 
-    with st.sidebar.expander("3. מקורות הכנסה", expanded=False):
-        incomes_ui = render_incomes_inputs()
+    with st.sidebar.expander("3. מקורות הכנסה וקצבה", expanded=False):
+        incomes_ui = render_incomes_inputs(remaining_wealth)
 
     with st.sidebar.expander("4. תקציב והוצאות", expanded=False):
         expenses_ui = render_expenses_inputs()
 
-    # --- הזרקת ההכנסות חזרה למקומן המקורי עבור המנוע ---
+    # Wire incomes back into the unified inputs dict
     inputs_dict["wealth"]["national_insurance"] = incomes_ui["national_insurance"]
     expenses_ui["work_income"] = incomes_ui["work_income"]
     expenses_ui["work_end_age"] = incomes_ui["work_end_age"]
@@ -38,8 +38,17 @@ def render_all_sidebar_inputs():
     st.sidebar.divider()
     st.sidebar.markdown("#### 🔧 הגדרות מתקדמות — מסלולים")
 
-    with st.sidebar.expander("5. מסלול תיקון 190", expanded=False):
-        inputs_dict["amendment_190"] = render_190_inputs(remaining_wealth)
+    capital_for_pension = incomes_ui.get("capital_for_pension", 0)
+
+    with st.sidebar.expander("5. מסלול 1 — תיקון 190", expanded=False):
+        a190 = render_190_inputs(remaining_wealth, capital_for_pension)
+        # Inject pension data from incomes
+        a190["desired_pension"]      = incomes_ui["desired_pension"]
+        a190["securing_years"]       = incomes_ui["securing_years"]
+        a190["base_coefficient"]     = incomes_ui["base_coefficient"]
+        a190["adjusted_coefficient"] = incomes_ui["adjusted_coefficient"]
+        a190["capital_for_pension"]  = capital_for_pension
+        inputs_dict["amendment_190"] = a190
 
     with st.sidebar.expander("6. מסלולים 2 ו-3 — 25% מס ריאלי", expanded=False):
         inputs_dict["real_tax_25"] = render_25_inputs(remaining_wealth)

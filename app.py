@@ -135,7 +135,7 @@ with tab1:
     render_qa_section(sim_results, display_inputs)
 
 with tab2:
-    render_charts(sim_results["df"])
+    render_charts(sim_results["df_full"], display_inputs)
 
 with tab3:
     st.subheader("🔍 גיליון סימולציה חודשי מלא (חודש-בחודשו)")

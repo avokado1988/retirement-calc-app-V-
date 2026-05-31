@@ -13,7 +13,7 @@ DEFAULTS = {
     "one_time_expense": 80000,
     "one_time_frequency": 8,
     "work_income": 0,
-    "desired_pension": 5000,
+    "desired_pension": 5306,
     "national_insurance": 2500,
     "annual_return": 0.055,
     "management_fee": 0.006,
