@@ -701,81 +701,85 @@ def render_qa_section(results, user_inputs):
         else: color = "#b71c1c"
         return f"<span style='color:{color}; font-weight:bold;'>{pct:.0f}%</span>"
 
+    # For tracks 1-3: withdrawal = cashflow deficit. For track 4: cashflow is the primary metric.
+    # Unified "משיכה / תזרים" row — same concept across all tracks.
+    def fmt_unified_cashflow(nn, cashflow=None):
+        if cashflow is not None:
+            if cashflow >= 0:
+                return f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(cashflow))}</span>"
+            else:
+                return f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(abs(cashflow)))}−</span>"
+        return fmt_withdrawal(nn)
+
     t2_cols = {
         "190 + קצבה מזערית": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
-            "גיל חוסן":     fmt_lifespan(empty_190),
-            "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
-            "משיכה חודשית": fmt_withdrawal(nn_190_c),
-            "קצב משיכה":    wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
-            "סך נכסים":     format_shekel(tw_190_c),
+            "משיכה / תזרים": fmt_unified_cashflow(nn_190_c),
+            "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_190),
             "שימור הון":    fmt_preservation(b190_95),
+            "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
+            "סך נכסים":     format_shekel(tw_190_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
             "גיל התאוששות": recovery_190,
-            "תזרים חודשי":  "—",
-            "גיל היפוך":    "—",
         },
         "25% ריאלי (ללא קצבה)": {
             "הכנסות חודשיות": format_shekel(int(base_income_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
-            "גיל חוסן":     fmt_lifespan(empty_25),
-            "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
-            "משיכה חודשית": fmt_withdrawal(nn_25_c),
-            "קצב משיכה":    wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
-            "סך נכסים":     format_shekel(tw_25_c),
+            "משיכה / תזרים": fmt_unified_cashflow(nn_25_c),
+            "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_25),
             "שימור הון":    fmt_preservation(b25_95),
+            "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
+            "סך נכסים":     format_shekel(tw_25_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             "גיל התאוששות": recovery_25,
-            "תזרים חודשי":  "—",
-            "גיל היפוך":    "—",
         },
         "25% ריאלי + קצבה מזערית": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
-            "גיל חוסן":     fmt_lifespan(empty_h),
-            "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
-            "משיכה חודשית": fmt_withdrawal(nn_h_c),
-            "קצב משיכה":    wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
-            "סך נכסים":     format_shekel(tw_h_c),
+            "משיכה / תזרים": fmt_unified_cashflow(nn_h_c),
+            "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_h),
             "שימור הון":    fmt_preservation(bh_95),
+            "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
+            "סך נכסים":     format_shekel(tw_h_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
             "גיל התאוששות": recovery_h,
-            "תזרים חודשי":  "—",
-            "גיל היפוך":    "—",
         },
         "שכירות": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + net_rental_c)),
             "הוצאות חודשיות": format_shekel(int(exp_check + rent_paid_c)),
-            "גיל חוסן":     fmt_lifespan(empty_r),
+            "משיכה / תזרים": fmt_unified_cashflow(nn_rent_c, cashflow=rental_cashflow_at_check),
+            "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_r),
+            "שימור הון":    fmt_preservation(br_95),
             "הון כולל":     format_shekel(br_c),
-            "תזרים חודשי":  (
-                f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(rental_cashflow_at_check))}</span>"
+            "סך נכסים":     format_shekel(tw_rent_c),
+            "קצב משיכה":    (
+                "<span style='color:#1a7a3a;'>✅ לא נדרש</span>"
                 if rental_cashflow_at_check >= 0 else
-                f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(abs(rental_cashflow_at_check)))}−</span>"
+                wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c))
             ),
+            "גיל התאוששות": recovery_r,
             "גיל היפוך":    (
                 "<span style='color:#1a7a3a;'>✅ נשאר חיובי</span>" if rental_always_positive
                 else f"<span style='color:#b84c00;font-weight:700;'>גיל {rental_flip_age:.0f}</span>"
                 if rental_flip_age else "<span style='color:#c0392b;'>מתחיל שלילי</span>"
             ),
-            "סך נכסים":     format_shekel(tw_rent_c),
-            "שימור הון":    fmt_preservation(br_95),
-            "גיל התאוששות": recovery_r,
         },
     }
 
     KEY_ROWS_2 = [
         ("סה\"כ הכנסות חודשיות (ב\"ל + קצבה + שכ\"ד)",  "הכנסות חודשיות"),
         ("סה\"כ הוצאות חודשיות (כולל שכ\"ד תשלום)",     "הוצאות חודשיות"),
-        ("כמה אמשוך מהתיק כל חודש?",                    "משיכה חודשית"),
-        ("עד איזה גיל הכסף מחזיק?",                     "גיל חוסן"),
+        ("כמה אמשוך / מה התזרים החודשי?",               "משיכה / תזרים"),
+        ("עד איזה גיל הכסף מחזיק?",                     "עד איזה גיל הכסף מחזיק?"),
         ("כמה מההון ההתחלתי נשמר בגיל 95?",             "שימור הון"),
         ("מה שווי ההון הכולל כולל הקצבה?",              "הון כולל"),
-        ("מה סך כלל הנכסים שלי?",                        "סך נכסים"),
+        ("מה סך כלל הנכסים שלי?",                       "סך נכסים"),
     ]
     DETAIL_ROWS_2 = [
         ("מה קצב המשיכה בגיל זה?",                    "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?",     "גיל התאוששות"),
-        ("תזרים שכירות / גיל היפוך",                   "תזרים חודשי"),
-        ("מתי התזרים הופך שלילי?",                     "גיל היפוך"),
+        ("מתי תזרים השכירות הופך שלילי?",              "גיל היפוך"),
     ]
 
     with st.expander(f"🔮 מצב בגיל נבדק — גיל {check_age:.1f}", expanded=True):
