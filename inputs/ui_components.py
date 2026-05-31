@@ -59,6 +59,7 @@ def get_withdrawal_style(rate):
         r = float(rate)
         if r < 3.0: color = "#99FF99"
         elif r <= 4.0: color = "#FFCC99"
+        elif r <= 6.0: color = "#FFB347"
         else: color = "#FF9999"
         return f"background-color: {color}; font-weight: bold; color: #1f2937;"
     except: return ""
@@ -76,9 +77,9 @@ def get_400_rule_style(multiplier_str):
 def get_emergency_style(years_str):
     if str(years_str) == "∞": return "background-color: #99FF99; font-weight: bold; color: #1f2937;"
     try:
-        val = float(years_str)
-        if val < 2.0: color = "#FF9999"
-        elif val <= 3.5: color = "#FFCC99"
+        val = float(str(years_str).replace(" שנים", "").replace(" שנה", ""))
+        if val < 1.0: color = "#FF9999"
+        elif val <= 2.0: color = "#FFCC99"
         else: color = "#99FF99"
         return f"background-color: {color}; font-weight: bold; color: #1f2937;"
     except: return ""
@@ -89,14 +90,20 @@ def get_larger_portfolio_style(is_larger):
 
 def get_resiliency_style(age_str):
     if "105+" in str(age_str) or "חסין" in str(age_str): color = "#99FF99"
-    else: color = "#FF9999"
+    else:
+        try:
+            age = float(str(age_str).replace("גיל ", ""))
+            if age >= 100: color = "#FFCC99"
+            elif age >= 90: color = "#FFB347"
+            else: color = "#FF9999"
+        except: color = "#FF9999"
     return f"background-color: {color}; font-weight: bold; color: #1f2937;"
 
 def get_preservation_pct_style(ratio_pct):
     try:
         val = float(ratio_pct)
         if val < 75.0: color = "#FF9999"
-        elif val <= 90.0: color = "#FFCC99"
+        elif val < 100.0: color = "#FFCC99"
         else: color = "#99FF99"
         return f"background-color: {color}; font-weight: bold; border: 1px solid #c5c5c5; color: #1f2937;"
     except: return ""
