@@ -121,7 +121,7 @@ try:
 except Exception:
     qa_tab_label = "🔬 QA — ניתוח מסלולים"
 
-tab1, tab2, tab3, tab4 = st.tabs([qa_tab_label, "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
+tab4, tab3, tab2, tab1 = st.tabs(["📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
 
 with tab1:
     render_qa_section(sim_results, display_inputs)
