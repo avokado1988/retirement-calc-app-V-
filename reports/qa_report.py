@@ -601,6 +601,8 @@ def render_qa_section(results, user_inputs):
 
     t1_cols = {
         "190 + קצבה מזערית": {
+            "הכנסות חודשיות":  format_shekel(int(base_income_retire + pension_retire)),
+            "הוצאות חודשיות":  format_shekel(int(exp_retire)),
             "הון כולל":        fmt_with_pension_note(inherit_190_r, pension_asset_retire),
             "משיכה חודשית":    fmt_withdrawal(nn_190_r),
             "קצב משיכה":       wrap_html_style(f"{pct_190_r:.2f}%", get_withdrawal_style(pct_190_r)),
@@ -612,6 +614,8 @@ def render_qa_section(results, user_inputs):
             "קרן חירום":       wrap_html_style(emer(nn_190_r), get_emergency_style(emer(nn_190_r))),
         },
         "25% ריאלי (ללא קצבה)": {
+            "הכנסות חודשיות":  format_shekel(int(base_income_retire)),
+            "הוצאות חודשיות":  format_shekel(int(exp_retire)),
             "הון כולל":        format_shekel(b25_r),
             "משיכה חודשית":    fmt_withdrawal(nn_25_r),
             "קצב משיכה":       wrap_html_style(f"{pct_25_r:.2f}%", get_withdrawal_style(pct_25_r)),
@@ -623,6 +627,8 @@ def render_qa_section(results, user_inputs):
             "קרן חירום":       wrap_html_style(emer(nn_25_r), get_emergency_style(emer(nn_25_r))),
         },
         "25% ריאלי + קצבה מזערית": {
+            "הכנסות חודשיות":  format_shekel(int(base_income_retire + pension_retire)),
+            "הוצאות חודשיות":  format_shekel(int(exp_retire)),
             "הון כולל":        fmt_with_pension_note(inherit_h_r, pension_asset_retire),
             "משיכה חודשית":    fmt_withdrawal(nn_h_r),
             "קצב משיכה":       wrap_html_style(f"{pct_h_r:.2f}%", get_withdrawal_style(pct_h_r)),
@@ -634,6 +640,8 @@ def render_qa_section(results, user_inputs):
             "קרן חירום":       wrap_html_style(emer(nn_h_r), get_emergency_style(emer(nn_h_r))),
         },
         "שכירות": {
+            "הכנסות חודשיות":  format_shekel(int(base_income_retire + net_rental_r)),
+            "הוצאות חודשיות":  format_shekel(int(exp_retire + rent_paid_r)),
             "הון כולל":        format_shekel(br_r),
             "משיכה חודשית":    (
                 f"<span style='color:#1a7a3a;font-weight:700;'>תזרים חיובי<br/>+{format_shekel(int(rental_cashflow_at_retire))}</span>"
@@ -655,10 +663,12 @@ def render_qa_section(results, user_inputs):
     }
 
     KEY_ROWS_1 = [
-        ("מה שווי ההון הכולל כולל הקצבה?",   "הון כולל"),
-        ("כמה אצטרך למשוך מהתיק כל חודש?",   "משיכה חודשית"),
-        ("מה קצב המשיכה השנתי מהתיק?",       "קצב משיכה"),
-        ("מה סך כלל הנכסים שלי?",             "סך נכסים"),
+        ("סה\"כ הכנסות חודשיות (ב\"ל + קצבה + שכ\"ד)",  "הכנסות חודשיות"),
+        ("סה\"כ הוצאות חודשיות (כולל שכ\"ד תשלום)",     "הוצאות חודשיות"),
+        ("כמה אצטרך למשוך מהתיק כל חודש?",              "משיכה חודשית"),
+        ("מה קצב המשיכה השנתי מהתיק?",                  "קצב משיכה"),
+        ("מה שווי ההון הכולל כולל הקצבה?",              "הון כולל"),
+        ("מה סך כלל הנכסים שלי?",                        "סך נכסים"),
     ]
     DETAIL_ROWS_1 = [
         ("מה גובה התיק הנזיל ביום הפרישה?",   "תיק נזיל"),
@@ -693,6 +703,8 @@ def render_qa_section(results, user_inputs):
 
     t2_cols = {
         "190 + קצבה מזערית": {
+            "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
+            "הוצאות חודשיות": format_shekel(int(exp_check)),
             "גיל חוסן":     fmt_lifespan(empty_190),
             "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
             "משיכה חודשית": fmt_withdrawal(nn_190_c),
@@ -704,6 +716,8 @@ def render_qa_section(results, user_inputs):
             "גיל היפוך":    "—",
         },
         "25% ריאלי (ללא קצבה)": {
+            "הכנסות חודשיות": format_shekel(int(base_income_check)),
+            "הוצאות חודשיות": format_shekel(int(exp_check)),
             "גיל חוסן":     fmt_lifespan(empty_25),
             "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
             "משיכה חודשית": fmt_withdrawal(nn_25_c),
@@ -715,6 +729,8 @@ def render_qa_section(results, user_inputs):
             "גיל היפוך":    "—",
         },
         "25% ריאלי + קצבה מזערית": {
+            "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
+            "הוצאות חודשיות": format_shekel(int(exp_check)),
             "גיל חוסן":     fmt_lifespan(empty_h),
             "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
             "משיכה חודשית": fmt_withdrawal(nn_h_c),
@@ -726,6 +742,8 @@ def render_qa_section(results, user_inputs):
             "גיל היפוך":    "—",
         },
         "שכירות": {
+            "הכנסות חודשיות": format_shekel(int(base_income_check + net_rental_c)),
+            "הוצאות חודשיות": format_shekel(int(exp_check + rent_paid_c)),
             "גיל חוסן":     fmt_lifespan(empty_r),
             "הון כולל":     format_shekel(br_c),
             "תזרים חודשי":  (
@@ -745,16 +763,18 @@ def render_qa_section(results, user_inputs):
     }
 
     KEY_ROWS_2 = [
-        ("עד איזה גיל הכסף מחזיק?",          "גיל חוסן"),
-        ("כמה מההון ההתחלתי נשמר בגיל 95?",  "שימור הון"),
-        ("מה שווי ההון הכולל כולל הקצבה?",  "הון כולל"),
-        ("מה סך כלל הנכסים שלי?",             "סך נכסים"),
-        ("תזרים חודשי נטו / גיל היפוך",       "תזרים חודשי"),
+        ("סה\"כ הכנסות חודשיות (ב\"ל + קצבה + שכ\"ד)",  "הכנסות חודשיות"),
+        ("סה\"כ הוצאות חודשיות (כולל שכ\"ד תשלום)",     "הוצאות חודשיות"),
+        ("כמה אמשוך מהתיק כל חודש?",                    "משיכה חודשית"),
+        ("עד איזה גיל הכסף מחזיק?",                     "גיל חוסן"),
+        ("כמה מההון ההתחלתי נשמר בגיל 95?",             "שימור הון"),
+        ("מה שווי ההון הכולל כולל הקצבה?",              "הון כולל"),
+        ("מה סך כלל הנכסים שלי?",                        "סך נכסים"),
     ]
     DETAIL_ROWS_2 = [
-        ("כמה אמשוך מהתיק כל חודש?",                  "משיכה חודשית"),
         ("מה קצב המשיכה בגיל זה?",                    "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?",     "גיל התאוששות"),
+        ("תזרים שכירות / גיל היפוך",                   "תזרים חודשי"),
         ("מתי התזרים הופך שלילי?",                     "גיל היפוך"),
     ]
 
