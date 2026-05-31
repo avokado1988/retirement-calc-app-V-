@@ -79,7 +79,7 @@ def get_emergency_style(years_str):
     try:
         val = float(str(years_str).replace(" שנים", "").replace(" שנה", ""))
         if val < 1.0: color = "#FF9999"
-        elif val <= 2.0: color = "#FFCC99"
+        elif val < 3.0: color = "#FFCC99"
         else: color = "#99FF99"
         return f"background-color: {color}; font-weight: bold; color: #1f2937;"
     except: return ""

@@ -386,15 +386,15 @@ def render_qa_section(results, user_inputs):
     st.subheader(f"📊 מצב ביום הפרישה (גיל {retire_age:.1f})")
     t1 = pd.DataFrame({
         "שאלה": [
-            "גודל תיק נזיל בגיל פרישה",
-            "שווי הון כולל הון בקצבה",
-            "שווי הנדל\"ן בפרישה",
-            "קצבאות בפרישה (ב\"ל + פנסיה)",
-            "משיכה חודשית נטו מהתיק",
-            "חוק ה-400 (יחס חסינות)",
-            "שנות כיסוי מקרן חירום",
-            "קצב משיכה שנתי",
-            "סך כלל הנכסים"
+            "מה גובה התיק הנזיל שלי ביום הפרישה?",
+            "מה שווי ההון הכולל כולל הקצבה?",
+            "מה שווי הנדל\"ן שלי בפרישה?",
+            "מה סך הקצבאות החודשיות שלי?",
+            "כמה אצטרך למשוך מהתיק כל חודש?",
+            "מה מדד החסינות של התיק (חוק 400)?",
+            "כמה שנים קרן החירום מכסה?",
+            "מה קצב המשיכה השנתי מהתיק?",
+            "מה סך כלל הנכסים שלי?"
         ],
         "מסלול 1 — תיקון 190": [
             format_shekel(b190_r),
@@ -409,7 +409,7 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 2 — 25% ריאלי": [
             format_shekel(b25_r),
-            "—",
+            format_shekel(b25_r),
             format_shekel(property_value_retire),
             format_shekel(base_income_retire),
             format_shekel(nn_25_r),
@@ -431,13 +431,13 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 4 — שכירות": [
             format_shekel(br_r),
-            "—",
+            format_shekel(br_r),
             format_shekel(float(row_retire.get("שווי נדלן מסלול 4", property_value_retire))),
             format_shekel(base_income_retire),
             format_shekel(nn_rent_r),
-            "לא רלוונטי",
-            "לא רלוונטי",
-            "לא רלוונטי",
+            'ל"ר',
+            'ל"ר',
+            'ל"ר',
             format_shekel(tw_rent_r)
         ]
     })
@@ -452,17 +452,17 @@ def render_qa_section(results, user_inputs):
     bool_preserve_95_190 = "✅ כן" if b190_95 >= baseline_capital else "❌ לא"
     bool_preserve_95_25 = "✅ כן" if b25_95 >= baseline_capital else "❌ לא"
     bool_preserve_95_h = "✅ כן" if bh_95 >= baseline_capital else "❌ לא"
-    bool_preserve_95_r = "✅ כן" if br_95 > 0 else "❌ לא"  # Track 4: חסכונות > 0?
+    bool_preserve_95_r = "✅ כן" if br_95 > 0 else "❌ לא"
 
     t2 = pd.DataFrame({
         "שאלה": [
-            "תיק נזיל שיישאר",
-            "שווי הון כולל הון בקצבה",
-            "משיכה חודשית נטו מהתיק",
-            "קצב משיכה בגיל הנבדק",
-            "האם נשמר ההון ההתחלתי? (גיל 95)",
-            "גיל שבו עובר את ההון ההתחלתי",
-            "סך כלל הנכסים"
+            "כמה כסף נזיל יישאר לי?",
+            "מה שווי ההון הכולל כולל הקצבה?",
+            "כמה אמשוך מהתיק כל חודש?",
+            "מה קצב המשיכה בגיל זה?",
+            "האם נשמר ההון ההתחלתי עד גיל 95?",
+            "מאיזה גיל התיק עולה מעל ההון הראשוני?",
+            "מה סך כלל הנכסים שלי?"
         ],
         "מסלול 1 — תיקון 190": [
             wrap_html_style(format_shekel(b190_c), get_larger_portfolio_style(b190_c > b25_c)),
@@ -475,7 +475,7 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 2 — 25% ריאלי": [
             wrap_html_style(format_shekel(b25_c), get_larger_portfolio_style(b25_c > b190_c)),
-            "—",
+            format_shekel(b25_c),
             format_shekel(nn_25_c),
             wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             wrap_html_style(bool_preserve_95_25, get_boolean_style(bool_preserve_95_25)),
@@ -493,7 +493,7 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 4 — שכירות": [
             wrap_html_style(format_shekel(br_c), get_larger_portfolio_style(br_c > b25_c)),
-            "—",
+            format_shekel(br_c),
             format_shekel(nn_rent_c),
             wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
             wrap_html_style(bool_preserve_95_r, get_boolean_style(bool_preserve_95_r)),
@@ -510,7 +510,7 @@ def render_qa_section(results, user_inputs):
     t3 = pd.DataFrame({
         "שורה תחתונה": [
             "עד איזה גיל הכסף יחזיק?",
-            "אחוז ההון ההתחלתי שנשמר בגיל 97"
+            "כמה מההון הראשוני נשמר בגיל 97?"
         ],
         "מסלול 1 — תיקון 190": [
             wrap_html_style(fmt_empty(empty_190), get_resiliency_style(fmt_empty(empty_190))),
