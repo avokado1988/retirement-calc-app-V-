@@ -85,6 +85,18 @@ user_inputs = inputs.render_all_sidebar_inputs()
 
 # 3. כפתור הפעלה — הסימולציה רצה רק בלחיצה (לא על כל שינוי)
 st.sidebar.divider()
+
+# אזהרה אם יש שינויים שטרם חושבו
+if "last_inputs" in st.session_state:
+    import json
+    try:
+        current_str = json.dumps(user_inputs, default=str, sort_keys=True)
+        last_str = json.dumps(st.session_state["last_inputs"], default=str, sort_keys=True)
+        if current_str != last_str:
+            st.sidebar.warning("⚠️ יש שינויים שלא חושבו — לחץ עדכן")
+    except Exception:
+        pass
+
 run_clicked = st.sidebar.button("▶️ עדכן סימולציה", use_container_width=True, type="primary")
 
 if run_clicked or "sim_results" not in st.session_state:
@@ -95,7 +107,22 @@ sim_results = st.session_state["sim_results"]
 display_inputs = st.session_state["last_inputs"]
 
 # 4. חלוקת המסך המרכזי ללשוניות תצוגה מקצועיות
-tab1, tab2, tab3, tab4 = st.tabs(["❓ שאלות ותשובות", "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
+# בדיקה אם יש מסלולים בסיכון (אוזלים לפני 105) לשם אינדיקטור ב-QA
+try:
+    df_full = sim_results["df_full"]
+    def _track_runs_out(col):
+        return any(float(v) <= 0 for v in df_full[col])
+    tracks_at_risk = any([
+        _track_runs_out("צבירה תיקון 190"),
+        _track_runs_out("צבירה מסלול ריאלי"),
+        _track_runs_out("צבירה מסלול היברידי"),
+        _track_runs_out("צבירה מסלול שכירות"),
+    ])
+    qa_tab_label = "🔴 QA — ניתוח מסלולים" if tracks_at_risk else "🟢 QA — ניתוח מסלולים"
+except Exception:
+    qa_tab_label = "🔬 QA — ניתוח מסלולים"
+
+tab1, tab2, tab3, tab4 = st.tabs([qa_tab_label, "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
 
 with tab1:
     render_qa_section(sim_results, display_inputs)

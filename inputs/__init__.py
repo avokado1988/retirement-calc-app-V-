@@ -13,6 +13,8 @@ def render_all_sidebar_inputs():
 
     inputs_dict = {}
 
+    st.sidebar.markdown("#### 🎯 הגדרות בסיס")
+
     with st.sidebar.expander("1. נתוני זמנים ופרישה", expanded=True):
         inputs_dict["timeline"] = render_timeline_inputs()
 
@@ -32,6 +34,9 @@ def render_all_sidebar_inputs():
     expenses_ui["work_income"] = incomes_ui["work_income"]
     expenses_ui["work_end_age"] = incomes_ui["work_end_age"]
     inputs_dict["expenses"] = expenses_ui
+
+    st.sidebar.divider()
+    st.sidebar.markdown("#### 🔧 הגדרות מתקדמות — מסלולים")
 
     with st.sidebar.expander("5. מסלול תיקון 190", expanded=False):
         inputs_dict["amendment_190"] = render_190_inputs(remaining_wealth)
