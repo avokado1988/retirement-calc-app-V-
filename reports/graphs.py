@@ -7,24 +7,28 @@ COLORS = {
     "190":    "#2ca02c",
     "25":     "#1f77b4",
     "hybrid": "#ff7f0e",
+    "rental": "#9467bd",
 }
 
 TRACK_NAMES = {
     "190":    "190 + קצבה מזערית",
     "25":     "25% ריאלי (ללא קצבה)",
     "hybrid": "25% ריאלי + קצבה מזערית",
+    "rental": "מסלול נדל\"ן (שכירות)",
 }
 
 COL_MAP = {
     "190":    "צבירה תיקון 190",
     "25":     "צבירה מסלול ריאלי",
     "hybrid": "צבירה מסלול היברידי",
+    "rental": "צבירה מסלול שכירות",
 }
 
 TAX_COL = {
     "190":    "מס ששולם 190",
     "25":     "מס ששולם 25",
     "hybrid": "מס ששולם היברידי",
+    "rental": "מס ששולם שכירות",
 }
 
 EXPENSE_COL = "הוצאה נומינלית"
@@ -34,17 +38,20 @@ PENSION_COL = "הכנסה מקצבה מזערית"
 
 def _track_selector(key_prefix):
     st.markdown("**בחר מסלולים להצגה:**")
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
-        show_190 = st.checkbox(TRACK_NAMES["190"],    value=True, key=f"{key_prefix}_190")
+        show_190    = st.checkbox(TRACK_NAMES["190"],    value=True,  key=f"{key_prefix}_190")
     with c2:
-        show_25  = st.checkbox(TRACK_NAMES["25"],     value=True, key=f"{key_prefix}_25")
+        show_25     = st.checkbox(TRACK_NAMES["25"],     value=True,  key=f"{key_prefix}_25")
     with c3:
-        show_h   = st.checkbox(TRACK_NAMES["hybrid"], value=True, key=f"{key_prefix}_hybrid")
+        show_h      = st.checkbox(TRACK_NAMES["hybrid"], value=True,  key=f"{key_prefix}_hybrid")
+    with c4:
+        show_rental = st.checkbox(TRACK_NAMES["rental"], value=False, key=f"{key_prefix}_rental")
     active = []
-    if show_190: active.append("190")
-    if show_25:  active.append("25")
-    if show_h:   active.append("hybrid")
+    if show_190:    active.append("190")
+    if show_25:     active.append("25")
+    if show_h:      active.append("hybrid")
+    if show_rental: active.append("rental")
     return active
 
 
@@ -151,7 +158,7 @@ def render_charts(df_history, user_inputs):
     st.markdown("סך המס ששולם בכל שנת גיל — אפקט מגן המס של תיקון 190 אל מול 25% ריאלי.")
     active_c = _track_selector("c")
 
-    agg_dict = {TAX_COL[tid]: "sum" for tid in ["190", "25", "hybrid"]}
+    agg_dict = {TAX_COL[tid]: "sum" for tid in ["190", "25", "hybrid", "rental"]}
     df_annual = (
         df.assign(age_floor=df["גיל"].astype(int))
           .groupby("age_floor", as_index=False)
@@ -188,19 +195,24 @@ def render_charts(df_history, user_inputs):
     active_d = _track_selector("d")
 
     df_press = df.copy()
-    pension_income = df_press[PENSION_COL] if PENSION_COL in df_press.columns else 0
+    pension_income  = df_press[PENSION_COL] if PENSION_COL in df_press.columns else 0
+    rental_net_col  = "הכנסת שכירות נטו" if "הכנסת שכירות נטו" in df_press.columns else None
+    rent_paid_col   = "הוצאת שכירות"      if "הוצאת שכירות"      in df_press.columns else None
+    rental_income   = df_press[rental_net_col] if rental_net_col else 0
+    rent_paid       = df_press[rent_paid_col]   if rent_paid_col   else 0
     df_press["withdrawal_190"]    = (df_press[EXPENSE_COL] - (df_press[INCOME_COL] + pension_income)).clip(lower=0)
     df_press["withdrawal_25"]     = (df_press[EXPENSE_COL] - df_press[INCOME_COL]).clip(lower=0)
     df_press["withdrawal_hybrid"] = (df_press[EXPENSE_COL] - (df_press[INCOME_COL] + pension_income)).clip(lower=0)
+    df_press["withdrawal_rental"] = (df_press[EXPENSE_COL] + rent_paid - (df_press[INCOME_COL] + rental_income)).clip(lower=0)
 
     df_press_annual = (
         df_press.assign(age_floor=df_press["גיל"].astype(int))
         .groupby("age_floor", as_index=False)
-        .agg({"withdrawal_190": "sum", "withdrawal_25": "sum", "withdrawal_hybrid": "sum"})
+        .agg({"withdrawal_190": "sum", "withdrawal_25": "sum", "withdrawal_hybrid": "sum", "withdrawal_rental": "sum"})
         .rename(columns={"age_floor": "גיל"})
     )
 
-    WITHDRAWAL_COL = {"190": "withdrawal_190", "25": "withdrawal_25", "hybrid": "withdrawal_hybrid"}
+    WITHDRAWAL_COL = {"190": "withdrawal_190", "25": "withdrawal_25", "hybrid": "withdrawal_hybrid", "rental": "withdrawal_rental"}
 
     fig_d = go.Figure()
     for tid in active_d:
