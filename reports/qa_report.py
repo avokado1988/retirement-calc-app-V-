@@ -11,9 +11,9 @@ def render_qa_section(results, user_inputs):
     st.markdown("""
         <style>
         .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 15px 0; font-family: sans-serif; }
-        .styled-table th { background-color: #f3f4f6; color: #1f2937; text-align: right !important; padding: 10px !important; font-weight: bold; border-bottom: 2px solid #e5e7eb; }
-        .styled-table td { padding: 8px !important; text-align: right !important; border-bottom: 1px solid #f3f4f6; }
-        .styled-table thead { display: none; }
+        .styled-table th { background-color: #2a2a3e; color: #e0e0e0; text-align: right !important; padding: 10px !important; font-weight: bold; border-bottom: 2px solid #444; }
+        .styled-table th:first-child { display: none; }
+        .styled-table td { padding: 8px !important; text-align: right !important; border-bottom: 1px solid #333; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -325,17 +325,24 @@ def render_qa_section(results, user_inputs):
     st.subheader("🧭 סיכום מנהלים — השוואת מסלולים")
 
     cols = st.columns(4)
-    for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(tracks_exec):
+    for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(tracks_exec)):
         pc = track_pros_cons[track_id]
         health = get_health_label(score)
         score_color = get_score_color(score)
         _, border_color = get_card_colors(score)
         res_label = resiliency_label_for_card(empty_age)
-        res_color = "#1a7a1a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#cc0000")
+        res_color = "#4dbb4d" if empty_age >= 105.0 else ("#ff8c42" if empty_age >= 90 else "#ff4444")
 
-        # Short track name for header
         track_short = pc["name"].split("—")[1].strip() if "—" in pc["name"] else pc["name"]
         track_num = pc["name"].split("—")[0].strip()
+
+        # Age 95 delta vs baseline
+        delta_95 = portfolio_95 - baseline_capital
+        delta_pct_95 = (delta_95 / baseline_capital * 100) if baseline_capital > 0 else 0
+        delta_sign = "+" if delta_95 >= 0 else ""
+        delta_color = "#4dbb4d" if delta_95 >= 0 else "#ff6666"
+        age95_line = f"{format_shekel(int(portfolio_95))}"
+        age95_delta = f"<span style='color:{delta_color}; font-size:0.78em;'>{delta_sign}{format_shekel(int(delta_95))} ({delta_sign}{delta_pct_95:.1f}%) מתוך {format_shekel(int(baseline_capital))}</span>"
 
         with cols[col_idx]:
             st.markdown(f"""
@@ -351,20 +358,21 @@ def render_qa_section(results, user_inputs):
   <div style='font-size: 1em; margin-bottom: 14px; color: #e0e0e0;'>{health}</div>
 
   <div style='border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;'>
-    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>יתרונות</div>
+    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; letter-spacing: 0.05em; margin-bottom: 6px;'>יתרונות</div>
     <div style='font-size: 0.82em; color: #4dbb4d; margin-bottom: 4px;'>✅ {pc["pro1"]}</div>
     <div style='font-size: 0.82em; color: #4dbb4d;'>✅ {pc["pro2"]}</div>
   </div>
 
   <div style='border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;'>
-    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>סיכונים</div>
+    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; letter-spacing: 0.05em; margin-bottom: 6px;'>סיכונים</div>
     <div style='font-size: 0.82em; color: #ff8c42; margin-bottom: 4px;'>⚠️ {pc["con1"]}</div>
     <div style='font-size: 0.82em; color: #ff8c42;'>⚠️ {pc["con2"]}</div>
   </div>
 
-  <div style='border-top: 1px solid #333; padding-top: 10px; display: flex; flex-direction: column; gap: 4px;'>
+  <div style='border-top: 1px solid #333; padding-top: 10px; display: flex; flex-direction: column; gap: 6px;'>
     <div style='font-size: 0.82em; color: {res_color}; font-weight: 600;'>📅 {res_label}</div>
-    <div style='font-size: 0.82em; color: #e0e0e0;'>💰 בגיל 95: <b style='color:#f0f0f0;'>{format_shekel(portfolio_95)}</b></div>
+    <div style='font-size: 0.85em; color: #f0f0f0; font-weight: 600;'>💰 {age95_line}</div>
+    <div>{age95_delta}</div>
   </div>
 
 </div>
