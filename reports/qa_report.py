@@ -10,10 +10,10 @@ from inputs.ui_components import (
 def render_qa_section(results, user_inputs):
     st.markdown("""
         <style>
-        .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 15px 0; font-family: sans-serif; }
-        .styled-table th { background-color: #2a2a3e; color: #e0e0e0; text-align: right !important; padding: 10px !important; font-weight: bold; border-bottom: 2px solid #444; }
-        .styled-table td { padding: 8px !important; text-align: right !important; border-bottom: 1px solid #333; }
-        .styled-table tbody th { background-color: #1e1e2e; color: #c0c0c0; font-weight: 600; padding: 8px !important; text-align: right !important; border-bottom: 1px solid #333; border-left: 2px solid #444; }
+        .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 8px 0; font-family: sans-serif; }
+        .styled-table thead th { background-color: #eef0f7; color: #1a1a2e; text-align: right !important; padding: 10px 12px !important; font-weight: 700; border-bottom: 2px solid #d0d4e8; font-size: 0.9em; }
+        .styled-table td { padding: 8px 12px !important; text-align: right !important; border-bottom: 1px solid #eef; color: #1a1a2e; }
+        .styled-table tbody th { background-color: #f8f9fc; color: #555; font-weight: 600; padding: 8px 12px !important; text-align: right !important; border-bottom: 1px solid #eef; border-left: 2px solid #d0d4e8; font-size: 0.88em; }
         [data-testid="stExpander"] summary { direction: rtl !important; text-align: right !important; }
         [data-testid="stExpander"] summary p { direction: rtl !important; text-align: right !important; }
         </style>
@@ -33,12 +33,8 @@ def render_qa_section(results, user_inputs):
     emergency_fund = float(wealth.get("emergency_fund", 0))
     property_value_start = float(wealth.get("new_apartment_cost", 0))
     appreciation_rate = float(wealth.get("property_appreciation", 0))
-    # Track 4: use user-defined current property value (the retained apartment)
     rental_property_start = float(rental_inputs.get("current_property_value", wealth.get("net_sale", property_value_start)))
 
-    # -------------------------------------------------------
-    # Helper: get row at target age
-    # -------------------------------------------------------
     def get_row(target_age):
         sub = df_full[df_full["גיל"] >= target_age]
         return sub.iloc[0] if not sub.empty else df_full.iloc[-1]
@@ -46,10 +42,8 @@ def render_qa_section(results, user_inputs):
     row_retire = get_row(retire_age)
     row_check = get_row(check_age)
 
-    # Read property value directly from engine column (tracks 1-3: new apartment)
     property_value_retire = float(row_retire.get("שווי נדלן", property_value_start))
     property_value_check = float(row_check.get("שווי נדלן", property_value_start))
-    # Track 4: retained apartment, valued independently from user input
     years_to_retire = retire_age - start_age
     years_to_check = check_age - start_age
     rental_prop_retire = rental_property_start * ((1 + appreciation_rate) ** years_to_retire)
@@ -86,21 +80,21 @@ def render_qa_section(results, user_inputs):
         delta_pct = (val - baseline) / baseline * 100
         arrow = "↑" if delta_pct >= 0 else "↓"
         if delta_pct > 20:
-            color = "#00e676"
+            color = "#1a7a3a"
         elif delta_pct >= 0:
-            color = "#2ecc71"
+            color = "#2e7d32"
         else:
-            color = "#ff5555"
+            color = "#c0392b"
         sign = "+" if delta_pct >= 0 else ""
         pension_note = ""
         if pension_component is not None:
-            pension_note = f"<br/><span style='color:#aaa; font-size:0.78em;'>מתוכם {format_shekel(int(pension_component))} ערך קצבה</span>"
+            pension_note = f"<br/><span style='color:#999; font-size:0.78em;'>מתוכם {format_shekel(int(pension_component))} ערך קצבה</span>"
         return f"{format_shekel(int(val))}<br/><span style='color:{color}; font-size:0.85em;'>({arrow}{sign}{delta_pct:.1f}%)</span>{pension_note}"
 
     def fmt_with_pension_note(val, pension_component=None):
         base = format_shekel(int(val))
         if pension_component is not None:
-            note = f"<br/><span style='color:#aaa; font-size:0.78em;'>מתוכם {format_shekel(int(pension_component))} ערך קצבה</span>"
+            note = f"<br/><span style='color:#999; font-size:0.78em;'>מתוכם {format_shekel(int(pension_component))} ערך קצבה</span>"
             return base + note
         return base
 
@@ -155,10 +149,8 @@ def render_qa_section(results, user_inputs):
     tw_h_c = bh_c + pension_asset_check + property_value_check + emergency_fund
     tw_rent_c = br_c + rental_prop_check + emergency_fund
 
-    bool_preserve = lambda bal: "✅ כן" if bal > baseline_capital else "❌ לא"
-
     # -------------------------------------------------------
-    # Extract values at age 95 (for preservation check)
+    # Extract values at age 95
     # -------------------------------------------------------
     df_95 = df_full[df_full["גיל"] >= 95.0]
     row_95 = df_95.iloc[0] if not df_95.empty else df_full.iloc[-1]
@@ -187,8 +179,6 @@ def render_qa_section(results, user_inputs):
     empty_h = find_empty_age("צבירה מסלול היברידי")
     empty_r = find_empty_age("צבירה מסלול שכירות")
 
-    fmt_empty = lambda a: "105+ (חסין)" if a >= 105.0 else f"גיל {a:.1f}"
-
     recovery_190 = find_recovery_age("צבירה תיקון 190")
     recovery_25 = find_recovery_age("צבירה מסלול ריאלי")
     recovery_h = find_recovery_age("צבירה מסלול היברידי")
@@ -208,34 +198,18 @@ def render_qa_section(results, user_inputs):
     ratio_r_pct, ratio_r_str = ratio_at_97("צבירה מסלול שכירות")
 
     # -------------------------------------------------------
-    # Executive Summary: compute scores per track
+    # Compute scores per track
     # -------------------------------------------------------
     def compute_score(track_id, empty_age, ratio_at_95, withdrawal_rate, rule400_val_str, is_track4=False):
-        """
-        track_id: 1-4
-        empty_age: age portfolio empties (120 = never)
-        ratio_at_95: portfolio_at_95 / baseline_capital (float ratio, not pct)
-        withdrawal_rate: annual withdrawal % (float)
-        rule400_val_str: rule400 string value
-        is_track4: True for track 4 (no rule400)
-        """
         score = 0
-
-        # 40 pts: resiliency to 105
         husn_105 = empty_age >= 105.0
         if husn_105:
             score += 40
-
-        # 30 pts: preservation at 95
         ratio_95_pct = ratio_at_95 * 100
         if ratio_95_pct >= 100.0:
             score += 30
         elif ratio_95_pct >= 75.0:
             score += 15
-        else:
-            score += 0
-
-        # 20 pts: withdrawal rate (use thresholds)
         r = float(withdrawal_rate)
         if r < 3.0:
             score += 20
@@ -243,12 +217,7 @@ def render_qa_section(results, user_inputs):
             score += 12
         elif r <= 6.0:
             score += 5
-        else:
-            score += 0
-
-        # 10 pts: rule400 (skip for track 4, redistribute to שימור)
         if is_track4:
-            # redistribute 10 pts to preservation (add bonus if ratio >= 100%)
             if ratio_95_pct >= 100.0:
                 score += 10
             elif ratio_95_pct >= 75.0:
@@ -263,55 +232,20 @@ def render_qa_section(results, user_inputs):
                         score += 10
                     elif r400 >= 1.0:
                         score += 5
-                    else:
-                        score += 0
                 except:
                     score += 0
-
         return score, husn_105
 
-    def get_health_label(score):
-        if score >= 80:
-            return "🟢 חסין"
-        elif score >= 60:
-            return "🟡 יציב"
-        elif score >= 40:
-            return "🟠 מוגבל"
-        else:
-            return "🔴 בסיכון"
-
-    def get_score_color(score):
-        if score >= 80:
-            return "#006600"
-        elif score >= 60:
-            return "#856400"
-        elif score >= 40:
-            return "#c45c00"
-        else:
-            return "#990000"
-
-    def get_card_colors(score):
-        if score >= 80:
-            return "#e6f9e6", "#006600"
-        elif score >= 60:
-            return "#fffbe6", "#856400"
-        elif score >= 40:
-            return "#fff3e6", "#c45c00"
-        else:
-            return "#fce8e8", "#990000"
-
-    # Ratio at 95 for each track (as fraction, not pct)
     ratio_190_95 = b190_95 / max(1.0, baseline_capital)
     ratio_25_95 = b25_95 / max(1.0, baseline_capital)
     ratio_h_95 = bh_95 / max(1.0, baseline_capital)
-    ratio_r_95 = br_95 / max(1.0, baseline_capital)  # for track4: positive = solvent
+    ratio_r_95 = br_95 / max(1.0, baseline_capital)
 
     score_190, husn_190 = compute_score(1, empty_190, ratio_190_95, pct_190_r, rule400_190_r)
     score_25, husn_25 = compute_score(2, empty_25, ratio_25_95, pct_25_r, rule400_25_r)
     score_h, husn_h = compute_score(3, empty_h, ratio_h_95, pct_h_r, rule400_h_r)
     score_r, husn_r = compute_score(4, empty_r, ratio_r_95, pct_rent_r, "N/A", is_track4=True)
 
-    # Pros/cons per track (hardcoded Hebrew)
     track_pros_cons = {
         1: {
             "name": "190 + קצבה מזערית",
@@ -343,9 +277,6 @@ def render_qa_section(results, user_inputs):
         },
     }
 
-    def resiliency_label_for_card(empty_age):
-        return "105+ (חסין)" if empty_age >= 105.0 else f"גיל {empty_age:.1f}"
-
     tracks_exec = [
         (1, score_190, empty_190, b190_95, husn_190),
         (2, score_25, empty_25, b25_95, husn_25),
@@ -354,79 +285,146 @@ def render_qa_section(results, user_inputs):
     ]
 
     # -------------------------------------------------------
+    # Rank: sort by score desc, lower track_id wins ties
+    # -------------------------------------------------------
+    sorted_by_score = sorted(tracks_exec, key=lambda x: (-x[1], x[0]))
+    ranked_order = [(i + 1, tid, sc, ea, p95, husn) for i, (tid, sc, ea, p95, husn) in enumerate(sorted_by_score)]
+    rank_for_track = {tid: rank for rank, tid, *_ in ranked_order}
+
+    TRACK_NAMES = {
+        1: "190 + קצבה מזערית",
+        2: "25% ריאלי (ללא קצבה)",
+        3: "25% ריאלי + קצבה מזערית",
+        4: "שכירות",
+    }
+
+    RANK_CFG = {
+        1: {"bg": "#FFFDF0", "border": "#E8A000", "th_bg": "#FFF8D6", "col_bg": "#FFFDF0",
+            "badge": "🏆", "label": "המסלול המומלץ", "rank_color": "#c07800",
+            "health_bg": "#e8f8ee", "health_color": "#1a7a3a"},
+        2: {"bg": "#F7F8FA", "border": "#607D8B", "th_bg": "#EEF1F5", "col_bg": "#F7F8FA",
+            "badge": "🥈", "label": "מקום שני", "rank_color": "#607D8B",
+            "health_bg": "#e8f8ee", "health_color": "#1a7a3a"},
+        3: {"bg": "#FDF7F3", "border": "#A0522D", "th_bg": "#F5EDE6", "col_bg": "#FDF7F3",
+            "badge": "🥉", "label": "מקום שלישי", "rank_color": "#8b4513",
+            "health_bg": "#fffbe6", "health_color": "#856400"},
+        4: {"bg": "#FFF5F5", "border": "#E53935", "th_bg": "#FFE8E8", "col_bg": "#FFF5F5",
+            "badge": "4️⃣", "label": "מקום רביעי", "rank_color": "#c0392b",
+            "health_bg": "#fde8e8", "health_color": "#b71c1c"},
+    }
+
+    def get_health_label(score):
+        if score >= 80: return "🟢 חסין"
+        elif score >= 60: return "🟡 יציב"
+        elif score >= 40: return "🟠 מוגבל"
+        else: return "🔴 בסיכון"
+
+    def get_health_style(score):
+        if score >= 80: return "#e8f8ee", "#1a7a3a"
+        elif score >= 60: return "#fffbe6", "#856400"
+        elif score >= 40: return "#fff0e6", "#b84c00"
+        else: return "#fde8e8", "#b71c1c"
+
+    # -------------------------------------------------------
     # Render Executive Summary
     # -------------------------------------------------------
-    st.markdown("<h3 style='text-align: center;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #1a1a2e;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
 
-    best_score = max(score for _, score, _, _, _ in tracks_exec)
-    # Single winner: lowest track_id among those with best score
-    winner_id = min(tid for tid, sc, _, _, _ in tracks_exec if sc == best_score)
-
-    # Build ordered list (reversed = RTL: track4, track3, track2, track1)
-    ordered_tracks = list(reversed(tracks_exec))
-
-    # Equal columns — winner distinguished by styling, not width
+    # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
     cols = st.columns(4)
-
-    for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(ordered_tracks):
+    for col_idx, (rank, track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(ranked_order)):
         pc = track_pros_cons[track_id]
+        rc = RANK_CFG[rank]
         health = get_health_label(score)
-        score_color = get_score_color(score)
-        _, border_color = get_card_colors(score)
-        res_label = resiliency_label_for_card(empty_age)
-        is_winner = track_id == winner_id
-        res_color = "#4dbb4d" if empty_age >= 105.0 else ("#ff8c42" if empty_age >= 90 else "#ff4444")
-
-        score_font = "2.2em" if is_winner else "1.8em"
-        border_width = "4px" if is_winner else "3px"
-        glow = "box-shadow:0 0 20px rgba(240,192,64,0.25),0 2px 10px rgba(0,0,0,0.4);" if is_winner else "box-shadow:0 2px 8px rgba(0,0,0,0.3);"
-        winner_badge = "<div style='display:inline-block;background:rgba(240,192,64,0.15);color:#f0c040;font-size:0.68em;padding:2px 10px;border-radius:10px;font-weight:700;letter-spacing:0.03em;'>🏆 המומלץ</div><div style='height:6px;'></div>" if is_winner else "<div style='height:24px;'></div>"
+        health_bg, health_color = get_health_style(score)
+        res_color = "#1a7a3a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#c0392b")
+        res_label = "105+" if empty_age >= 105.0 else f"גיל {empty_age:.1f}"
 
         delta_95 = portfolio_95 - baseline_capital
         delta_pct_95 = (delta_95 / baseline_capital * 100) if baseline_capital > 0 else 0
         arrow = "↑" if delta_95 >= 0 else "↓"
-        delta_color = "#4dbb4d" if delta_95 >= 0 else "#ff6666"
+        delta_color = "#1a7a3a" if delta_95 >= 0 else "#c0392b"
         sign = "+" if delta_95 >= 0 else "−"
         abs_delta = abs(int(delta_95))
         abs_pct = abs(delta_pct_95)
 
         card_html = (
-            f"<div style='border-top:{border_width} solid {border_color};border-radius:10px;padding:16px 16px 18px 16px;"
-            f"background:#1a1a2e;{glow}text-align:center;direction:rtl;font-family:sans-serif;color:#e0e0e0;"
-            f"min-height:260px;display:flex;flex-direction:column;justify-content:space-between;'>"
+            f"<div style='background:{rc['bg']};border-top:4px solid {rc['border']};border-radius:12px;"
+            f"padding:16px 14px 14px 14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);font-family:sans-serif;"
+            f"direction:rtl;text-align:right;min-height:240px;display:flex;flex-direction:column;justify-content:space-between;'>"
             f"<div>"
-            f"{winner_badge}"
-            f"<div style='font-size:0.95em;font-weight:700;color:#f0f0f0;line-height:1.3;margin-bottom:12px;'>{pc['name']}</div>"
-            f"<div style='font-size:{score_font};font-weight:900;color:{score_color};line-height:1;margin-bottom:16px;'>{score}"
-            f"<span style='font-size:0.38em;color:#666;font-weight:400;'>/100</span></div>"
+            f"<div style='text-align:center;margin-bottom:6px;font-size:1.7em;line-height:1;'>{rc['badge']}</div>"
+            f"<div style='text-align:center;font-size:0.72em;font-weight:700;color:{rc['rank_color']};margin-bottom:8px;letter-spacing:0.04em;'>{rc['label']}</div>"
+            f"<div style='text-align:center;font-size:0.92em;font-weight:700;color:#1a1a2e;margin-bottom:10px;line-height:1.35;'>{pc['name']}</div>"
+            f"<div style='text-align:center;margin-bottom:10px;'>"
+            f"<span style='display:inline-block;font-size:0.78em;font-weight:600;padding:2px 10px;border-radius:20px;"
+            f"background:{health_bg};color:{health_color};'>{health}</span></div>"
             f"</div>"
-            f"<div style='border-top:1px solid #2a2a40;padding-top:12px;text-align:right;'>"
-            f"<div style='font-size:0.68em;color:#666;margin-bottom:2px;'>⏳ הכסף מחזיק עד</div>"
-            f"<div style='font-size:0.88em;color:{res_color};font-weight:700;margin-bottom:12px;'>{res_label}</div>"
-            f"<div style='font-size:0.68em;color:#666;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
-            f"<div style='font-size:0.92em;color:#f0f0f0;font-weight:700;'>{format_shekel(int(portfolio_95))}</div>"
-            f"<div style='font-size:0.72em;color:{delta_color};margin-top:3px;'>{arrow} {sign}{format_shekel(abs_delta)}"
-            f"<span style='color:#555;'> | </span>"
-            f"<span style='color:{delta_color};'>{sign}{abs_pct:.1f}%</span></div>"
-            f"<div style='font-size:0.65em;color:#555;margin-top:1px;'>מ-{format_shekel(int(baseline_capital))}</div>"
+            f"<div style='border-top:1px solid #e8e8e8;padding-top:10px;'>"
+            f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>⏳ הכסף מחזיק עד</div>"
+            f"<div style='font-size:0.88em;font-weight:700;color:{res_color};margin-bottom:10px;'>{res_label}</div>"
+            f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
+            f"<div style='font-size:0.9em;font-weight:700;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
+            f"<div style='font-size:0.75em;color:{delta_color};font-weight:600;margin-top:2px;'>"
+            f"{arrow} {sign}{format_shekel(abs_delta)} | {sign}{abs_pct:.1f}%</div>"
+            f"<div style='font-size:0.65em;color:#aaa;margin-top:1px;'>מ-{format_shekel(int(baseline_capital))}</div>"
             f"</div></div>"
         )
 
         with cols[col_idx]:
             st.markdown(card_html, unsafe_allow_html=True)
             with st.expander("יתרונות וסיכונים"):
-                st.markdown(f"<span style='color:#4dbb4d;'>✅ {pc['pro1']}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#4dbb4d;'>✅ {pc['pro2']}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#ff8c42;'>⚠️ {pc['con1']}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#ff8c42;'>⚠️ {pc['con2']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#1a7a3a;'>✅ {pc['pro1']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#1a7a3a;'>✅ {pc['pro2']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#b84c00;'>⚠️ {pc['con1']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#b84c00;'>⚠️ {pc['con2']}</span>", unsafe_allow_html=True)
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
     # -------------------------------------------------------
-    # Table 1: At retirement — collapsible, 4 key rows + expander
+    # Table helpers
     # -------------------------------------------------------
+    # Column order for tables: rank1 first = rightmost with RTL CSS
+    ranked_col_order = [TRACK_NAMES[tid] for _, tid, *_ in ranked_order]
 
-    # All data pre-built per column
+    def build_html_table(row_list, data_dict, include_header=True):
+        col_bgs = ["transparent"] + [RANK_CFG[r]["col_bg"] for r, *_ in ranked_order]
+        header_bgs = [RANK_CFG[r]["th_bg"] for r, *_ in ranked_order]
+        header_borders = [RANK_CFG[r]["border"] for r, *_ in ranked_order]
+        badges = [RANK_CFG[r]["badge"] for r, *_ in ranked_order]
+        track_names = [TRACK_NAMES[tid] for _, tid, *_ in ranked_order]
+
+        cg = "<colgroup>" + "".join(f"<col style='background-color:{bg};'>" for bg in col_bgs) + "</colgroup>"
+
+        if include_header:
+            hcells = "<th>שאלה</th>"
+            for i in range(len(ranked_order)):
+                hcells += (
+                    f"<th style='background:{header_bgs[i]};border-bottom:3px solid {header_borders[i]};'>"
+                    f"{badges[i]} {track_names[i]}</th>"
+                )
+            thead = f"<thead><tr>{hcells}</tr></thead>"
+        else:
+            thead = ""
+
+        rows_html = ""
+        for question, key in row_list:
+            cells = f"<th>{question}</th>"
+            for name in ranked_col_order:
+                cells += f"<td>{data_dict[name][key]}</td>"
+            rows_html += f"<tr>{cells}</tr>"
+        tbody = f"<tbody>{rows_html}</tbody>"
+
+        return f"<table class='styled-table'>{cg}{thead}{tbody}</table>"
+
+    # -------------------------------------------------------
+    # Table 1: At retirement
+    # -------------------------------------------------------
+    bool_preserve_95_190 = "✅ כן" if b190_95 >= baseline_capital else "❌ לא"
+    bool_preserve_95_25  = "✅ כן" if b25_95  >= baseline_capital else "❌ לא"
+    bool_preserve_95_h   = "✅ כן" if bh_95   >= baseline_capital else "❌ לא"
+    bool_preserve_95_r   = "✅ כן" if br_95 > 0 else "❌ לא"
+
     t1_cols = {
         "190 + קצבה מזערית": {
             "הון כולל":        fmt_with_pension_note(inherit_190_r, pension_asset_retire),
@@ -488,32 +486,14 @@ def render_qa_section(results, user_inputs):
         ("כמה שנים קרן החירום מכסה?",          "קרן חירום"),
     ]
 
-    def build_df(row_list, data_dict):
-        track_keys = list(data_dict.keys())
-        rows = {"שאלה": [r[0] for r in row_list]}
-        for tk in track_keys:
-            rows[tk] = [data_dict[tk][r[1]] for r in row_list]
-        return pd.DataFrame(rows)
-
     with st.expander(f"📊 מצב ביום הפרישה — גיל {retire_age:.1f}", expanded=True):
-        st.markdown(
-            build_df(KEY_ROWS_1, t1_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
-            unsafe_allow_html=True
-        )
+        st.markdown(build_html_table(KEY_ROWS_1, t1_cols), unsafe_allow_html=True)
         with st.expander("פרטים נוספים"):
-            st.markdown(
-                build_df(DETAIL_ROWS_1, t1_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
-                unsafe_allow_html=True
-            )
+            st.markdown(build_html_table(DETAIL_ROWS_1, t1_cols, include_header=False), unsafe_allow_html=True)
 
     # -------------------------------------------------------
-    # Table 2: At check_age — collapsible, 4 key rows + expander
+    # Table 2: At check_age
     # -------------------------------------------------------
-    bool_preserve_95_190 = "✅ כן" if b190_95 >= baseline_capital else "❌ לא"
-    bool_preserve_95_25  = "✅ כן" if b25_95  >= baseline_capital else "❌ לא"
-    bool_preserve_95_h   = "✅ כן" if bh_95   >= baseline_capital else "❌ לא"
-    bool_preserve_95_r   = "✅ כן" if br_95 > 0 else "❌ לא"
-
     t2_cols = {
         "190 + קצבה מזערית": {
             "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
@@ -561,13 +541,6 @@ def render_qa_section(results, user_inputs):
     ]
 
     with st.expander(f"🔮 מצב בגיל נבדק — גיל {check_age:.1f}", expanded=True):
-        st.markdown(
-            build_df(KEY_ROWS_2, t2_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
-            unsafe_allow_html=True
-        )
+        st.markdown(build_html_table(KEY_ROWS_2, t2_cols), unsafe_allow_html=True)
         with st.expander("פרטים נוספים"):
-            st.markdown(
-                build_df(DETAIL_ROWS_2, t2_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
-                unsafe_allow_html=True
-            )
-
+            st.markdown(build_html_table(DETAIL_ROWS_2, t2_cols, include_header=False), unsafe_allow_html=True)
