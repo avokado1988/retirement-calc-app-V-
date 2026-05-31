@@ -34,6 +34,8 @@ def render_qa_section(results, user_inputs):
     property_value_start = float(wealth.get("new_apartment_cost", 0))
     appreciation_rate = float(wealth.get("property_appreciation", 0))
     rental_property_start = float(rental_inputs.get("current_property_value", wealth.get("net_sale", property_value_start)))
+    # Rented property uses its own (lower) appreciation rate — pricey homes climb slower
+    rental_appreciation_rate = float(rental_inputs.get("rental_property_appreciation", 0.015))
 
     def get_row(target_age):
         sub = df_full[df_full["גיל"] >= target_age]
@@ -46,8 +48,8 @@ def render_qa_section(results, user_inputs):
     property_value_check = float(row_check.get("שווי נדלן", property_value_start))
     years_to_retire = retire_age - start_age
     years_to_check = check_age - start_age
-    rental_prop_retire = rental_property_start * ((1 + appreciation_rate) ** years_to_retire)
-    rental_prop_check = rental_property_start * ((1 + appreciation_rate) ** years_to_check)
+    rental_prop_retire = rental_property_start * ((1 + rental_appreciation_rate) ** years_to_retire)
+    rental_prop_check = rental_property_start * ((1 + rental_appreciation_rate) ** years_to_check)
 
     # -------------------------------------------------------
     # Extract values at retirement
