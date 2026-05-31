@@ -83,7 +83,12 @@ def render_qa_section(results, user_inputs):
         if baseline <= 0: return format_shekel(int(val))
         delta_pct = (val - baseline) / baseline * 100
         arrow = "↑" if delta_pct >= 0 else "↓"
-        color = "#4dbb4d" if delta_pct >= 0 else "#ff5555"
+        if delta_pct > 20:
+            color = "#00e676"   # ירוק זוהר — תיק צומח
+        elif delta_pct >= 0:
+            color = "#2ecc71"   # ירוק כהה — שמר הון
+        else:
+            color = "#ff5555"   # אדום — שחיקה
         sign = "+" if delta_pct >= 0 else ""
         return f"{format_shekel(int(val))} <span style='color:{color}; font-size:0.85em;'>({arrow}{sign}{delta_pct:.1f}%)</span>"
 
@@ -480,7 +485,6 @@ def render_qa_section(results, user_inputs):
 
     t2 = pd.DataFrame({
         "שאלה": [
-            "כמה כסף נזיל יישאר לי?",
             "מה שווי ההון הכולל כולל הקצבה?",
             "כמה אמשוך מהתיק כל חודש?",
             "מה קצב המשיכה בגיל זה?",
@@ -489,7 +493,6 @@ def render_qa_section(results, user_inputs):
             "מה סך כלל הנכסים שלי?"
         ],
         "מסלול 1 — תיקון 190": [
-            fmt_with_delta(b190_c, baseline_capital),
             fmt_with_delta(inherit_190_c, baseline_capital),
             fmt_withdrawal(nn_190_c),
             wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
@@ -499,7 +502,6 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 2 — 25% ריאלי": [
             fmt_with_delta(b25_c, baseline_capital),
-            fmt_with_delta(b25_c, baseline_capital),
             fmt_withdrawal(nn_25_c),
             wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             wrap_html_style(bool_preserve_95_25, get_boolean_style(bool_preserve_95_25)),
@@ -507,7 +509,6 @@ def render_qa_section(results, user_inputs):
             format_shekel(tw_25_c)
         ],
         "מסלול 3 — קצבה + 25% ריאלי": [
-            fmt_with_delta(bh_c, baseline_capital),
             fmt_with_delta(inherit_h_c, baseline_capital),
             fmt_withdrawal(nn_h_c),
             wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
@@ -516,7 +517,6 @@ def render_qa_section(results, user_inputs):
             format_shekel(tw_h_c)
         ],
         "מסלול 4 — שכירות": [
-            fmt_with_delta(br_c, baseline_capital),
             fmt_with_delta(br_c, baseline_capital),
             fmt_withdrawal(nn_rent_c),
             wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
