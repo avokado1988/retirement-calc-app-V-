@@ -298,9 +298,18 @@ def render_qa_section(results, user_inputs):
         4: "שכירות",
     }
 
+    # Winner only if best score >= 60 (at least "יציב")
+    best_score = sorted_by_score[0][1]
+    has_winner = best_score >= 60
+
     RANK_CFG = {
-        1: {"bg": "#FFFDF0", "border": "#E8A000", "th_bg": "#FFF8D6", "col_bg": "#FFFDF0",
-            "badge": "🏆", "label": "המסלול המומלץ", "rank_color": "#c07800",
+        1: {"bg": "#FFFDF0" if has_winner else "#F8F8F8",
+            "border": "#E8A000" if has_winner else "#999",
+            "th_bg": "#FFF8D6" if has_winner else "#EFEFEF",
+            "col_bg": "#FFFDF0" if has_winner else "#F8F8F8",
+            "badge": "🏆" if has_winner else "1️⃣",
+            "label": "המסלול המומלץ" if has_winner else "מקום ראשון",
+            "rank_color": "#c07800" if has_winner else "#555",
             "health_bg": "#e8f8ee", "health_color": "#1a7a3a"},
         2: {"bg": "#F7F8FA", "border": "#607D8B", "th_bg": "#EEF1F5", "col_bg": "#F7F8FA",
             "badge": "🥈", "label": "מקום שני", "rank_color": "#607D8B",
@@ -329,6 +338,9 @@ def render_qa_section(results, user_inputs):
     # Render Executive Summary
     # -------------------------------------------------------
     st.markdown("<h3 style='text-align: center; color: #1a1a2e;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
+
+    if not has_winner:
+        st.warning("⚠️ אין מסלול מומלץ — אף מסלול אינו עומד בסף בריאות פיננסי מינימלי. מומלץ לבחון מחדש את ההנחות, ההכנסות וההוצאות.")
 
     # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
     cols = st.columns(4)
