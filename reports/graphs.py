@@ -204,15 +204,14 @@ def render_charts(df_history, user_inputs):
 
     fig_d = go.Figure()
     for tid in active_d:
-        fig_d.add_trace(go.Bar(
+        fig_d.add_trace(go.Scatter(
             x=df_press_annual["גיל"],
             y=df_press_annual[WITHDRAWAL_COL[tid]],
-            name=TRACK_NAMES[tid],
-            marker_color=COLORS[tid],
-            opacity=0.82
+            mode='lines', name=TRACK_NAMES[tid],
+            line=dict(color=COLORS[tid], width=2.5,
+                      dash='dash' if tid == "hybrid" else 'solid')
         ))
     fig_d.update_layout(
-        barmode='group',
         xaxis_title="גיל", yaxis_title="משיכה שנתית נדרשת (₪)",
         hovermode="x unified", template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
