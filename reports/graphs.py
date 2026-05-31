@@ -27,26 +27,22 @@ def render_charts(df_history):
         fig1.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה תיקון 190"],
             mode='lines', name='190 + קצבה מזערית',
-            line=dict(color=COLORS["190"], width=3),
-            fill='tozeroy', fillcolor='rgba(44,160,44,0.08)'
+            line=dict(color=COLORS["190"], width=2.5)
         ))
         fig1.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה מסלול היברידי"],
             mode='lines', name='25% ריאלי + קצבה מזערית',
-            line=dict(color=COLORS["hybrid"], width=3, dash='dash'),
-            fill='tozeroy', fillcolor='rgba(255,127,14,0.08)'
+            line=dict(color=COLORS["hybrid"], width=2.5, dash='dash')
         ))
         fig1.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה מסלול ריאלי"],
             mode='lines', name='25% ריאלי (ללא קצבה)',
-            line=dict(color=COLORS["25"], width=3),
-            fill='tozeroy', fillcolor='rgba(31,119,180,0.08)'
+            line=dict(color=COLORS["25"], width=2.5)
         ))
         fig1.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה מסלול שכירות"],
             mode='lines', name='שכירות',
-            line=dict(color=COLORS["rental"], width=3, dash='dot'),
-            fill='tozeroy', fillcolor='rgba(148,103,189,0.08)'
+            line=dict(color=COLORS["rental"], width=2.5, dash='dot')
         ))
         fig1.update_layout(
             xaxis_title="גיל", yaxis_title="הון נזיל (₪)",
@@ -66,46 +62,44 @@ def render_charts(df_history):
         )
         fig2 = go.Figure()
 
-        # Track 1 — 190: total (liquid + pension) filled, dashed liquid below
+        # Track 1 — 190: solid line = total, dashed = liquid, shaded gap = pension
         total_190 = df["צבירה תיקון 190"] + pension_asset
         fig2.add_trace(go.Scatter(
             x=df["גיל"], y=total_190,
             mode='lines', name='190 + קצבה — סה"כ',
-            line=dict(color=COLORS["190"], width=2),
-            fill='tozeroy', fillcolor='rgba(44,160,44,0.12)'
+            line=dict(color=COLORS["190"], width=2.5)
         ))
         fig2.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה תיקון 190"],
             mode='lines', name='190 — הון נזיל',
-            line=dict(color=COLORS["190"], width=2, dash='dash'),
-            fill='tonexty', fillcolor='rgba(44,160,44,0.22)'
+            line=dict(color=COLORS["190"], width=1.5, dash='dash'),
+            fill='tonexty', fillcolor='rgba(44,160,44,0.18)'
         ))
 
-        # Track 3 — hybrid: total (liquid + pension) filled, dashed liquid below
+        # Track 3 — hybrid: solid = total, dashed = liquid, shaded gap = pension
         total_hybrid = df["צבירה מסלול היברידי"] + pension_asset
         fig2.add_trace(go.Scatter(
             x=df["גיל"], y=total_hybrid,
             mode='lines', name='25% ריאלי + קצבה — סה"כ',
-            line=dict(color=COLORS["hybrid"], width=2),
-            fill='tozeroy', fillcolor='rgba(255,127,14,0.10)'
+            line=dict(color=COLORS["hybrid"], width=2.5)
         ))
         fig2.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה מסלול היברידי"],
             mode='lines', name='25% ריאלי + קצבה — נזיל',
-            line=dict(color=COLORS["hybrid"], width=2, dash='dash'),
-            fill='tonexty', fillcolor='rgba(255,127,14,0.20)'
+            line=dict(color=COLORS["hybrid"], width=1.5, dash='dash'),
+            fill='tonexty', fillcolor='rgba(255,127,14,0.18)'
         ))
 
         # Tracks 2 and 4 — no pension, just liquid lines
         fig2.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה מסלול ריאלי"],
             mode='lines', name='25% ריאלי (ללא קצבה)',
-            line=dict(color=COLORS["25"], width=2, dash='dot')
+            line=dict(color=COLORS["25"], width=2.5)
         ))
         fig2.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה מסלול שכירות"],
             mode='lines', name='שכירות',
-            line=dict(color=COLORS["rental"], width=2, dash='dot')
+            line=dict(color=COLORS["rental"], width=2.5, dash='dot')
         ))
 
         fig2.update_layout(
@@ -125,30 +119,10 @@ def render_charts(df_history):
     st.markdown("כמה מס משלם כל מסלול בכל שנת פרישה — אפקט מגן המס של תיקון 190 אל מול 25% ריאלי.")
 
     fig3 = go.Figure()
-    fig3.add_trace(go.Scatter(
-        x=df["גיל"], y=df["מס ששולם 190"],
-        mode='lines', name='190 + קצבה מזערית',
-        line=dict(color=COLORS["190"], width=3),
-        fill='tozeroy', fillcolor='rgba(44,160,44,0.10)'
-    ))
-    fig3.add_trace(go.Scatter(
-        x=df["גיל"], y=df["מס ששולם היברידי"],
-        mode='lines', name='25% ריאלי + קצבה מזערית',
-        line=dict(color=COLORS["hybrid"], width=3, dash='dash'),
-        fill='tozeroy', fillcolor='rgba(255,127,14,0.08)'
-    ))
-    fig3.add_trace(go.Scatter(
-        x=df["גיל"], y=df["מס ששולם 25"],
-        mode='lines', name='25% ריאלי (ללא קצבה)',
-        line=dict(color=COLORS["25"], width=3),
-        fill='tozeroy', fillcolor='rgba(31,119,180,0.08)'
-    ))
-    fig3.add_trace(go.Scatter(
-        x=df["גיל"], y=df["מס ששולם שכירות"],
-        mode='lines', name='שכירות',
-        line=dict(color=COLORS["rental"], width=3, dash='dot'),
-        fill='tozeroy', fillcolor='rgba(148,103,189,0.08)'
-    ))
+    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם 190"],    mode='lines', name='190 + קצבה מזערית',           line=dict(color=COLORS["190"],    width=2.5)))
+    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם היברידי"], mode='lines', name='25% ריאלי + קצבה מזערית', line=dict(color=COLORS["hybrid"], width=2.5, dash='dash')))
+    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם 25"],     mode='lines', name='25% ריאלי (ללא קצבה)',     line=dict(color=COLORS["25"],     width=2.5)))
+    fig3.add_trace(go.Scatter(x=df["גיל"], y=df["מס ששולם שכירות"], mode='lines', name='שכירות',                   line=dict(color=COLORS["rental"], width=2.5, dash='dot')))
     fig3.update_layout(
         xaxis_title="גיל", yaxis_title="מס שנתי (₪)",
         hovermode="x unified", template="plotly_white",
