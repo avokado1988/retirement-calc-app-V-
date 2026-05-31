@@ -59,6 +59,18 @@ st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", p
 st.markdown("<h1 style='text-align: center;'>📊 סימולטור פרישה השוואתי</h1>", unsafe_allow_html=True)
 st.divider()
 
+st.markdown("""
+<style>
+.stTabs [data-baseweb="tab-list"] {
+    direction: rtl;
+    justify-content: flex-end;
+}
+.stTabs [data-baseweb="tab"] {
+    direction: rtl;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ==============================================================================
 # 🗑️ כפתור איפוס נתונים בדפדפן (כדי להתחיל לקוח חדש מאפס)
 # ==============================================================================
