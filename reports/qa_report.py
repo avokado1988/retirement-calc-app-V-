@@ -69,6 +69,15 @@ def render_qa_section(results, user_inputs):
     def rule400(bal, nn): return f"{bal / (nn * 400):.2f}" if nn > 0 else "∞"
     def emer(nn): return f"{emergency_fund / (nn * 12):.1f}" if nn > 0 else "∞"
     def wpct(nn, bal): return (nn * 12) / bal * 100 if bal > 0 else 0.0
+    def fmt_withdrawal(nn):
+        return wrap_html_style(f"−{format_shekel(int(nn))}", "color: #ff6666; font-weight: bold;") if nn > 0 else format_shekel(0)
+    def fmt_with_delta(val, baseline):
+        if baseline <= 0: return format_shekel(int(val))
+        delta_pct = (val - baseline) / baseline * 100
+        arrow = "↑" if delta_pct >= 0 else "↓"
+        color = "#4dbb4d" if delta_pct >= 0 else "#ff5555"
+        sign = "+" if delta_pct >= 0 else ""
+        return f"{format_shekel(int(val))} <span style='color:{color}; font-size:0.85em;'>({arrow}{sign}{delta_pct:.1f}%)</span>"
 
     pct_190_r = wpct(nn_190_r, b190_r)
     pct_25_r = wpct(nn_25_r, b25_r)
@@ -348,14 +357,12 @@ def render_qa_section(results, user_inputs):
             st.markdown(f"""
 <div style='border-top: 4px solid {border_color}; border-radius: 8px; padding: 14px 16px 16px 16px; background: #1e1e2e; box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-align: right; direction: rtl; font-family: sans-serif; color: #e0e0e0;'>
 
-  <div style='font-size: 0.75em; color: #aaa; margin-bottom: 2px;'>{track_num}</div>
-  <div style='font-size: 1em; font-weight: 700; color: #f0f0f0; margin-bottom: 12px;'>{track_short}</div>
-
-  <div style='display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; direction: ltr; justify-content: flex-end;'>
-    <span style='font-size: 2.2em; font-weight: 800; color: {score_color}; line-height: 1;'>{score}</span>
-    <span style='font-size: 1em; color: #aaa;'>/100</span>
+  <div style='text-align: center; margin-bottom: 14px;'>
+    <div style='font-size: 0.75em; color: #aaa; margin-bottom: 2px;'>{track_num}</div>
+    <div style='font-size: 1em; font-weight: 700; color: #f0f0f0; margin-bottom: 10px;'>{track_short}</div>
+    <div style='font-size: 2.4em; font-weight: 800; color: {score_color}; line-height: 1; margin-bottom: 4px;'>{score}<span style='font-size:0.4em; color:#aaa;'>/100</span></div>
+    <div style='font-size: 1em; color: #e0e0e0;'>{health}</div>
   </div>
-  <div style='font-size: 1em; margin-bottom: 14px; color: #e0e0e0;'>{health}</div>
 
   <div style='border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;'>
     <div style='font-size: 0.7em; font-weight: 700; color: #aaa; letter-spacing: 0.05em; margin-bottom: 6px;'>יתרונות</div>
@@ -401,7 +408,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(inherit_190_r),
             format_shekel(property_value_retire),
             format_shekel(base_income_retire + pension_retire),
-            format_shekel(nn_190_r),
+            fmt_withdrawal(nn_190_r),
             wrap_html_style(rule400(b190_r, nn_190_r), get_400_rule_style(rule400(b190_r, nn_190_r))),
             wrap_html_style(emer(nn_190_r), get_emergency_style(emer(nn_190_r))),
             wrap_html_style(f"{pct_190_r:.2f}%", get_withdrawal_style(pct_190_r)),
@@ -412,7 +419,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(b25_r),
             format_shekel(property_value_retire),
             format_shekel(base_income_retire),
-            format_shekel(nn_25_r),
+            fmt_withdrawal(nn_25_r),
             wrap_html_style(rule400(b25_r, nn_25_r), get_400_rule_style(rule400(b25_r, nn_25_r))),
             wrap_html_style(emer(nn_25_r), get_emergency_style(emer(nn_25_r))),
             wrap_html_style(f"{pct_25_r:.2f}%", get_withdrawal_style(pct_25_r)),
@@ -423,7 +430,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(inherit_h_r),
             format_shekel(property_value_retire),
             format_shekel(base_income_retire + pension_retire),
-            format_shekel(nn_h_r),
+            fmt_withdrawal(nn_h_r),
             wrap_html_style(rule400(bh_r, nn_h_r), get_400_rule_style(rule400(bh_r, nn_h_r))),
             wrap_html_style(emer(nn_h_r), get_emergency_style(emer(nn_h_r))),
             wrap_html_style(f"{pct_h_r:.2f}%", get_withdrawal_style(pct_h_r)),
@@ -434,7 +441,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(br_r),
             format_shekel(float(row_retire.get("שווי נדלן מסלול 4", property_value_retire))),
             format_shekel(base_income_retire),
-            format_shekel(nn_rent_r),
+            fmt_withdrawal(nn_rent_r),
             'ל"ר',
             'ל"ר',
             'ל"ר',
@@ -465,36 +472,36 @@ def render_qa_section(results, user_inputs):
             "מה סך כלל הנכסים שלי?"
         ],
         "מסלול 1 — תיקון 190": [
-            wrap_html_style(format_shekel(b190_c), get_larger_portfolio_style(b190_c > b25_c)),
-            format_shekel(inherit_190_c),
-            format_shekel(nn_190_c),
+            fmt_with_delta(b190_c, baseline_capital),
+            fmt_with_delta(inherit_190_c, baseline_capital),
+            fmt_withdrawal(nn_190_c),
             wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
             wrap_html_style(bool_preserve_95_190, get_boolean_style(bool_preserve_95_190)),
             recovery_190,
             format_shekel(tw_190_c)
         ],
         "מסלול 2 — 25% ריאלי": [
-            wrap_html_style(format_shekel(b25_c), get_larger_portfolio_style(b25_c > b190_c)),
-            format_shekel(b25_c),
-            format_shekel(nn_25_c),
+            fmt_with_delta(b25_c, baseline_capital),
+            fmt_with_delta(b25_c, baseline_capital),
+            fmt_withdrawal(nn_25_c),
             wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             wrap_html_style(bool_preserve_95_25, get_boolean_style(bool_preserve_95_25)),
             recovery_25,
             format_shekel(tw_25_c)
         ],
         "מסלול 3 — קצבה + 25% ריאלי": [
-            wrap_html_style(format_shekel(bh_c), get_larger_portfolio_style(bh_c > b25_c)),
-            format_shekel(inherit_h_c),
-            format_shekel(nn_h_c),
+            fmt_with_delta(bh_c, baseline_capital),
+            fmt_with_delta(inherit_h_c, baseline_capital),
+            fmt_withdrawal(nn_h_c),
             wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
             wrap_html_style(bool_preserve_95_h, get_boolean_style(bool_preserve_95_h)),
             recovery_h,
             format_shekel(tw_h_c)
         ],
         "מסלול 4 — שכירות": [
-            wrap_html_style(format_shekel(br_c), get_larger_portfolio_style(br_c > b25_c)),
-            format_shekel(br_c),
-            format_shekel(nn_rent_c),
+            fmt_with_delta(br_c, baseline_capital),
+            fmt_with_delta(br_c, baseline_capital),
+            fmt_withdrawal(nn_rent_c),
             wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
             wrap_html_style(bool_preserve_95_r, get_boolean_style(bool_preserve_95_r)),
             recovery_r,
