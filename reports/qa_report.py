@@ -341,6 +341,8 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     st.markdown("<h3 style='text-align: center;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
 
+    best_score = max(score for _, score, _, _, _ in tracks_exec)
+
     cols = st.columns(4)
     for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(tracks_exec)):
         pc = track_pros_cons[track_id]
@@ -348,6 +350,7 @@ def render_qa_section(results, user_inputs):
         score_color = get_score_color(score)
         _, border_color = get_card_colors(score)
         res_label = resiliency_label_for_card(empty_age)
+        trophy = "🏆 " if score == best_score else ""
         res_color = "#4dbb4d" if empty_age >= 105.0 else ("#ff8c42" if empty_age >= 90 else "#ff4444")
 
         track_short = pc["name"].split("—")[1].strip() if "—" in pc["name"] else pc["name"]
@@ -367,7 +370,7 @@ def render_qa_section(results, user_inputs):
 
   <div style='text-align: center; margin-bottom: 14px;'>
     <div style='font-size: 0.75em; color: #aaa; margin-bottom: 2px;'>{track_num}</div>
-    <div style='font-size: 1em; font-weight: 700; color: #f0f0f0; margin-bottom: 10px;'>{track_short}</div>
+    <div style='font-size: 1em; font-weight: 700; color: #f0f0f0; margin-bottom: 10px;'>{trophy}{track_short}</div>
     <div style='font-size: 2.4em; font-weight: 800; color: {score_color}; line-height: 1; margin-bottom: 4px;'>{score}<span style='font-size:0.4em; color:#aaa;'>/100</span></div>
     <div style='font-size: 1em; color: #e0e0e0;'>{health}</div>
   </div>
