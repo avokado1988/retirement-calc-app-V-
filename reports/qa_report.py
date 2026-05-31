@@ -492,7 +492,22 @@ def render_qa_section(results, user_inputs):
     # Table helper — st.columns(4) aligned under cards
     # -------------------------------------------------------
     def render_metric_columns(rows, data_dict, show_header=True):
-        tcols = st.columns(4)
+        label_col, *tcols = st.columns([1.4, 1, 1, 1, 1])
+
+        # Question labels column (rightmost in RTL layout = rendered last = leftmost in LTR)
+        with label_col:
+            if show_header:
+                st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
+            for question, _ in rows:
+                st.markdown(
+                    f"<div style='padding:5px 8px;border-radius:5px;margin-bottom:4px;"
+                    f"background:#f8f9fc;border:1px solid #eee;direction:rtl;text-align:right;"
+                    f"font-size:0.82em;font-weight:600;color:#333;min-height:42px;"
+                    f"display:flex;align-items:center;justify-content:flex-end;'>"
+                    f"{question}</div>",
+                    unsafe_allow_html=True
+                )
+
         for col_idx, (rank, track_id, *_) in enumerate(reversed(ranked_order)):
             rc = RANK_CFG[rank]
             track_name = TRACK_NAMES[track_id]
@@ -505,14 +520,14 @@ def render_qa_section(results, user_inputs):
                         f"{rc['badge']} {track_name}</div>",
                         unsafe_allow_html=True
                     )
-                for question, key in rows:
+                for _, key in rows:
                     val = data_dict.get(track_name, {}).get(key, "—")
                     st.markdown(
                         f"<div style='background:{rc['col_bg']};padding:5px 8px;border-radius:5px;"
-                        f"margin-bottom:4px;direction:rtl;border:1px solid #eee;'>"
-                        f"<div style='font-size:0.60em;color:#888;margin-bottom:1px;'>{question}</div>"
-                        f"<div style='font-size:0.88em;font-weight:600;'>{val}</div>"
-                        f"</div>",
+                        f"margin-bottom:4px;text-align:center;border:1px solid #eee;"
+                        f"font-size:0.88em;font-weight:600;min-height:42px;"
+                        f"display:flex;align-items:center;justify-content:center;'>"
+                        f"{val}</div>",
                         unsafe_allow_html=True
                     )
 
