@@ -39,11 +39,6 @@ def render_charts(df_history):
             mode='lines', name='25% ריאלי (ללא קצבה)',
             line=dict(color=COLORS["25"], width=2.5)
         ))
-        fig1.add_trace(go.Scatter(
-            x=df["גיל"], y=df["צבירה מסלול שכירות"],
-            mode='lines', name='שכירות',
-            line=dict(color=COLORS["rental"], width=2.5, dash='dot')
-        ))
         fig1.update_layout(
             xaxis_title="גיל", yaxis_title="הון נזיל (₪)",
             hovermode="x unified", template="plotly_white",
@@ -90,16 +85,11 @@ def render_charts(df_history):
             fill='tonexty', fillcolor='rgba(255,127,14,0.18)'
         ))
 
-        # Tracks 2 and 4 — no pension, just liquid lines
+        # Track 2 — no pension, just liquid line
         fig2.add_trace(go.Scatter(
             x=df["גיל"], y=df["צבירה מסלול ריאלי"],
             mode='lines', name='25% ריאלי (ללא קצבה)',
             line=dict(color=COLORS["25"], width=2.5)
-        ))
-        fig2.add_trace(go.Scatter(
-            x=df["גיל"], y=df["צבירה מסלול שכירות"],
-            mode='lines', name='שכירות',
-            line=dict(color=COLORS["rental"], width=2.5, dash='dot')
         ))
 
         fig2.update_layout(
@@ -125,7 +115,6 @@ def render_charts(df_history):
               "מס ששולם 190":     "sum",
               "מס ששולם 25":      "sum",
               "מס ששולם היברידי": "sum",
-              "מס ששולם שכירות":  "sum",
           })
           .rename(columns={"age_floor": "גיל"})
     )
@@ -134,7 +123,6 @@ def render_charts(df_history):
     fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם 190"],    mode='lines', name='190 + קצבה מזערית',       line=dict(color=COLORS["190"],    width=2.5)))
     fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם היברידי"], mode='lines', name='25% ריאלי + קצבה מזערית', line=dict(color=COLORS["hybrid"], width=2.5, dash='dash')))
     fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם 25"],     mode='lines', name='25% ריאלי (ללא קצבה)',    line=dict(color=COLORS["25"],     width=2.5)))
-    fig3.add_trace(go.Scatter(x=df_annual["גיל"], y=df_annual["מס ששולם שכירות"], mode='lines', name='שכירות',                  line=dict(color=COLORS["rental"], width=2.5, dash='dot')))
     fig3.update_layout(
         xaxis_title="גיל", yaxis_title="מס שנתי (₪)",
         hovermode="x unified", template="plotly_white",
@@ -155,7 +143,6 @@ def render_charts(df_history):
     df_nw["nw_190"]    = df_nw["צבירה תיקון 190"]      + df_nw["שווי נדלן"]
     df_nw["nw_25"]     = df_nw["צבירה מסלול ריאלי"]    + df_nw["שווי נדלן"]
     df_nw["nw_hybrid"] = df_nw["צבירה מסלול היברידי"]  + df_nw["שווי נדלן"]
-    df_nw["nw_rental"] = df_nw["צבירה מסלול שכירות"]   + df_nw.get("שווי נדלן מסלול 4", df_nw["שווי נדלן"])
 
     fig4 = go.Figure()
     fig4.add_trace(go.Scatter(
@@ -172,11 +159,6 @@ def render_charts(df_history):
         x=df_nw["גיל"], y=df_nw["nw_25"],
         mode='lines', name='25% ריאלי (ללא קצבה)',
         line=dict(color=COLORS["25"], width=3)
-    ))
-    fig4.add_trace(go.Scatter(
-        x=df_nw["גיל"], y=df_nw["nw_rental"],
-        mode='lines', name='שכירות (כולל נכס מושכר)',
-        line=dict(color=COLORS["rental"], width=3, dash='dot')
     ))
     fig4.update_layout(
         xaxis_title="גיל", yaxis_title="שווי נכסים כולל (₪)",
