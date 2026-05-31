@@ -13,6 +13,7 @@ def render_qa_section(results, user_inputs):
         .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 15px 0; font-family: sans-serif; }
         .styled-table th { background-color: #f3f4f6; color: #1f2937; text-align: right !important; padding: 10px !important; font-weight: bold; border-bottom: 2px solid #e5e7eb; }
         .styled-table td { padding: 8px !important; text-align: right !important; border-bottom: 1px solid #f3f4f6; }
+        .styled-table thead { display: none; }
         </style>
     """, unsafe_allow_html=True)
 
