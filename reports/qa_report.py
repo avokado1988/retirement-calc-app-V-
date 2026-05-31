@@ -339,32 +339,32 @@ def render_qa_section(results, user_inputs):
 
         with cols[col_idx]:
             st.markdown(f"""
-<div style='border-top: 4px solid {border_color}; border-radius: 8px; padding: 14px 16px 16px 16px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: right; direction: rtl; font-family: sans-serif;'>
+<div style='border-top: 4px solid {border_color}; border-radius: 8px; padding: 14px 16px 16px 16px; background: #1e1e2e; box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-align: right; direction: rtl; font-family: sans-serif; color: #e0e0e0;'>
 
-  <div style='font-size: 0.75em; color: #888; margin-bottom: 2px;'>{track_num}</div>
-  <div style='font-size: 1em; font-weight: 700; color: #1f2937; margin-bottom: 12px;'>{track_short}</div>
+  <div style='font-size: 0.75em; color: #aaa; margin-bottom: 2px;'>{track_num}</div>
+  <div style='font-size: 1em; font-weight: 700; color: #f0f0f0; margin-bottom: 12px;'>{track_short}</div>
 
   <div style='display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; direction: ltr; justify-content: flex-end;'>
     <span style='font-size: 2.2em; font-weight: 800; color: {score_color}; line-height: 1;'>{score}</span>
-    <span style='font-size: 1em; color: #888;'>/100</span>
+    <span style='font-size: 1em; color: #aaa;'>/100</span>
   </div>
-  <div style='font-size: 1em; margin-bottom: 14px;'>{health}</div>
+  <div style='font-size: 1em; margin-bottom: 14px; color: #e0e0e0;'>{health}</div>
 
-  <div style='border-top: 1px solid #e5e7eb; padding-top: 10px; margin-bottom: 10px;'>
-    <div style='font-size: 0.7em; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>יתרונות</div>
-    <div style='font-size: 0.82em; color: #1a7a1a; margin-bottom: 4px;'>✅ {pc["pro1"]}</div>
-    <div style='font-size: 0.82em; color: #1a7a1a;'>✅ {pc["pro2"]}</div>
-  </div>
-
-  <div style='border-top: 1px solid #e5e7eb; padding-top: 10px; margin-bottom: 10px;'>
-    <div style='font-size: 0.7em; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>סיכונים</div>
-    <div style='font-size: 0.82em; color: #cc5500; margin-bottom: 4px;'>⚠️ {pc["con1"]}</div>
-    <div style='font-size: 0.82em; color: #cc5500;'>⚠️ {pc["con2"]}</div>
+  <div style='border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;'>
+    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>יתרונות</div>
+    <div style='font-size: 0.82em; color: #4dbb4d; margin-bottom: 4px;'>✅ {pc["pro1"]}</div>
+    <div style='font-size: 0.82em; color: #4dbb4d;'>✅ {pc["pro2"]}</div>
   </div>
 
-  <div style='border-top: 1px solid #e5e7eb; padding-top: 10px; display: flex; flex-direction: column; gap: 4px;'>
+  <div style='border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;'>
+    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;'>סיכונים</div>
+    <div style='font-size: 0.82em; color: #ff8c42; margin-bottom: 4px;'>⚠️ {pc["con1"]}</div>
+    <div style='font-size: 0.82em; color: #ff8c42;'>⚠️ {pc["con2"]}</div>
+  </div>
+
+  <div style='border-top: 1px solid #333; padding-top: 10px; display: flex; flex-direction: column; gap: 4px;'>
     <div style='font-size: 0.82em; color: {res_color}; font-weight: 600;'>📅 {res_label}</div>
-    <div style='font-size: 0.82em; color: #1f2937;'>💰 בגיל 95: <b>{format_shekel(portfolio_95)}</b></div>
+    <div style='font-size: 0.82em; color: #e0e0e0;'>💰 בגיל 95: <b style='color:#f0f0f0;'>{format_shekel(portfolio_95)}</b></div>
   </div>
 
 </div>
@@ -433,7 +433,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(tw_rent_r)
         ]
     })
-    st.markdown(t1.set_index("שאלה").to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
+    st.markdown(t1.set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
 
     # -------------------------------------------------------
     # Table 2: At check_age
@@ -493,7 +493,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(tw_rent_c)
         ]
     })
-    st.markdown(t2.set_index("שאלה").to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
+    st.markdown(t2.set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
 
     # -------------------------------------------------------
     # Table 3: Resiliency
@@ -521,4 +521,4 @@ def render_qa_section(results, user_inputs):
             wrap_html_style(ratio_r_str, get_preservation_pct_style(ratio_r_pct))
         ]
     })
-    st.markdown(t3.set_index("שורה תחתונה").to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
+    st.markdown(t3.set_index("שורה תחתונה").rename_axis(None).to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
