@@ -33,7 +33,7 @@
   .card.rank1 { background: #FFFDF0; border-top-color: #E8A000; box-shadow: 0 4px 18px rgba(232,160,0,0.15); }
   .card.rank2 { background: #F7F8FA; border-top-color: #607D8B; }
   .card.rank3 { background: #FDF7F3; border-top-color: #A0522D; }
-  .card.rank4 { background: #FFFFFF; border-top-color: #CBD5E0; }
+  .card.rank4 { background: #FFF5F5; border-top-color: #E53935; }
 
   /* גישה ב — border שמאל */
   .card.rankB1 { background: #fff; border-top-color: #eee; border-right: 5px solid #E8A000; }
@@ -155,7 +155,7 @@
   .tdelta-neg { color: #b71c1c; font-size: 0.85em; }
   .pension-note { color: #999; font-size: 0.78em; display: block; margin-top: 2px; }
 
-  .table-section { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.07); margin-bottom: 8px; }
+  .table-section { background: #FAFBFD; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.07); margin-bottom: 8px; }
   .table-detail-toggle {
     background: #f8f9fc;
     padding: 8px 14px;
@@ -178,8 +178,6 @@
 
 <h1>🧭 סיכום מנהלים — השוואת מסלולים</h1>
 
-<!-- SECTION LABEL A -->
-<p style="text-align:center; color:#999; font-size:0.82em; margin-bottom:14px;">— גישה א: רקע עדין לפי דרגה —</p>
 <!-- CARDS -->
 <div class="cards-row">
 
@@ -300,29 +298,6 @@
   </div>
 
 </div>
-
-<!-- SECTION LABEL B -->
-<p style="text-align:center; color:#999; font-size:0.82em; margin: 8px 0 14px 0;">— גישה ב: border צד שמאל, רקע לבן אחיד —</p>
-<div class="cards-row">
-  <div class="card rankB4">
-    <div><div class="card-header"><div class="rank-badge">4️⃣</div><div class="rank-text" style="color:#999;">מקום רביעי</div><div class="card-name">שכירות</div><span class="health-label health-red">🔴 בסיכון</span></div></div>
-    <div class="card-bottom"><div class="card-label">⏳ הכסף מחזיק עד</div><div class="card-value res-red">גיל 65.5</div><div class="card-label">💰 תיק בגיל 95</div><div class="card-value">₪560,000−</div><div class="card-delta-neg">↓ −₪3,900,000 | −116.8%</div><div class="card-baseline">מ-₪3,340,000</div></div>
-  </div>
-  <div class="card rankB3">
-    <div><div class="card-header"><div class="rank-badge">🥉</div><div class="rank-text" style="color:#8b4513;">מקום שלישי</div><div class="card-name">25% ריאלי (ללא קצבה)</div><span class="health-label health-green">🟢 חסין</span></div></div>
-    <div class="card-bottom"><div class="card-label">⏳ הכסף מחזיק עד</div><div class="card-value res-green">105+</div><div class="card-label">💰 תיק בגיל 95</div><div class="card-value">₪3,869,004</div><div class="card-delta-pos">↑ +₪529,004 | +15.8%</div><div class="card-baseline">מ-₪3,340,000</div></div>
-  </div>
-  <div class="card rankB2">
-    <div><div class="card-header"><div class="rank-badge">🥈</div><div class="rank-text" style="color:#607D8B;">מקום שני</div><div class="card-name">25% ריאלי + קצבה מזערית</div><span class="health-label health-green">🟢 חסין</span></div></div>
-    <div class="card-bottom"><div class="card-label">⏳ הכסף מחזיק עד</div><div class="card-value res-green">105+</div><div class="card-label">💰 תיק בגיל 95</div><div class="card-value">₪4,530,117</div><div class="card-delta-pos">↑ +₪1,190,117 | +35.6%</div><div class="card-baseline">מ-₪3,340,000</div></div>
-  </div>
-  <div class="card rankB1">
-    <div><div class="card-header"><div class="rank-badge">🏆</div><div class="rank-text" style="color:#c07800;">המסלול המומלץ</div><div class="card-name">190 + קצבה מזערית</div><span class="health-label health-green">🟢 חסין</span></div></div>
-    <div class="card-bottom"><div class="card-label">⏳ הכסף מחזיק עד</div><div class="card-value res-green">105+</div><div class="card-label">💰 תיק בגיל 95</div><div class="card-value">₪4,514,139</div><div class="card-delta-pos">↑ +₪1,174,139 | +35.2%</div><div class="card-baseline">מ-₪3,340,000</div></div>
-  </div>
-</div>
-
-<p style="text-align:center; color:#999; font-size:0.82em; margin: 24px 0 14px 0;">— הטבלאות —</p>
 
 <!-- TABLE 1 -->
 <div class="section-title" onclick="toggleSection('table1')">
