@@ -384,7 +384,7 @@ def render_qa_section(results, user_inputs):
         return (
             f"<div style='font-size:0.62em;color:#999;margin-top:6px;'>{label}</div>"
             f"<div style='font-size:0.74em;color:{col};font-weight:600;'>"
-            f"{arr} {sgn}{format_shekel(abs(int(d)))} | {sgn}{abs(pct):.1f}%</div>"
+            f"{arr} {format_shekel(abs(int(d)))}{sgn} | {abs(pct):.1f}%{sgn}</div>"
         )
 
     def build_why_line(is_winner, is_resilient, is_preserving, empty_age, has_pension):
