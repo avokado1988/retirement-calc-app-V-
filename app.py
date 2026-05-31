@@ -61,12 +61,7 @@ st.divider()
 
 st.markdown("""
 <style>
-[data-baseweb="tab-list"] {
-    direction: rtl !important;
-    justify-content: flex-end !important;
-    flex-direction: row !important;
-}
-[data-testid="stTabs"] > div:first-child {
+[role="tablist"] {
     direction: rtl !important;
 }
 </style>
