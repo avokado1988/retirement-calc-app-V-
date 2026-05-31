@@ -544,21 +544,8 @@ def render_qa_section(results, user_inputs):
     # Table helper — st.columns(4) aligned under cards
     # -------------------------------------------------------
     def render_metric_columns(rows, data_dict, show_header=True):
-        label_col, *tcols = st.columns([1.4, 1, 1, 1, 1])
-
-        # Question labels column (rightmost in RTL layout = rendered last = leftmost in LTR)
-        with label_col:
-            if show_header:
-                st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-            for question, _ in rows:
-                st.markdown(
-                    f"<div style='padding:5px 8px;border-radius:5px;margin-bottom:4px;"
-                    f"background:#f8f9fc;border:1px solid #eee;direction:rtl;text-align:right;"
-                    f"font-size:0.82em;font-weight:600;color:#333;min-height:42px;"
-                    f"display:flex;align-items:center;justify-content:flex-end;'>"
-                    f"{question}</div>",
-                    unsafe_allow_html=True
-                )
+        # RTL: data columns on the left (rank4..rank1), question labels on the far right
+        *tcols, label_col = st.columns([1, 1, 1, 1, 1.5])
 
         for col_idx, (rank, track_id, *_) in enumerate(reversed(ranked_order)):
             rc = RANK_CFG[rank]
@@ -575,13 +562,28 @@ def render_qa_section(results, user_inputs):
                 for _, key in rows:
                     val = data_dict.get(track_name, {}).get(key, "—")
                     st.markdown(
-                        f"<div style='background:{rc['col_bg']};padding:5px 8px;border-radius:5px;"
+                        f"<div style='background:{rc['col_bg']};padding:6px 8px;border-radius:5px;"
                         f"margin-bottom:4px;text-align:center;border:1px solid #eee;"
-                        f"font-size:0.88em;font-weight:600;min-height:42px;"
-                        f"display:flex;align-items:center;justify-content:center;'>"
+                        f"font-size:0.88em;font-weight:600;min-height:46px;line-height:1.35;"
+                        f"display:flex;flex-direction:column;align-items:center;justify-content:center;'>"
                         f"{val}</div>",
                         unsafe_allow_html=True
                     )
+
+        # Question labels column — on the right, RTL aligned
+        with label_col:
+            if show_header:
+                st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
+            for question, _ in rows:
+                st.markdown(
+                    f"<div style='padding:6px 10px;border-radius:5px;margin-bottom:4px;"
+                    f"background:#f8f9fc;border:1px solid #eee;border-right:3px solid #d0d4e8;"
+                    f"direction:rtl;text-align:right;"
+                    f"font-size:0.82em;font-weight:600;color:#333;min-height:46px;"
+                    f"display:flex;align-items:center;justify-content:flex-start;'>"
+                    f"{question}</div>",
+                    unsafe_allow_html=True
+                )
 
     # -------------------------------------------------------
     # Table 1: At retirement

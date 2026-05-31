@@ -7,7 +7,7 @@ def render_rental_inputs(wealth_data):
     emergency_fund = float(wealth_data.get("emergency_fund", 300000))
     net_sale = float(wealth_data.get("net_sale", 10000000))
 
-    net_for_rental = existing_savings - kids_help
+    net_for_rental = max(0, existing_savings - kids_help - emergency_fund)
 
     st.subheader("🏠 מסלול 4 — אסטרטגיית שכירות")
     st.caption("במסלול זה הדירה לא נמכרת. ההון הנזיל מגיע מחסכונות קיימים בלבד.")
