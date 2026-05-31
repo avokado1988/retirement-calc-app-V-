@@ -57,7 +57,7 @@ def show_net_summary(title, amount):
 def get_withdrawal_style(rate):
     try:
         r = float(rate)
-        if r < 3.0: color = "#99FF99"
+        if r < 3.0: color = "#2ecc71"
         elif r <= 4.0: color = "#FFCC99"
         elif r <= 6.0: color = "#FFB347"
         else: color = "#FF9999"
@@ -65,31 +65,31 @@ def get_withdrawal_style(rate):
     except: return ""
 
 def get_400_rule_style(multiplier_str):
-    if str(multiplier_str) == "∞": return "background-color: #99FF99; font-weight: bold; color: #1f2937;"
+    if str(multiplier_str) == "∞": return "background-color: #2ecc71; font-weight: bold; color: #1f2937;"
     try:
         val = float(multiplier_str)
         if val < 1.0: color = "#FF9999"
         elif val <= 1.3: color = "#FFCC99"
-        else: color = "#99FF99"
+        else: color = "#2ecc71"
         return f"background-color: {color}; font-weight: bold; color: #1f2937;"
     except: return ""
 
 def get_emergency_style(years_str):
-    if str(years_str) == "∞": return "background-color: #99FF99; font-weight: bold; color: #1f2937;"
+    if str(years_str) == "∞": return "background-color: #2ecc71; font-weight: bold; color: #1f2937;"
     try:
         val = float(str(years_str).replace(" שנים", "").replace(" שנה", ""))
         if val < 1.0: color = "#FF9999"
         elif val < 3.0: color = "#FFCC99"
-        else: color = "#99FF99"
+        else: color = "#2ecc71"
         return f"background-color: {color}; font-weight: bold; color: #1f2937;"
     except: return ""
 
 def get_larger_portfolio_style(is_larger):
-    if is_larger: return "background-color: #99FF99; font-weight: bold; color: #1f2937;"
+    if is_larger: return "background-color: #2ecc71; font-weight: bold; color: #1f2937;"
     return ""
 
 def get_resiliency_style(age_str):
-    if "105+" in str(age_str) or "חסין" in str(age_str): color = "#99FF99"
+    if "105+" in str(age_str) or "חסין" in str(age_str): color = "#2ecc71"
     else:
         try:
             age = float(str(age_str).replace("גיל ", ""))
@@ -104,7 +104,7 @@ def get_preservation_pct_style(ratio_pct):
         val = float(ratio_pct)
         if val < 75.0: color = "#FF9999"
         elif val < 100.0: color = "#FFCC99"
-        else: color = "#99FF99"
+        else: color = "#2ecc71"
         return f"background-color: {color}; font-weight: bold; border: 1px solid #c5c5c5; color: #1f2937;"
     except: return ""
 
