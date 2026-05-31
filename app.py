@@ -61,12 +61,13 @@ st.divider()
 
 st.markdown("""
 <style>
-.stTabs [data-baseweb="tab-list"] {
-    direction: rtl;
-    justify-content: flex-end;
+[data-baseweb="tab-list"] {
+    direction: rtl !important;
+    justify-content: flex-end !important;
+    flex-direction: row !important;
 }
-.stTabs [data-baseweb="tab"] {
-    direction: rtl;
+[data-testid="stTabs"] > div:first-child {
+    direction: rtl !important;
 }
 </style>
 """, unsafe_allow_html=True)
