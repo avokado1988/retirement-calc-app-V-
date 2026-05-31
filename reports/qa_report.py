@@ -632,7 +632,7 @@ def render_qa_section(results, user_inputs):
             "קרן חירום":       wrap_html_style(emer(nn_h_r), get_emergency_style(emer(nn_h_r))),
         },
         "שכירות": {
-            "הון כולל":        format_shekel(tw_rent_r),
+            "הון כולל":        format_shekel(br_r),
             "משיכה חודשית":    (
                 f"<span style='color:#1a7a3a;font-weight:700;'>תזרים חיובי<br/>+{format_shekel(int(rental_cashflow_at_retire))}</span>"
                 if rental_cashflow_at_retire >= 0 else
@@ -725,7 +725,7 @@ def render_qa_section(results, user_inputs):
         },
         "שכירות": {
             "גיל חוסן":     fmt_lifespan(empty_r),
-            "הון כולל":     format_shekel(tw_rent_c),
+            "הון כולל":     format_shekel(br_c),
             "תזרים חודשי":  (
                 f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(rental_cashflow_at_check))}</span>"
                 if rental_cashflow_at_check >= 0 else
