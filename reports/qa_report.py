@@ -93,9 +93,14 @@ def render_qa_section(results, user_inputs):
         pension_note = ""
         if pension_component > 0:
             pension_note = f"<br/><span style='color:#aaa; font-size:0.78em;'>מתוכם {format_shekel(int(pension_component))} ערך קצבה</span>"
-        elif pension_component == 0 and val > 0:
-            pension_note = ""
-        return f"{format_shekel(int(val))} <span style='color:{color}; font-size:0.85em;'>({arrow}{sign}{delta_pct:.1f}%)</span>{pension_note}"
+        return f"{format_shekel(int(val))}<br/><span style='color:{color}; font-size:0.85em;'>({arrow}{sign}{delta_pct:.1f}%)</span>{pension_note}"
+
+    def fmt_with_pension_note(val, pension_component=0):
+        base = format_shekel(int(val))
+        if pension_component > 0:
+            note = f"<br/><span style='color:#aaa; font-size:0.78em;'>מתוכם {format_shekel(int(pension_component))} ערך קצבה</span>"
+            return base + note
+        return base
 
     pct_190_r = wpct(nn_190_r, b190_r)
     pct_25_r = wpct(nn_25_r, b25_r)
@@ -372,7 +377,7 @@ def render_qa_section(results, user_inputs):
         delta_sign = "+" if delta_95 >= 0 else ""
         delta_color = "#4dbb4d" if delta_95 >= 0 else "#ff6666"
         age95_line = f"{format_shekel(int(portfolio_95))}"
-        age95_delta = f"<span style='color:{delta_color};'>{delta_sign}{format_shekel(int(delta_95))} ({delta_sign}{delta_pct_95:.1f}%)</span> <span style='color:#777;'>מ-{format_shekel(int(baseline_capital))}</span>"
+        age95_delta = f"<span style='color:{delta_color};'>{delta_sign}{format_shekel(int(delta_95))} ({delta_sign}{delta_pct_95:.1f}%)</span><br/><span style='color:#777; font-size:0.85em;'>מ-{format_shekel(int(baseline_capital))}</span>"
 
         with cols[col_idx]:
             st.markdown(f"""
@@ -432,7 +437,7 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 1 — תיקון 190": [
             format_shekel(b190_r),
-            format_shekel(inherit_190_r),
+            fmt_with_pension_note(inherit_190_r, pension_asset_retire),
             format_shekel(property_value_retire),
             format_shekel(base_income_retire + pension_retire),
             fmt_withdrawal(nn_190_r),
@@ -454,7 +459,7 @@ def render_qa_section(results, user_inputs):
         ],
         "מסלול 3 — קצבה + 25% ריאלי": [
             format_shekel(bh_r),
-            format_shekel(inherit_h_r),
+            fmt_with_pension_note(inherit_h_r, pension_asset_retire),
             format_shekel(property_value_retire),
             format_shekel(base_income_retire + pension_retire),
             fmt_withdrawal(nn_h_r),
