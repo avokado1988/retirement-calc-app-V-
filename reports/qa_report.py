@@ -357,15 +357,14 @@ def render_qa_section(results, user_inputs):
     st.markdown("<h3 style='text-align: center;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
 
     best_score = max(score for _, score, _, _, _ in tracks_exec)
+    # Single winner: lowest track_id among those with best score
+    winner_id = min(tid for tid, sc, _, _, _ in tracks_exec if sc == best_score)
 
     # Build ordered list (reversed = RTL: track4, track3, track2, track1)
     ordered_tracks = list(reversed(tracks_exec))
 
-    # Dynamic column widths: winner gets 1.5, others get 1.0
-    col_widths = []
-    for (track_id, score, _, _, _) in ordered_tracks:
-        col_widths.append(1.5 if score == best_score else 1.0)
-    cols = st.columns(col_widths)
+    # Equal columns — winner distinguished by styling, not width
+    cols = st.columns(4)
 
     for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(ordered_tracks):
         pc = track_pros_cons[track_id]
@@ -373,35 +372,42 @@ def render_qa_section(results, user_inputs):
         score_color = get_score_color(score)
         _, border_color = get_card_colors(score)
         res_label = resiliency_label_for_card(empty_age)
-        is_winner = score == best_score
+        is_winner = track_id == winner_id
         res_color = "#4dbb4d" if empty_age >= 105.0 else ("#ff8c42" if empty_age >= 90 else "#ff4444")
 
-        track_short = pc["name"]
-
-        score_font = "3.2em" if is_winner else "2.4em"
-        winner_badge = "<div style='display:inline-block;background:rgba(240,192,64,0.15);color:#f0c040;font-size:0.7em;padding:2px 10px;border-radius:10px;margin-bottom:8px;font-weight:700;'>🏆 המסלול המומלץ</div>" if is_winner else "<div style='height:6px;'></div>"
-        glow = "box-shadow:0 0 18px rgba(240,192,64,0.3),0 2px 8px rgba(0,0,0,0.3);" if is_winner else "box-shadow:0 2px 8px rgba(0,0,0,0.3);"
+        score_font = "2.8em" if is_winner else "2.2em"
+        border_width = "4px" if is_winner else "3px"
+        glow = "box-shadow:0 0 20px rgba(240,192,64,0.25),0 2px 10px rgba(0,0,0,0.4);" if is_winner else "box-shadow:0 2px 8px rgba(0,0,0,0.3);"
+        winner_badge = "<div style='display:inline-block;background:rgba(240,192,64,0.15);color:#f0c040;font-size:0.68em;padding:2px 10px;border-radius:10px;font-weight:700;letter-spacing:0.03em;'>🏆 המומלץ</div><div style='height:6px;'></div>" if is_winner else "<div style='height:24px;'></div>"
 
         delta_95 = portfolio_95 - baseline_capital
         delta_pct_95 = (delta_95 / baseline_capital * 100) if baseline_capital > 0 else 0
-        delta_sign = "+" if delta_95 >= 0 else ""
+        arrow = "↑" if delta_95 >= 0 else "↓"
         delta_color = "#4dbb4d" if delta_95 >= 0 else "#ff6666"
-        age95_delta = f"<span style='color:{delta_color};'>{delta_sign}{format_shekel(int(delta_95))} ({delta_sign}{delta_pct_95:.1f}%)</span><br/><span style='color:#777;font-size:0.85em;'>מ-{format_shekel(int(baseline_capital))}</span>"
+        sign = "+" if delta_95 >= 0 else "−"
+        abs_delta = abs(int(delta_95))
+        abs_pct = abs(delta_pct_95)
 
         card_html = (
-            f"<div style='border-top:4px solid {border_color};border-radius:8px;padding:14px 16px 16px 16px;background:#1e1e2e;{glow}text-align:right;direction:rtl;font-family:sans-serif;color:#e0e0e0;'>"
-            f"<div style='text-align:center;margin-bottom:14px;'>"
+            f"<div style='border-top:{border_width} solid {border_color};border-radius:10px;padding:16px 16px 18px 16px;"
+            f"background:#1a1a2e;{glow}text-align:center;direction:rtl;font-family:sans-serif;color:#e0e0e0;"
+            f"min-height:260px;display:flex;flex-direction:column;justify-content:space-between;'>"
+            f"<div>"
             f"{winner_badge}"
-            f"<div style='font-size:1.1em;font-weight:700;color:#f0f0f0;margin:4px 0 10px 0;'>{track_short}</div>"
-            f"<div style='font-size:{score_font};font-weight:800;color:{score_color};line-height:1;margin-bottom:4px;'>{score}<span style='font-size:0.4em;color:#aaa;'>/100</span></div>"
-            f"<div style='font-size:1em;color:#e0e0e0;margin-top:4px;'>{health}</div>"
+            f"<div style='font-size:0.95em;font-weight:700;color:#f0f0f0;line-height:1.3;margin-bottom:12px;'>{pc['name']}</div>"
+            f"<div style='font-size:{score_font};font-weight:900;color:{score_color};line-height:1;'>{score}"
+            f"<span style='font-size:0.38em;color:#666;font-weight:400;'>/100</span></div>"
+            f"<div style='font-size:0.85em;color:#ccc;margin-top:6px;margin-bottom:16px;'>{health}</div>"
             f"</div>"
-            f"<div style='border-top:1px solid #333;padding-top:10px;'>"
-            f"<div style='font-size:0.7em;color:#888;margin-bottom:4px;'>⏳ הכסף מחזיק עד</div>"
-            f"<div style='font-size:0.9em;color:{res_color};font-weight:700;margin-bottom:10px;'>{res_label}</div>"
-            f"<div style='font-size:0.7em;color:#888;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
-            f"<div style='font-size:0.88em;color:#f0f0f0;font-weight:700;'>{format_shekel(int(portfolio_95))}</div>"
-            f"<div style='font-size:0.75em;margin-top:2px;'>{age95_delta}</div>"
+            f"<div style='border-top:1px solid #2a2a40;padding-top:12px;text-align:right;'>"
+            f"<div style='font-size:0.68em;color:#666;margin-bottom:2px;'>⏳ הכסף מחזיק עד</div>"
+            f"<div style='font-size:0.88em;color:{res_color};font-weight:700;margin-bottom:12px;'>{res_label}</div>"
+            f"<div style='font-size:0.68em;color:#666;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
+            f"<div style='font-size:0.92em;color:#f0f0f0;font-weight:700;'>{format_shekel(int(portfolio_95))}</div>"
+            f"<div style='font-size:0.72em;color:{delta_color};margin-top:3px;'>{arrow} {sign}{format_shekel(abs_delta)}"
+            f"<span style='color:#555;'> | </span>"
+            f"<span style='color:{delta_color};'>{sign}{abs_pct:.1f}%</span></div>"
+            f"<div style='font-size:0.65em;color:#555;margin-top:1px;'>מ-{format_shekel(int(baseline_capital))}</div>"
             f"</div></div>"
         )
 
