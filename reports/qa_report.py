@@ -40,8 +40,7 @@ def render_qa_section(results, user_inputs):
     row_retire = get_row(retire_age)
     row_check = get_row(check_age)
 
-    # Read property value directly from engine column to stay in sync to the shekel
-    # (engine compounds monthly from m=0; recomputing here would drift by ~1 month).
+    # Read property value directly from engine column
     property_value_retire = float(row_retire.get("שווי נדלן", property_value_start))
     property_value_check = float(row_check.get("שווי נדלן", property_value_start))
 
@@ -74,6 +73,10 @@ def render_qa_section(results, user_inputs):
     pct_25_r = wpct(nn_25_r, b25_r)
     pct_h_r = wpct(nn_h_r, bh_r)
     pct_rent_r = wpct(nn_rent_r, br_r)
+
+    rule400_190_r = rule400(b190_r, nn_190_r)
+    rule400_25_r = rule400(b25_r, nn_25_r)
+    rule400_h_r = rule400(bh_r, nn_h_r)
 
     inherit_190_r = b190_r + pension_asset_retire
     inherit_h_r = bh_r + pension_asset_retire
@@ -120,6 +123,16 @@ def render_qa_section(results, user_inputs):
     bool_preserve = lambda bal: "✅ כן" if bal > baseline_capital else "❌ לא"
 
     # -------------------------------------------------------
+    # Extract values at age 95 (for preservation check)
+    # -------------------------------------------------------
+    df_95 = df_full[df_full["גיל"] >= 95.0]
+    row_95 = df_95.iloc[0] if not df_95.empty else df_full.iloc[-1]
+    b190_95 = float(row_95["צבירה תיקון 190"])
+    b25_95 = float(row_95["צבירה מסלול ריאלי"])
+    bh_95 = float(row_95["צבירה מסלול היברידי"])
+    br_95 = float(row_95["צבירה מסלול שכירות"])
+
+    # -------------------------------------------------------
     # Scans: resiliency and recovery ages
     # -------------------------------------------------------
     def find_empty_age(col):
@@ -158,6 +171,183 @@ def render_qa_section(results, user_inputs):
     ratio_25_pct, ratio_25_str = ratio_at_97("צבירה מסלול ריאלי")
     ratio_h_pct, ratio_h_str = ratio_at_97("צבירה מסלול היברידי")
     ratio_r_pct, ratio_r_str = ratio_at_97("צבירה מסלול שכירות")
+
+    # -------------------------------------------------------
+    # Executive Summary: compute scores per track
+    # -------------------------------------------------------
+    def compute_score(track_id, empty_age, ratio_at_95, withdrawal_rate, rule400_val_str, is_track4=False):
+        """
+        track_id: 1-4
+        empty_age: age portfolio empties (120 = never)
+        ratio_at_95: portfolio_at_95 / baseline_capital (float ratio, not pct)
+        withdrawal_rate: annual withdrawal % (float)
+        rule400_val_str: rule400 string value
+        is_track4: True for track 4 (no rule400)
+        """
+        score = 0
+
+        # 40 pts: resiliency to 105
+        husn_105 = empty_age >= 105.0
+        if husn_105:
+            score += 40
+
+        # 30 pts: preservation at 95
+        ratio_95_pct = ratio_at_95 * 100
+        if ratio_95_pct >= 100.0:
+            score += 30
+        elif ratio_95_pct >= 75.0:
+            score += 15
+        else:
+            score += 0
+
+        # 20 pts: withdrawal rate (use thresholds)
+        r = float(withdrawal_rate)
+        if r < 3.0:
+            score += 20
+        elif r <= 4.0:
+            score += 12
+        elif r <= 6.0:
+            score += 5
+        else:
+            score += 0
+
+        # 10 pts: rule400 (skip for track 4, redistribute to שימור)
+        if is_track4:
+            # redistribute 10 pts to preservation (add bonus if ratio >= 100%)
+            if ratio_95_pct >= 100.0:
+                score += 10
+            elif ratio_95_pct >= 75.0:
+                score += 5
+        else:
+            if rule400_val_str == "∞":
+                score += 10
+            else:
+                try:
+                    r400 = float(rule400_val_str)
+                    if r400 > 1.3:
+                        score += 10
+                    elif r400 >= 1.0:
+                        score += 5
+                    else:
+                        score += 0
+                except:
+                    score += 0
+
+        return score, husn_105
+
+    def get_health_label(score):
+        if score >= 80:
+            return "🟢 חסין"
+        elif score >= 60:
+            return "🟡 יציב"
+        elif score >= 40:
+            return "🟠 מוגבל"
+        else:
+            return "🔴 בסיכון"
+
+    def get_score_color(score):
+        if score >= 80:
+            return "#006600"
+        elif score >= 60:
+            return "#856400"
+        elif score >= 40:
+            return "#c45c00"
+        else:
+            return "#990000"
+
+    def get_card_colors(score):
+        if score >= 80:
+            return "#e6f9e6", "#006600"
+        elif score >= 60:
+            return "#fffbe6", "#856400"
+        elif score >= 40:
+            return "#fff3e6", "#c45c00"
+        else:
+            return "#fce8e8", "#990000"
+
+    # Ratio at 95 for each track (as fraction, not pct)
+    ratio_190_95 = b190_95 / max(1.0, baseline_capital)
+    ratio_25_95 = b25_95 / max(1.0, baseline_capital)
+    ratio_h_95 = bh_95 / max(1.0, baseline_capital)
+    ratio_r_95 = br_95 / max(1.0, baseline_capital)  # for track4: positive = solvent
+
+    score_190, husn_190 = compute_score(1, empty_190, ratio_190_95, pct_190_r, rule400_190_r)
+    score_25, husn_25 = compute_score(2, empty_25, ratio_25_95, pct_25_r, rule400_25_r)
+    score_h, husn_h = compute_score(3, empty_h, ratio_h_95, pct_h_r, rule400_h_r)
+    score_r, husn_r = compute_score(4, empty_r, ratio_r_95, pct_rent_r, "N/A", is_track4=True)
+
+    # Pros/cons per track (hardcoded Hebrew)
+    track_pros_cons = {
+        1: {
+            "name": "מסלול 1 — תיקון 190",
+            "pro1": "קצבה מובטחת לכל החיים — גם בגיל 105 הכסף לא נגמר. ביטוח אריכות ימים.",
+            "pro2": "מיסוי נמוך — 15% נומינלי בלבד",
+            "con1": "פחות גמיש — לא ניתן לשבור את הקצבה לצורך הוצאה גדולה",
+            "con2": "דורש הון גדול — צריך לפחות ₪1M+ לקצבה משמעותית",
+        },
+        2: {
+            "name": "מסלול 2 — 25% ריאלי",
+            "pro1": "כל הכסף נזיל — ניתן למשוך כל סכום בכל עת, ירושה מקסימלית",
+            "pro2": "כל ההון עובד בשוק — ללא כיסוח לקצבה",
+            "con1": "אין גיבוי לאריכות ימים — אם הכסף ייגמר בגיל 92 אין עוד מקורות",
+            "con2": "תלוי לחלוטין בביצועי השוק",
+        },
+        3: {
+            "name": "מסלול 3 — היברידי",
+            "pro1": "שילוב קצבה קטנה + נזילות — רצפת ביטחון עם יכולת תמרון",
+            "pro2": "מאזן בין ביטחון וגמישות",
+            "con1": "מורכב — טעות במקדם ההמרה גוררת הפסד שקשה להחזיר",
+            "con2": "הון נזיל קטן יותר ממסלול 2 — פחות ירושה",
+        },
+        4: {
+            "name": "מסלול 4 — שכירות",
+            "pro1": "הדירה נשמרת ועולה בערכה עם הזמן",
+            "pro2": 'שכ"ד מכסה חלק מהוצאות — פחות תלות בתיק',
+            "con1": 'הון נזיל קטן מאוד — כמעט כל הכסף כלוא בנדל"ן',
+            "con2": "שוכר לא תמיד מגיע — תיקונים, ריקנות, ועד בית בגיל מבוגר",
+        },
+    }
+
+    def resiliency_label_for_card(empty_age):
+        return "105+ (חסין)" if empty_age >= 105.0 else f"גיל {empty_age:.1f}"
+
+    tracks_exec = [
+        (1, score_190, empty_190, b190_95, husn_190),
+        (2, score_25, empty_25, b25_95, husn_25),
+        (3, score_h, empty_h, bh_95, husn_h),
+        (4, score_r, empty_r, br_95, husn_r),
+    ]
+
+    # -------------------------------------------------------
+    # Render Executive Summary
+    # -------------------------------------------------------
+    st.subheader("🧭 סיכום מנהלים — השוואת מסלולים")
+
+    cols = st.columns(4)
+    for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(tracks_exec):
+        pc = track_pros_cons[track_id]
+        health = get_health_label(score)
+        score_color = get_score_color(score)
+        bg_color, border_color = get_card_colors(score)
+        res_label = resiliency_label_for_card(empty_age)
+
+        with cols[col_idx]:
+            st.markdown(f"""
+<div style='border: 2px solid {border_color}; border-radius: 12px; padding: 16px; background: {bg_color}; text-align: right; direction: rtl;'>
+    <h4 style='margin:0 0 8px 0;'>{pc["name"]}</h4>
+    <div style='font-size: 2em; font-weight: bold; color: {score_color};'>{score}/100</div>
+    <div style='font-size: 1.2em; margin: 8px 0;'>{health}</div>
+    <hr style='margin: 10px 0;'/>
+    <div>✅ {pc["pro1"]}<br/>✅ {pc["pro2"]}</div>
+    <hr style='margin: 10px 0;'/>
+    <div>⚠️ {pc["con1"]}<br/>⚠️ {pc["con2"]}</div>
+    <hr style='margin: 10px 0;'/>
+    <div>📅 <b>חוסן:</b> {res_label}</div>
+    <div>💰 <b>בגיל 95:</b> {format_shekel(portfolio_95)}</div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("<br/>", unsafe_allow_html=True)
 
     # -------------------------------------------------------
     # Table 1: At retirement
@@ -214,9 +404,9 @@ def render_qa_section(results, user_inputs):
             format_shekel(float(row_retire.get("שווי נדלן מסלול 4", property_value_retire))),
             format_shekel(base_income_retire),
             format_shekel(nn_rent_r),
-            wrap_html_style(rule400(br_r, nn_rent_r), get_400_rule_style(rule400(br_r, nn_rent_r))),
-            wrap_html_style(emer(nn_rent_r), get_emergency_style(emer(nn_rent_r))),
-            wrap_html_style(f"{pct_rent_r:.2f}%", get_withdrawal_style(pct_rent_r)),
+            "לא רלוונטי",
+            "לא רלוונטי",
+            "לא רלוונטי",
             format_shekel(tw_rent_r)
         ]
     })
@@ -226,13 +416,20 @@ def render_qa_section(results, user_inputs):
     # Table 2: At check_age
     # -------------------------------------------------------
     st.subheader(f"🔮 מצב בגיל נבדק (גיל {check_age:.1f})")
+
+    # Preservation at age 95 (not check_age)
+    bool_preserve_95_190 = "✅ כן" if b190_95 >= baseline_capital else "❌ לא"
+    bool_preserve_95_25 = "✅ כן" if b25_95 >= baseline_capital else "❌ לא"
+    bool_preserve_95_h = "✅ כן" if bh_95 >= baseline_capital else "❌ לא"
+    bool_preserve_95_r = "✅ כן" if br_95 > 0 else "❌ לא"  # Track 4: חסכונות > 0?
+
     t2 = pd.DataFrame({
         "שאלה": [
             "תיק נזיל שיישאר",
             "שווי ירושה (תיק + הבטחת קצבה)",
             "משיכה חודשית נטו מהתיק",
             "קצב משיכה בגיל הנבדק",
-            "האם נשמר ההון ההתחלתי?",
+            "האם נשמר ההון ההתחלתי? (גיל 95)",
             "גיל שבו עובר את ההון ההתחלתי",
             "סך כלל הנכסים"
         ],
@@ -241,7 +438,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(inherit_190_c),
             format_shekel(nn_190_c),
             wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
-            wrap_html_style(bool_preserve(b190_c), get_boolean_style(bool_preserve(b190_c))),
+            wrap_html_style(bool_preserve_95_190, get_boolean_style(bool_preserve_95_190)),
             recovery_190,
             format_shekel(tw_190_c)
         ],
@@ -250,7 +447,7 @@ def render_qa_section(results, user_inputs):
             "—",
             format_shekel(nn_25_c),
             wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
-            wrap_html_style(bool_preserve(b25_c), get_boolean_style(bool_preserve(b25_c))),
+            wrap_html_style(bool_preserve_95_25, get_boolean_style(bool_preserve_95_25)),
             recovery_25,
             format_shekel(tw_25_c)
         ],
@@ -259,7 +456,7 @@ def render_qa_section(results, user_inputs):
             format_shekel(inherit_h_c),
             format_shekel(nn_h_c),
             wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
-            wrap_html_style(bool_preserve(bh_c), get_boolean_style(bool_preserve(bh_c))),
+            wrap_html_style(bool_preserve_95_h, get_boolean_style(bool_preserve_95_h)),
             recovery_h,
             format_shekel(tw_h_c)
         ],
@@ -268,7 +465,7 @@ def render_qa_section(results, user_inputs):
             "—",
             format_shekel(nn_rent_c),
             wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
-            wrap_html_style(bool_preserve(br_c), get_boolean_style(bool_preserve(br_c))),
+            wrap_html_style(bool_preserve_95_r, get_boolean_style(bool_preserve_95_r)),
             recovery_r,
             format_shekel(tw_rent_c)
         ]
