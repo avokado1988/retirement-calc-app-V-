@@ -46,8 +46,9 @@ def run_simulation(user_inputs):
 
     # Property
     property_value = float(wealth.get("new_apartment_cost", 5800000))
-    property_rental_value = float(wealth.get("new_apartment_cost", 5800000))
+    property_rental_value = float(rental.get("current_property_value", wealth.get("new_apartment_cost", 5800000)))
     prop_appreciation_monthly = (1 + float(wealth.get("property_appreciation", 0.023))) ** (1/12) - 1
+    rental_prop_appreciation_monthly = (1 + float(rental.get("rental_property_appreciation", 0.015))) ** (1/12) - 1
 
     # Track 4 rental parameters
     rental_income_base = float(rental.get("rental_income_monthly", 0))
@@ -174,7 +175,7 @@ def run_simulation(user_inputs):
         if balance_hybrid > 0: balance_hybrid *= (1 + r_monthly_hybrid)
         if balance_rental > 0: balance_rental *= (1 + r_monthly_rental)
         property_value *= (1 + prop_appreciation_monthly)
-        property_rental_value *= (1 + prop_appreciation_monthly)
+        property_rental_value *= (1 + rental_prop_appreciation_monthly)
 
         # --- Inheritance values (liquid + pension guarantee asset) ---
         inheritance_190 = balance_190 + pension_asset_value

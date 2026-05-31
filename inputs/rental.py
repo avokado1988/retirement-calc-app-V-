@@ -21,6 +21,11 @@ def render_rental_inputs(wealth_data):
         "שווי הדירה הנוכחית (₪)",
         value=int(net_sale), min_value=0, step=100000, unit="₪", color=COLOR_GREEN
     )
+    rental_appreciation_pct = compact_number_input(
+        "עליית ערך שנתית — דירה מושכרת (%)",
+        value=1.5, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
+    )
+    st.caption("דירות יקרות מתייקרות לאט יותר באחוזים — מומלץ 1–2% לדירה מעל ₪5M.")
 
     st.divider()
     st.markdown("##### 📥 הכנסה מהשכרת הנכס")
@@ -60,4 +65,5 @@ def render_rental_inputs(wealth_data):
         "rent_paid_growth_rate": rent_paid_growth_pct / 100,
         "rental_tax_rate": rental_tax_pct / 100,
         "current_property_value": current_property_value,
+        "rental_property_appreciation": rental_appreciation_pct / 100,
     }
