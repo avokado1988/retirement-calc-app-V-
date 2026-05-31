@@ -74,7 +74,7 @@ def render_qa_section(results, user_inputs):
     def emer(nn): return f"{emergency_fund / (nn * 12):.1f}" if nn > 0 else "∞"
     def wpct(nn, bal): return (nn * 12) / bal * 100 if bal > 0 else 0.0
     def fmt_withdrawal(nn):
-        return format_shekel(int(nn)) if nn == 0 else f"−{format_shekel(int(nn))}"
+        return format_shekel(int(nn)) if nn == 0 else f"{format_shekel(int(nn))}−"
     def fmt_with_delta(val, baseline, pension_component=None):
         if baseline <= 0: return format_shekel(int(val))
         delta_pct = (val - baseline) / baseline * 100
