@@ -59,13 +59,6 @@ st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", p
 st.markdown("<h1 style='text-align: center;'>📊 סימולטור פרישה השוואתי</h1>", unsafe_allow_html=True)
 st.divider()
 
-st.markdown("""
-<style>
-[role="tablist"] {
-    direction: rtl !important;
-}
-</style>
-""", unsafe_allow_html=True)
 
 # ==============================================================================
 # 🗑️ כפתור איפוס נתונים בדפדפן (כדי להתחיל לקוח חדש מאפס)
@@ -106,6 +99,16 @@ if "last_inputs" in st.session_state:
 
 run_clicked = st.sidebar.button("▶️ עדכן סימולציה", use_container_width=True, type="primary")
 
+import json, os
+_DEFAULTS_FILE = os.path.join(os.path.dirname(__file__), "user_defaults.json")
+if st.sidebar.button("💾 שמור נתונים אלו כברירת מחדל", use_container_width=True):
+    try:
+        with open(_DEFAULTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(user_inputs, f, default=str, ensure_ascii=False, indent=2)
+        st.sidebar.success("✅ נשמר בהצלחה!")
+    except Exception as e:
+        st.sidebar.error(f"שגיאה: {e}")
+
 if run_clicked or "sim_results" not in st.session_state:
     st.session_state["sim_results"] = run_simulation(user_inputs)
     st.session_state["last_inputs"] = user_inputs
@@ -129,7 +132,7 @@ try:
 except Exception:
     qa_tab_label = "🔬 QA — ניתוח מסלולים"
 
-tab1, tab2, tab3, tab4 = st.tabs([qa_tab_label, "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
+tab4, tab3, tab2, tab1 = st.tabs(["📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
 
 with tab1:
     render_qa_section(sim_results, display_inputs)

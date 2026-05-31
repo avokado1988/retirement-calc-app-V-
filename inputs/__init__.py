@@ -4,7 +4,7 @@ from .wealth import render_wealth_inputs
 from .expenses import render_expenses_inputs
 from .incomes import render_incomes_inputs
 from .amendment_190 import render_190_inputs
-from .real_tax_25 import render_25_inputs
+from .real_tax_25 import render_track2_inputs, render_track3_inputs
 from .rental import render_rental_inputs
 
 def render_all_sidebar_inputs():
@@ -50,13 +50,16 @@ def render_all_sidebar_inputs():
         a190["capital_for_pension"]  = capital_for_pension
         inputs_dict["amendment_190"] = a190
 
-    with st.sidebar.expander("6. מסלולים 2 ו-3 — 25% מס ריאלי", expanded=False):
-        inputs_dict["real_tax_25"] = render_25_inputs(remaining_wealth)
+    with st.sidebar.expander("6. מסלול 2 — 25% מס ריאלי (ללא קצבה)", expanded=False):
+        t2 = render_track2_inputs(remaining_wealth)
 
-    # net_for_hybrid = same capital as track 1 after pension purchase
-    inputs_dict["real_tax_25"]["net_for_hybrid"] = inputs_dict["amendment_190"].get("net_for_190", 0)
+    net_for_hybrid = inputs_dict["amendment_190"].get("net_for_190", 0)
+    with st.sidebar.expander("7. מסלול 3 — 25% ריאלי + קצבה מזערית (היברידי)", expanded=False):
+        t3 = render_track3_inputs(net_for_hybrid)
 
-    with st.sidebar.expander("7. מסלול 4 — השכרת הנכס", expanded=False):
+    inputs_dict["real_tax_25"] = {**t2, **t3, "net_for_hybrid": net_for_hybrid}
+
+    with st.sidebar.expander("8. מסלול 4 — השכרת הנכס", expanded=False):
         inputs_dict["rental"] = render_rental_inputs(inputs_dict["wealth"])
 
     return inputs_dict
