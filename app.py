@@ -56,7 +56,7 @@ from reports.qa_summary import render_qa_summary_page
 # 1. הגדרת תצורת דף אחידה
 st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", page_icon="📊", layout="wide")
 
-st.title("📊 סימולטור פרישה השוואתי - Gold Standard")
+st.markdown("<h1 style='text-align: center;'>📊 סימולטור פרישה השוואתי</h1>", unsafe_allow_html=True)
 st.markdown("המערכת מנתחת את עוגת ההון ומציגה השוואה אקטוארית בין מסלול תיקון 190 למסלול 25% מס ריאלי.")
 st.divider()
 

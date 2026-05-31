@@ -12,8 +12,8 @@ def render_qa_section(results, user_inputs):
         <style>
         .styled-table { width: 100% !important; direction: rtl !important; text-align: right !important; border-collapse: collapse; margin: 15px 0; font-family: sans-serif; }
         .styled-table th { background-color: #2a2a3e; color: #e0e0e0; text-align: right !important; padding: 10px !important; font-weight: bold; border-bottom: 2px solid #444; }
-        .styled-table th:first-child { display: none; }
         .styled-table td { padding: 8px !important; text-align: right !important; border-bottom: 1px solid #333; }
+        .styled-table tbody th { background-color: #1e1e2e; color: #c0c0c0; font-weight: 600; padding: 8px !important; text-align: right !important; border-bottom: 1px solid #333; border-left: 2px solid #444; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -331,7 +331,7 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Render Executive Summary
     # -------------------------------------------------------
-    st.subheader("🧭 סיכום מנהלים — השוואת מסלולים")
+    st.markdown("<h3 style='text-align: center;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
 
     cols = st.columns(4)
     for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(tracks_exec)):
@@ -396,7 +396,7 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Table 1: At retirement
     # -------------------------------------------------------
-    st.subheader(f"📊 מצב ביום הפרישה (גיל {retire_age:.1f})")
+    st.markdown(f"<h3 style='text-align: center;'>📊 מצב ביום הפרישה (גיל {retire_age:.1f})</h3>", unsafe_allow_html=True)
     t1 = pd.DataFrame({
         "שאלה": [
             "מה גובה התיק הנזיל שלי ביום הפרישה?",
@@ -459,7 +459,7 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Table 2: At check_age
     # -------------------------------------------------------
-    st.subheader(f"🔮 מצב בגיל נבדק (גיל {check_age:.1f})")
+    st.markdown(f"<h3 style='text-align: center;'>🔮 מצב בגיל נבדק (גיל {check_age:.1f})</h3>", unsafe_allow_html=True)
 
     # Preservation at age 95 (not check_age)
     bool_preserve_95_190 = "✅ כן" if b190_95 >= baseline_capital else "❌ לא"
@@ -519,7 +519,7 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Table 3: Resiliency
     # -------------------------------------------------------
-    st.subheader("🏁 שורה תחתונה וחסינות אקטוארית")
+    st.markdown("<h3 style='text-align: center;'>🏁 שורה תחתונה וחסינות אקטוארית</h3>", unsafe_allow_html=True)
     t3 = pd.DataFrame({
         "שורה תחתונה": [
             "עד איזה גיל הכסף יחזיק?",
