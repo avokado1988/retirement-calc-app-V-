@@ -14,6 +14,8 @@ def render_qa_section(results, user_inputs):
         .styled-table th { background-color: #2a2a3e; color: #e0e0e0; text-align: right !important; padding: 10px !important; font-weight: bold; border-bottom: 2px solid #444; }
         .styled-table td { padding: 8px !important; text-align: right !important; border-bottom: 1px solid #333; }
         .styled-table tbody th { background-color: #1e1e2e; color: #c0c0c0; font-weight: 600; padding: 8px !important; text-align: right !important; border-bottom: 1px solid #333; border-left: 2px solid #444; }
+        [data-testid="stExpander"] summary { direction: rtl !important; text-align: right !important; }
+        [data-testid="stExpander"] summary p { direction: rtl !important; text-align: right !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -78,7 +80,7 @@ def render_qa_section(results, user_inputs):
     def emer(nn): return f"{emergency_fund / (nn * 12):.1f}" if nn > 0 else "∞"
     def wpct(nn, bal): return (nn * 12) / bal * 100 if bal > 0 else 0.0
     def fmt_withdrawal(nn):
-        return wrap_html_style(f"−{format_shekel(int(nn))}", "color: #ff6666; font-weight: bold;") if nn > 0 else format_shekel(0)
+        return format_shekel(int(nn)) if nn == 0 else f"−{format_shekel(int(nn))}"
     def fmt_with_delta(val, baseline, pension_component=None):
         if baseline <= 0: return format_shekel(int(val))
         delta_pct = (val - baseline) / baseline * 100
@@ -375,7 +377,7 @@ def render_qa_section(results, user_inputs):
         is_winner = track_id == winner_id
         res_color = "#4dbb4d" if empty_age >= 105.0 else ("#ff8c42" if empty_age >= 90 else "#ff4444")
 
-        score_font = "2.8em" if is_winner else "2.2em"
+        score_font = "2.2em" if is_winner else "1.8em"
         border_width = "4px" if is_winner else "3px"
         glow = "box-shadow:0 0 20px rgba(240,192,64,0.25),0 2px 10px rgba(0,0,0,0.4);" if is_winner else "box-shadow:0 2px 8px rgba(0,0,0,0.3);"
         winner_badge = "<div style='display:inline-block;background:rgba(240,192,64,0.15);color:#f0c040;font-size:0.68em;padding:2px 10px;border-radius:10px;font-weight:700;letter-spacing:0.03em;'>🏆 המומלץ</div><div style='height:6px;'></div>" if is_winner else "<div style='height:24px;'></div>"
@@ -395,9 +397,8 @@ def render_qa_section(results, user_inputs):
             f"<div>"
             f"{winner_badge}"
             f"<div style='font-size:0.95em;font-weight:700;color:#f0f0f0;line-height:1.3;margin-bottom:12px;'>{pc['name']}</div>"
-            f"<div style='font-size:{score_font};font-weight:900;color:{score_color};line-height:1;'>{score}"
+            f"<div style='font-size:{score_font};font-weight:900;color:{score_color};line-height:1;margin-bottom:16px;'>{score}"
             f"<span style='font-size:0.38em;color:#666;font-weight:400;'>/100</span></div>"
-            f"<div style='font-size:0.85em;color:#ccc;margin-top:6px;margin-bottom:16px;'>{health}</div>"
             f"</div>"
             f"<div style='border-top:1px solid #2a2a40;padding-top:12px;text-align:right;'>"
             f"<div style='font-size:0.68em;color:#666;margin-bottom:2px;'>⏳ הכסף מחזיק עד</div>"
