@@ -358,182 +358,211 @@ def render_qa_section(results, user_inputs):
 
     best_score = max(score for _, score, _, _, _ in tracks_exec)
 
-    cols = st.columns(4)
-    for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(tracks_exec)):
+    # Build ordered list (reversed = RTL: track4, track3, track2, track1)
+    ordered_tracks = list(reversed(tracks_exec))
+
+    # Dynamic column widths: winner gets 1.5, others get 1.0
+    col_widths = []
+    for (track_id, score, _, _, _) in ordered_tracks:
+        col_widths.append(1.5 if score == best_score else 1.0)
+    cols = st.columns(col_widths)
+
+    for col_idx, (track_id, score, empty_age, portfolio_95, husn) in enumerate(ordered_tracks):
         pc = track_pros_cons[track_id]
         health = get_health_label(score)
         score_color = get_score_color(score)
         _, border_color = get_card_colors(score)
         res_label = resiliency_label_for_card(empty_age)
-        trophy = "🏆 " if score == best_score else ""
+        is_winner = score == best_score
         res_color = "#4dbb4d" if empty_age >= 105.0 else ("#ff8c42" if empty_age >= 90 else "#ff4444")
 
         track_short = pc["name"].split("—")[1].strip() if "—" in pc["name"] else pc["name"]
         track_num = pc["name"].split("—")[0].strip()
+
+        score_font = "3.2em" if is_winner else "2.4em"
+        winner_badge = "<div style='display:inline-block; background:rgba(240,192,64,0.15); color:#f0c040; font-size:0.7em; padding:2px 10px; border-radius:10px; margin-bottom:6px; font-weight:700;'>🏆 המסלול המומלץ</div><br/>" if is_winner else ""
+        glow = "box-shadow: 0 0 18px rgba(240,192,64,0.3), 0 2px 8px rgba(0,0,0,0.3);" if is_winner else "box-shadow: 0 2px 8px rgba(0,0,0,0.3);"
 
         # Age 95 delta vs baseline
         delta_95 = portfolio_95 - baseline_capital
         delta_pct_95 = (delta_95 / baseline_capital * 100) if baseline_capital > 0 else 0
         delta_sign = "+" if delta_95 >= 0 else ""
         delta_color = "#4dbb4d" if delta_95 >= 0 else "#ff6666"
-        age95_line = f"{format_shekel(int(portfolio_95))}"
         age95_delta = f"<span style='color:{delta_color};'>{delta_sign}{format_shekel(int(delta_95))} ({delta_sign}{delta_pct_95:.1f}%)</span><br/><span style='color:#777; font-size:0.85em;'>מ-{format_shekel(int(baseline_capital))}</span>"
 
         with cols[col_idx]:
             st.markdown(f"""
-<div style='border-top: 4px solid {border_color}; border-radius: 8px; padding: 14px 16px 16px 16px; background: #1e1e2e; box-shadow: 0 2px 8px rgba(0,0,0,0.3); text-align: right; direction: rtl; font-family: sans-serif; color: #e0e0e0;'>
-
+<div style='border-top: 4px solid {border_color}; border-radius: 8px; padding: 14px 16px 16px 16px; background: #1e1e2e; {glow} text-align: right; direction: rtl; font-family: sans-serif; color: #e0e0e0;'>
   <div style='text-align: center; margin-bottom: 14px;'>
+    {winner_badge}
     <div style='font-size: 0.75em; color: #aaa; margin-bottom: 2px;'>{track_num}</div>
-    <div style='font-size: 1em; font-weight: 700; color: #f0f0f0; margin-bottom: 10px;'>{trophy}{track_short}</div>
-    <div style='font-size: 2.4em; font-weight: 800; color: {score_color}; line-height: 1; margin-bottom: 4px;'>{score}<span style='font-size:0.4em; color:#aaa;'>/100</span></div>
+    <div style='font-size: 1em; font-weight: 700; color: #f0f0f0; margin-bottom: 10px;'>{track_short}</div>
+    <div style='font-size: {score_font}; font-weight: 800; color: {score_color}; line-height: 1; margin-bottom: 4px;'>{score}<span style='font-size:0.4em; color:#aaa;'>/100</span></div>
     <div style='font-size: 1em; color: #e0e0e0;'>{health}</div>
   </div>
-
-  <div style='border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;'>
-    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; letter-spacing: 0.05em; margin-bottom: 6px;'>יתרונות</div>
-    <div style='font-size: 0.82em; color: #4dbb4d; margin-bottom: 4px;'>✅ {pc["pro1"]}</div>
-    <div style='font-size: 0.82em; color: #4dbb4d;'>✅ {pc["pro2"]}</div>
+  <div style='border-top: 1px solid #333; padding-top: 10px;'>
+    <div style='font-size: 0.7em; color: #888; margin-bottom: 4px;'>⏳ הכסף מחזיק עד</div>
+    <div style='font-size: 0.9em; color: {res_color}; font-weight: 700; margin-bottom: 10px;'>{res_label}</div>
+    <div style='font-size: 0.7em; color: #888; margin-bottom: 2px;'>💰 תיק בגיל 95</div>
+    <div style='font-size: 0.88em; color: #f0f0f0; font-weight: 700;'>{format_shekel(int(portfolio_95))}</div>
+    <div style='font-size: 0.75em; margin-top: 2px;'>{age95_delta}</div>
   </div>
-
-  <div style='border-top: 1px solid #333; padding-top: 10px; margin-bottom: 10px;'>
-    <div style='font-size: 0.7em; font-weight: 700; color: #aaa; letter-spacing: 0.05em; margin-bottom: 6px;'>סיכונים</div>
-    <div style='font-size: 0.82em; color: #ff8c42; margin-bottom: 4px;'>⚠️ {pc["con1"]}</div>
-    <div style='font-size: 0.82em; color: #ff8c42;'>⚠️ {pc["con2"]}</div>
-  </div>
-
-  <div style='border-top: 1px solid #333; padding-top: 10px; display: flex; flex-direction: column; gap: 8px;'>
-    <div>
-      <div style='font-size: 0.68em; color: #888; margin-bottom: 2px;'>⏳ הכסף מחזיק עד</div>
-      <div style='font-size: 0.88em; color: {res_color}; font-weight: 700;'>{res_label}</div>
-    </div>
-    <div>
-      <div style='font-size: 0.68em; color: #888; margin-bottom: 2px;'>💰 גובה התיק בגיל 95</div>
-      <div style='font-size: 0.88em; color: #f0f0f0; font-weight: 700;'>{age95_line}</div>
-      <div style='font-size: 0.75em; margin-top: 2px;'>{age95_delta} ביחס להון ההתחלתי</div>
-    </div>
-  </div>
-
 </div>
 """, unsafe_allow_html=True)
+            with st.expander("יתרונות וסיכונים"):
+                st.markdown(f"<span style='color:#4dbb4d;'>✅ {pc['pro1']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#4dbb4d;'>✅ {pc['pro2']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#ff8c42;'>⚠️ {pc['con1']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#ff8c42;'>⚠️ {pc['con2']}</span>", unsafe_allow_html=True)
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
     # -------------------------------------------------------
-    # Table 1: At retirement
+    # Table 1: At retirement — collapsible, 4 key rows + expander
     # -------------------------------------------------------
-    st.markdown(f"<h3 style='text-align: center;'>📊 מצב ביום הפרישה (גיל {retire_age:.1f})</h3>", unsafe_allow_html=True)
-    t1 = pd.DataFrame({
-        "שאלה": [
-            "מה גובה התיק הנזיל שלי ביום הפרישה?",
-            "מה שווי ההון הכולל כולל הקצבה?",
-            "מה שווי הנדל\"ן שלי בפרישה?",
-            "מה סך הקצבאות החודשיות שלי?",
-            "כמה אצטרך למשוך מהתיק כל חודש?",
-            "מה מדד החסינות של התיק (חוק 400)?",
-            "כמה שנים קרן החירום מכסה?",
-            "מה קצב המשיכה השנתי מהתיק?",
-            "מה סך כלל הנכסים שלי?"
-        ],
-        "מסלול 1 — תיקון 190": [
-            format_shekel(b190_r),
-            fmt_with_pension_note(inherit_190_r, pension_asset_retire),
-            format_shekel(property_value_retire),
-            format_shekel(base_income_retire + pension_retire),
-            fmt_withdrawal(nn_190_r),
-            wrap_html_style(rule400(b190_r, nn_190_r), get_400_rule_style(rule400(b190_r, nn_190_r))),
-            wrap_html_style(emer(nn_190_r), get_emergency_style(emer(nn_190_r))),
-            wrap_html_style(f"{pct_190_r:.2f}%", get_withdrawal_style(pct_190_r)),
-            format_shekel(tw_190_r)
-        ],
-        "מסלול 2 — 25% ריאלי": [
-            format_shekel(b25_r),
-            format_shekel(b25_r),
-            format_shekel(property_value_retire),
-            format_shekel(base_income_retire),
-            fmt_withdrawal(nn_25_r),
-            wrap_html_style(rule400(b25_r, nn_25_r), get_400_rule_style(rule400(b25_r, nn_25_r))),
-            wrap_html_style(emer(nn_25_r), get_emergency_style(emer(nn_25_r))),
-            wrap_html_style(f"{pct_25_r:.2f}%", get_withdrawal_style(pct_25_r)),
-            format_shekel(tw_25_r)
-        ],
-        "מסלול 3 — קצבה + 25% ריאלי": [
-            format_shekel(bh_r),
-            fmt_with_pension_note(inherit_h_r, pension_asset_retire),
-            format_shekel(property_value_retire),
-            format_shekel(base_income_retire + pension_retire),
-            fmt_withdrawal(nn_h_r),
-            wrap_html_style(rule400(bh_r, nn_h_r), get_400_rule_style(rule400(bh_r, nn_h_r))),
-            wrap_html_style(emer(nn_h_r), get_emergency_style(emer(nn_h_r))),
-            wrap_html_style(f"{pct_h_r:.2f}%", get_withdrawal_style(pct_h_r)),
-            format_shekel(tw_h_r)
-        ],
-        "מסלול 4 — שכירות": [
-            format_shekel(br_r),
-            format_shekel(br_r),
-            format_shekel(rental_prop_retire),
-            format_shekel(base_income_retire),
-            fmt_withdrawal(nn_rent_r),
-            'ל"ר',
-            'ל"ר',
-            'ל"ר',
-            format_shekel(tw_rent_r)
-        ]
-    })
-    st.markdown(t1.set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
+
+    # All data pre-built per column
+    t1_cols = {
+        "מסלול 1 — תיקון 190": {
+            "הון כולל":        fmt_with_pension_note(inherit_190_r, pension_asset_retire),
+            "משיכה חודשית":    fmt_withdrawal(nn_190_r),
+            "קצב משיכה":       wrap_html_style(f"{pct_190_r:.2f}%", get_withdrawal_style(pct_190_r)),
+            "סך נכסים":        format_shekel(tw_190_r),
+            "תיק נזיל":        format_shekel(b190_r),
+            "שווי נדלן":       format_shekel(property_value_retire),
+            "קצבאות חודשיות":  format_shekel(base_income_retire + pension_retire),
+            "חוק 400":         wrap_html_style(rule400(b190_r, nn_190_r), get_400_rule_style(rule400(b190_r, nn_190_r))),
+            "קרן חירום":       wrap_html_style(emer(nn_190_r), get_emergency_style(emer(nn_190_r))),
+        },
+        "מסלול 2 — 25% ריאלי": {
+            "הון כולל":        format_shekel(b25_r),
+            "משיכה חודשית":    fmt_withdrawal(nn_25_r),
+            "קצב משיכה":       wrap_html_style(f"{pct_25_r:.2f}%", get_withdrawal_style(pct_25_r)),
+            "סך נכסים":        format_shekel(tw_25_r),
+            "תיק נזיל":        format_shekel(b25_r),
+            "שווי נדלן":       format_shekel(property_value_retire),
+            "קצבאות חודשיות":  format_shekel(base_income_retire),
+            "חוק 400":         wrap_html_style(rule400(b25_r, nn_25_r), get_400_rule_style(rule400(b25_r, nn_25_r))),
+            "קרן חירום":       wrap_html_style(emer(nn_25_r), get_emergency_style(emer(nn_25_r))),
+        },
+        "מסלול 3 — קצבה + 25% ריאלי": {
+            "הון כולל":        fmt_with_pension_note(inherit_h_r, pension_asset_retire),
+            "משיכה חודשית":    fmt_withdrawal(nn_h_r),
+            "קצב משיכה":       wrap_html_style(f"{pct_h_r:.2f}%", get_withdrawal_style(pct_h_r)),
+            "סך נכסים":        format_shekel(tw_h_r),
+            "תיק נזיל":        format_shekel(bh_r),
+            "שווי נדלן":       format_shekel(property_value_retire),
+            "קצבאות חודשיות":  format_shekel(base_income_retire + pension_retire),
+            "חוק 400":         wrap_html_style(rule400(bh_r, nn_h_r), get_400_rule_style(rule400(bh_r, nn_h_r))),
+            "קרן חירום":       wrap_html_style(emer(nn_h_r), get_emergency_style(emer(nn_h_r))),
+        },
+        "מסלול 4 — שכירות": {
+            "הון כולל":        format_shekel(br_r),
+            "משיכה חודשית":    fmt_withdrawal(nn_rent_r),
+            "קצב משיכה":       'ל"ר',
+            "סך נכסים":        format_shekel(tw_rent_r),
+            "תיק נזיל":        format_shekel(br_r),
+            "שווי נדלן":       format_shekel(rental_prop_retire),
+            "קצבאות חודשיות":  format_shekel(base_income_retire),
+            "חוק 400":         'ל"ר',
+            "קרן חירום":       'ל"ר',
+        },
+    }
+
+    KEY_ROWS_1 = [
+        ("מה שווי ההון הכולל כולל הקצבה?",   "הון כולל"),
+        ("כמה אצטרך למשוך מהתיק כל חודש?",   "משיכה חודשית"),
+        ("מה קצב המשיכה השנתי מהתיק?",       "קצב משיכה"),
+        ("מה סך כלל הנכסים שלי?",             "סך נכסים"),
+    ]
+    DETAIL_ROWS_1 = [
+        ("מה גובה התיק הנזיל ביום הפרישה?",   "תיק נזיל"),
+        ("מה שווי הנדל\"ן שלי בפרישה?",       "שווי נדלן"),
+        ("מה סך הקצבאות החודשיות שלי?",       "קצבאות חודשיות"),
+        ("מה מדד החסינות של התיק (חוק 400)?", "חוק 400"),
+        ("כמה שנים קרן החירום מכסה?",          "קרן חירום"),
+    ]
+
+    def build_df(row_list, data_dict):
+        track_keys = list(data_dict.keys())
+        rows = {"שאלה": [r[0] for r in row_list]}
+        for tk in track_keys:
+            rows[tk] = [data_dict[tk][r[1]] for r in row_list]
+        return pd.DataFrame(rows)
+
+    with st.expander(f"📊 מצב ביום הפרישה — גיל {retire_age:.1f}", expanded=True):
+        st.markdown(
+            build_df(KEY_ROWS_1, t1_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
+            unsafe_allow_html=True
+        )
+        with st.expander("פרטים נוספים"):
+            st.markdown(
+                build_df(DETAIL_ROWS_1, t1_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
+                unsafe_allow_html=True
+            )
 
     # -------------------------------------------------------
-    # Table 2: At check_age
+    # Table 2: At check_age — collapsible, 4 key rows + expander
     # -------------------------------------------------------
-    st.markdown(f"<h3 style='text-align: center;'>🔮 מצב בגיל נבדק (גיל {check_age:.1f})</h3>", unsafe_allow_html=True)
-
-    # Preservation at age 95 (not check_age)
     bool_preserve_95_190 = "✅ כן" if b190_95 >= baseline_capital else "❌ לא"
-    bool_preserve_95_25 = "✅ כן" if b25_95 >= baseline_capital else "❌ לא"
-    bool_preserve_95_h = "✅ כן" if bh_95 >= baseline_capital else "❌ לא"
-    bool_preserve_95_r = "✅ כן" if br_95 > 0 else "❌ לא"
+    bool_preserve_95_25  = "✅ כן" if b25_95  >= baseline_capital else "❌ לא"
+    bool_preserve_95_h   = "✅ כן" if bh_95   >= baseline_capital else "❌ לא"
+    bool_preserve_95_r   = "✅ כן" if br_95 > 0 else "❌ לא"
 
-    t2 = pd.DataFrame({
-        "שאלה": [
-            "מה שווי ההון הכולל כולל הקצבה?",
-            "כמה אמשוך מהתיק כל חודש?",
-            "מה קצב המשיכה בגיל זה?",
-            "האם נשמר ההון ההתחלתי עד גיל 95?",
-            "מאיזה גיל התיק עולה מעל ההון הראשוני?",
-            "מה סך כלל הנכסים שלי?"
-        ],
-        "מסלול 1 — תיקון 190": [
-            fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
-            fmt_withdrawal(nn_190_c),
-            wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
-            wrap_html_style(bool_preserve_95_190, get_boolean_style(bool_preserve_95_190)),
-            recovery_190,
-            format_shekel(tw_190_c)
-        ],
-        "מסלול 2 — 25% ריאלי": [
-            fmt_with_delta(b25_c, baseline_capital),
-            fmt_withdrawal(nn_25_c),
-            wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
-            wrap_html_style(bool_preserve_95_25, get_boolean_style(bool_preserve_95_25)),
-            recovery_25,
-            format_shekel(tw_25_c)
-        ],
-        "מסלול 3 — קצבה + 25% ריאלי": [
-            fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
-            fmt_withdrawal(nn_h_c),
-            wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
-            wrap_html_style(bool_preserve_95_h, get_boolean_style(bool_preserve_95_h)),
-            recovery_h,
-            format_shekel(tw_h_c)
-        ],
-        "מסלול 4 — שכירות": [
-            fmt_with_delta(br_c, baseline_capital),
-            fmt_withdrawal(nn_rent_c),
-            wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
-            wrap_html_style(bool_preserve_95_r, get_boolean_style(bool_preserve_95_r)),
-            recovery_r,
-            format_shekel(tw_rent_c)
-        ]
-    })
-    st.markdown(t2.set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
+    t2_cols = {
+        "מסלול 1 — תיקון 190": {
+            "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
+            "משיכה חודשית": fmt_withdrawal(nn_190_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
+            "סך נכסים":     format_shekel(tw_190_c),
+            "שימור הון":    wrap_html_style(bool_preserve_95_190, get_boolean_style(bool_preserve_95_190)),
+            "גיל התאוששות": recovery_190,
+        },
+        "מסלול 2 — 25% ריאלי": {
+            "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
+            "משיכה חודשית": fmt_withdrawal(nn_25_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
+            "סך נכסים":     format_shekel(tw_25_c),
+            "שימור הון":    wrap_html_style(bool_preserve_95_25, get_boolean_style(bool_preserve_95_25)),
+            "גיל התאוששות": recovery_25,
+        },
+        "מסלול 3 — קצבה + 25% ריאלי": {
+            "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
+            "משיכה חודשית": fmt_withdrawal(nn_h_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
+            "סך נכסים":     format_shekel(tw_h_c),
+            "שימור הון":    wrap_html_style(bool_preserve_95_h, get_boolean_style(bool_preserve_95_h)),
+            "גיל התאוששות": recovery_h,
+        },
+        "מסלול 4 — שכירות": {
+            "הון כולל":     fmt_with_delta(br_c, baseline_capital),
+            "משיכה חודשית": fmt_withdrawal(nn_rent_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
+            "סך נכסים":     format_shekel(tw_rent_c),
+            "שימור הון":    wrap_html_style(bool_preserve_95_r, get_boolean_style(bool_preserve_95_r)),
+            "גיל התאוששות": recovery_r,
+        },
+    }
+
+    KEY_ROWS_2 = [
+        ("מה שווי ההון הכולל כולל הקצבה?",  "הון כולל"),
+        ("כמה אמשוך מהתיק כל חודש?",         "משיכה חודשית"),
+        ("מה קצב המשיכה בגיל זה?",           "קצב משיכה"),
+        ("מה סך כלל הנכסים שלי?",             "סך נכסים"),
+    ]
+    DETAIL_ROWS_2 = [
+        ("האם נשמר ההון ההתחלתי עד גיל 95?",          "שימור הון"),
+        ("מאיזה גיל התיק עולה מעל ההון הראשוני?",     "גיל התאוששות"),
+    ]
+
+    with st.expander(f"🔮 מצב בגיל נבדק — גיל {check_age:.1f}", expanded=True):
+        st.markdown(
+            build_df(KEY_ROWS_2, t2_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
+            unsafe_allow_html=True
+        )
+        with st.expander("פרטים נוספים"):
+            st.markdown(
+                build_df(DETAIL_ROWS_2, t2_cols).set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"),
+                unsafe_allow_html=True
+            )
 
