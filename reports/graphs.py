@@ -3,195 +3,219 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
-def render_charts(df_history):
-    st.markdown("### 📈 ניתוח אקטוארי ויזואלי")
-    st.markdown("גלול מטה כדי לראות את התנהגות התיק מכמה זוויות שונות.")
+COLORS = {
+    "190":    "#2ca02c",
+    "25":     "#1f77b4",
+    "hybrid": "#ff7f0e",
+}
+
+TRACK_NAMES = {
+    "190":    "190 + קצבה מזערית",
+    "25":     "25% ריאלי (ללא קצבה)",
+    "hybrid": "25% ריאלי + קצבה מזערית",
+}
+
+COL_MAP = {
+    "190":    "צבירה תיקון 190",
+    "25":     "צבירה מסלול ריאלי",
+    "hybrid": "צבירה מסלול היברידי",
+}
+
+TAX_COL = {
+    "190":    "מס ששולם 190",
+    "25":     "מס ששולם 25",
+    "hybrid": "מס ששולם היברידי",
+}
+
+EXPENSE_COL = "הוצאה נומינלית"
+INCOME_COL  = "הכנסה נומינלית"
+PENSION_COL = "הכנסה מקצבה מזערית"
+
+
+def _track_selector(key_prefix):
+    st.markdown("**בחר מסלולים להצגה:**")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        show_190 = st.checkbox(TRACK_NAMES["190"],    value=True, key=f"{key_prefix}_190")
+    with c2:
+        show_25  = st.checkbox(TRACK_NAMES["25"],     value=True, key=f"{key_prefix}_25")
+    with c3:
+        show_h   = st.checkbox(TRACK_NAMES["hybrid"], value=True, key=f"{key_prefix}_hybrid")
+    active = []
+    if show_190: active.append("190")
+    if show_25:  active.append("25")
+    if show_h:   active.append("hybrid")
+    return active
+
+
+def render_charts(df_history, user_inputs):
+    st.markdown("### 📈 ניתוח ויזואלי — התפתחות ההון לאורך הפרישה")
     st.divider()
 
-    # =========================================================
-    # Graph 1: Capital development — all 4 tracks
-    # =========================================================
-    st.subheader("💰 1. התפתחות ההון הנזיל — 4 מסלולים")
-    st.markdown("השוואת יתרת ההון הנזיל בכל אחד מ-4 המסלולים לאורך שנות הפרישה.")
-    fig1 = go.Figure()
+    df = df_history.copy()
 
-    fig1.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["צבירה תיקון 190"],
-        mode='lines', name='מסלול 1 — תיקון 190',
-        line=dict(color='#2ca02c', width=3),
-        fill='tozeroy', fillcolor='rgba(44, 160, 44, 0.08)'
-    ))
-    fig1.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["צבירה מסלול ריאלי"],
-        mode='lines', name='מסלול 2 — 25% ריאלי',
-        line=dict(color='#1f77b4', width=3),
-        fill='tozeroy', fillcolor='rgba(31, 119, 180, 0.08)'
-    ))
-    fig1.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["צבירה מסלול היברידי"],
-        mode='lines', name='מסלול 3 — קצבה + 25% ריאלי',
-        line=dict(color='#ff7f0e', width=3, dash='dash'),
-        fill='tozeroy', fillcolor='rgba(255, 127, 14, 0.08)'
-    ))
-    fig1.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["צבירה מסלול שכירות"],
-        mode='lines', name='מסלול 4 — שכירות',
-        line=dict(color='#9467bd', width=3, dash='dot'),
-        fill='tozeroy', fillcolor='rgba(148, 103, 189, 0.08)'
-    ))
+    # Guarantee end age for vertical line
+    try:
+        timeline = user_inputs.get("timeline", {})
+        amendment = user_inputs.get("amendment_190", {})
+        retirement_age = float(timeline.get("retirement_age", 67.0))
+        securing_years = float(amendment.get("securing_years", 20))
+        guarantee_end_age = retirement_age + securing_years
+    except Exception:
+        guarantee_end_age = None
 
-    fig1.update_layout(
+    pension_asset = df["ערך קצבה נותר"] if "ערך קצבה נותר" in df.columns else pd.Series(0, index=df.index)
+
+    # =========================================================
+    # Chart A: Liquid portfolio comparison
+    # =========================================================
+    st.subheader("א) השוואת תיקים — הון נזיל בלבד")
+    st.markdown("ההון הנזיל הגולמי של כל מסלול ללא ערך הקצבה.")
+    active_a = _track_selector("a")
+
+    fig_a = go.Figure()
+    for tid in active_a:
+        fig_a.add_trace(go.Scatter(
+            x=df["גיל"], y=df[COL_MAP[tid]],
+            mode='lines', name=TRACK_NAMES[tid],
+            line=dict(color=COLORS[tid], width=2.5,
+                      dash='dash' if tid == "hybrid" else 'solid')
+        ))
+    fig_a.update_layout(
         xaxis_title="גיל", yaxis_title="הון נזיל (₪)",
         hovermode="x unified", template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    fig1.update_traces(hovertemplate="%{y:,.0f} ₪")
-    st.plotly_chart(fig1, use_container_width=True)
+    fig_a.update_traces(hovertemplate="%{y:,.0f} ₪")
+    st.plotly_chart(fig_a, use_container_width=True)
 
     st.divider()
 
     # =========================================================
-    # Graph 2: Cash flow puzzle (tracks 1 and 3 — pension-based)
+    # Chart B: Total including pension value + guarantee line
     # =========================================================
-    st.subheader("⚖️ 2. פאזל מימון המחיה — השוואת מסלולים")
+    st.subheader("ב) הון כולל ערך הקצבה — כולל ה'בור' בסיום תקופת ההבטחה")
+    st.markdown(
+        "קו מלא = הון נזיל + ערך הקצבה הנותר. "
+        "קו מקווקו = הון נזיל בלבד. "
+        "השטח הצבוע = כסף הכלוא בקצבה שנעלם עם סיום ההבטחה."
+    )
+    active_b = _track_selector("b")
 
-    tab_c1, tab_c2 = st.tabs(["מסלולים 1 ו-3 (קצבה)", "מסלול 4 (שכירות)"])
+    fig_b = go.Figure()
+    for tid in active_b:
+        liq_col = COL_MAP[tid]
+        has_pension = tid in ("190", "hybrid")
+        if has_pension:
+            total = df[liq_col] + pension_asset
+            r, g, b = int(COLORS[tid][1:3], 16), int(COLORS[tid][3:5], 16), int(COLORS[tid][5:7], 16)
+            fig_b.add_trace(go.Scatter(
+                x=df["גיל"], y=total,
+                mode='lines', name=f'{TRACK_NAMES[tid]} — סה"כ',
+                line=dict(color=COLORS[tid], width=2.5)
+            ))
+            fig_b.add_trace(go.Scatter(
+                x=df["גיל"], y=df[liq_col],
+                mode='lines', name=f'{TRACK_NAMES[tid]} — נזיל',
+                line=dict(color=COLORS[tid], width=1.5, dash='dash'),
+                fill='tonexty', fillcolor=f'rgba({r},{g},{b},0.18)'
+            ))
+        else:
+            fig_b.add_trace(go.Scatter(
+                x=df["גיל"], y=df[liq_col],
+                mode='lines', name=TRACK_NAMES[tid],
+                line=dict(color=COLORS[tid], width=2.5)
+            ))
 
-    with tab_c1:
-        st.markdown("הכנסות קבועות (ירוק), קצבה (כחול), **גירעון שנמשך מחסכונות (אדום)**.")
-        fig2a = go.Figure()
-        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=df_history["הכנסה נומינלית"],
-            mode='none', name='הכנסה קבועה (ב"ל / עבודה)',
-            fill='tozeroy', stackgroup='one', fillcolor='rgba(44, 160, 44, 0.6)'))
-        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=df_history["הכנסה מקצבה מזערית"],
-            mode='none', name='קצבת תיקון 190 / היברידי',
-            fill='tonexty', stackgroup='one', fillcolor='rgba(31, 119, 180, 0.6)'))
-        gap1 = (df_history["הוצאה נומינלית"] - (df_history["הכנסה נומינלית"] + df_history["הכנסה מקצבה מזערית"])).clip(lower=0)
-        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=gap1,
-            mode='none', name='משיכה מחסכונות (גירעון)',
-            fill='tonexty', stackgroup='one', fillcolor='rgba(214, 39, 40, 0.5)'))
-        fig2a.add_trace(go.Scatter(x=df_history["גיל"], y=df_history["הוצאה נומינלית"],
-            mode='lines', name='סך הוצאות', line=dict(color='black', width=2, dash='dot')))
-        max_y1 = df_history["הוצאה נומינלית"].quantile(0.95) * 1.3
-        fig2a.update_layout(xaxis_title="גיל", yaxis_title="סכום חודשי (₪)",
-            yaxis=dict(range=[0, max_y1]), hovermode="x unified", template="plotly_white",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-        fig2a.update_traces(hovertemplate="%{y:,.0f} ₪")
-        st.plotly_chart(fig2a, use_container_width=True)
+    if guarantee_end_age:
+        fig_b.add_vline(
+            x=guarantee_end_age, line_dash="dot", line_color="gray",
+            annotation_text=f"סיום הבטחה (גיל {guarantee_end_age:.0f})",
+            annotation_position="top right"
+        )
 
-    with tab_c2:
-        st.markdown("הכנסות (ירוק = ב\"ל + שכירות נטו), **גירעון (אדום) = הוצאות מחיה + שכירות תשלום פחות הכנסות**.")
-        fig2b = go.Figure()
-        total_income_4 = df_history["הכנסה נומינלית"] + df_history.get("הכנסת שכירות נטו", 0)
-        total_expense_4 = df_history["הוצאה נומינלית"] + df_history.get("הוצאת שכירות", 0)
-        fig2b.add_trace(go.Scatter(x=df_history["גיל"], y=total_income_4,
-            mode='none', name='סך הכנסות (ב"ל + שכירות נטו)',
-            fill='tozeroy', stackgroup='one', fillcolor='rgba(44, 160, 44, 0.6)'))
-        gap4 = (total_expense_4 - total_income_4).clip(lower=0)
-        fig2b.add_trace(go.Scatter(x=df_history["גיל"], y=gap4,
-            mode='none', name='גירעון — משיכה מחסכונות',
-            fill='tonexty', stackgroup='one', fillcolor='rgba(214, 39, 40, 0.5)'))
-        fig2b.add_trace(go.Scatter(x=df_history["גיל"], y=total_expense_4,
-            mode='lines', name='סך הוצאות (מחיה + שכירות)', line=dict(color='black', width=2, dash='dot')))
-        max_y2 = total_expense_4.quantile(0.95) * 1.3
-        fig2b.update_layout(xaxis_title="גיל", yaxis_title="סכום חודשי (₪)",
-            yaxis=dict(range=[0, max_y2]), hovermode="x unified", template="plotly_white",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-        fig2b.update_traces(hovertemplate="%{y:,.0f} ₪")
-        st.plotly_chart(fig2b, use_container_width=True)
-
-    st.divider()
-
-    # =========================================================
-    # Graph 3: Cumulative tax — all 4 tracks
-    # =========================================================
-    st.subheader("🛡️ 3. סך מס רווחי הון ששולם (מצטבר) — 4 מסלולים")
-    st.markdown("אפקט מגן המס של תיקון 190 אל מול גביית 25% ריאלי במסלולים האחרים.")
-
-    df_tax = df_history.copy()
-    df_tax['cum_190'] = df_tax['מס ששולם 190'].cumsum()
-    df_tax['cum_25'] = df_tax['מס ששולם 25'].cumsum()
-    df_tax['cum_hybrid'] = df_tax['מס ששולם היברידי'].cumsum()
-    df_tax['cum_rental'] = df_tax['מס ששולם שכירות'].cumsum()
-
-    fig3 = go.Figure()
-    fig3.add_trace(go.Scatter(x=df_tax["גיל"], y=df_tax["cum_190"], mode='lines', name='מסלול 1 — 190', line=dict(color='#2ca02c', width=3)))
-    fig3.add_trace(go.Scatter(x=df_tax["גיל"], y=df_tax["cum_25"], mode='lines', name='מסלול 2 — 25% ריאלי', line=dict(color='#1f77b4', width=3)))
-    fig3.add_trace(go.Scatter(x=df_tax["גיל"], y=df_tax["cum_hybrid"], mode='lines', name='מסלול 3 — היברידי', line=dict(color='#ff7f0e', width=3, dash='dash')))
-    fig3.add_trace(go.Scatter(x=df_tax["גיל"], y=df_tax["cum_rental"], mode='lines', name='מסלול 4 — שכירות', line=dict(color='#9467bd', width=3, dash='dot')))
-
-    fig3.update_layout(
-        xaxis_title="גיל", yaxis_title="סך מס ששולם (₪)",
+    fig_b.update_layout(
+        xaxis_title="גיל", yaxis_title="הון (₪)",
         hovermode="x unified", template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    fig3.update_traces(hovertemplate="%{y:,.0f} ₪")
-    st.plotly_chart(fig3, use_container_width=True)
+    fig_b.update_traces(hovertemplate="%{y:,.0f} ₪")
+    st.plotly_chart(fig_b, use_container_width=True)
 
     st.divider()
 
     # =========================================================
-    # Graph 4: Net worth — liquid + real estate
+    # Chart C: Annual tax paid
     # =========================================================
-    st.subheader("🏢 4. שווי נקי כולל — הון נזיל + נדל\"ן")
-    st.markdown("מבט הוליסטי: מסלול 4 מציג גם את הנכס המושכר, לעומת מסלולים 1-3 שמציגים את הדירה הנרכשת.")
+    st.subheader("ג) מס שנתי ששולם — השוואת מסלולים")
+    st.markdown("סך המס ששולם בכל שנת גיל — אפקט מגן המס של תיקון 190 אל מול 25% ריאלי.")
+    active_c = _track_selector("c")
 
-    df_nw = df_history.copy()
-    df_nw['nw_190'] = df_nw['צבירה תיקון 190'] + df_nw['שווי נדלן']
-    df_nw['nw_25'] = df_nw['צבירה מסלול ריאלי'] + df_nw['שווי נדלן']
-    df_nw['nw_hybrid'] = df_nw['צבירה מסלול היברידי'] + df_nw['שווי נדלן']
-    df_nw['nw_rental'] = df_nw['צבירה מסלול שכירות'] + df_nw['שווי נדלן מסלול 4']
+    agg_dict = {TAX_COL[tid]: "sum" for tid in ["190", "25", "hybrid"]}
+    df_annual = (
+        df.assign(age_floor=df["גיל"].astype(int))
+          .groupby("age_floor", as_index=False)
+          .agg(agg_dict)
+          .rename(columns={"age_floor": "גיל"})
+    )
 
-    fig4 = go.Figure()
-    fig4.add_trace(go.Scatter(x=df_nw["גיל"], y=df_nw["nw_190"], mode='lines', name='מסלול 1 — 190', line=dict(color='#2ca02c', width=3, dash='dot')))
-    fig4.add_trace(go.Scatter(x=df_nw["גיל"], y=df_nw["nw_25"], mode='lines', name='מסלול 2 — 25% ריאלי', line=dict(color='#1f77b4', width=3, dash='dot')))
-    fig4.add_trace(go.Scatter(x=df_nw["גיל"], y=df_nw["nw_hybrid"], mode='lines', name='מסלול 3 — היברידי', line=dict(color='#ff7f0e', width=3, dash='dash')))
-    fig4.add_trace(go.Scatter(x=df_nw["גיל"], y=df_nw["nw_rental"], mode='lines', name='מסלול 4 — שכירות (כולל נכס)', line=dict(color='#9467bd', width=3)))
-
-    fig4.update_layout(
-        xaxis_title="גיל", yaxis_title="שווי נכסים כולל (₪)",
+    fig_c = go.Figure()
+    for tid in active_c:
+        fig_c.add_trace(go.Scatter(
+            x=df_annual["גיל"], y=df_annual[TAX_COL[tid]],
+            mode='lines', name=TRACK_NAMES[tid],
+            line=dict(color=COLORS[tid], width=2.5,
+                      dash='dash' if tid == "hybrid" else 'solid')
+        ))
+    fig_c.update_layout(
+        xaxis_title="גיל", yaxis_title="מס שנתי (₪)",
         hovermode="x unified", template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    fig4.update_traces(hovertemplate="%{y:,.0f} ₪")
-    st.plotly_chart(fig4, use_container_width=True)
+    fig_c.update_traces(hovertemplate="%{y:,.0f} ₪")
+    st.plotly_chart(fig_c, use_container_width=True)
 
     st.divider()
 
     # =========================================================
-    # Graph 5: Inheritance value — liquid + pension guarantee
+    # Chart D: Portfolio pressure — annual withdrawal needed
     # =========================================================
-    st.subheader("🏆 5. שווי ירושה כולל — תיק נזיל + ערך הבטחת הקצבה")
-    st.markdown("מסלולים 1 ו-3 כוללים את ערך הבטחת הקצבה לירושה (נשחק לאפס בסיום תקופת ההבטחה).")
+    st.subheader("ד) לחץ על התיק — כמה צריך להשלים מהחיסכון מדי שנה")
+    st.markdown(
+        "כמה כסף כל מסלול נאלץ למשוך מהחיסכון בכל שנה כדי לכסות את הגירעון בין הוצאות להכנסות. "
+        "ככל שהעמודה גבוהה יותר — כך התיק נשחק מהר יותר."
+    )
+    active_d = _track_selector("d")
 
-    fig5 = go.Figure()
-    fig5.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["שווי ירושה 190"],
-        mode='lines', name='שווי ירושה — מסלול 1 (190)',
-        line=dict(color='#2ca02c', width=3),
-        fill='tozeroy', fillcolor='rgba(44, 160, 44, 0.08)'
-    ))
-    fig5.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["שווי ירושה היברידי"],
-        mode='lines', name='שווי ירושה — מסלול 3 (היברידי)',
-        line=dict(color='#ff7f0e', width=3, dash='dash'),
-        fill='tozeroy', fillcolor='rgba(255, 127, 14, 0.08)'
-    ))
-    fig5.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["צבירה מסלול ריאלי"],
-        mode='lines', name='הון נזיל — מסלול 2 (25% ריאלי)',
-        line=dict(color='#1f77b4', width=2, dash='dot')
-    ))
-    fig5.add_trace(go.Scatter(
-        x=df_history["גיל"], y=df_history["ערך קצבה נותר"],
-        mode='lines', name='ערך הבטחת קצבה בלבד',
-        line=dict(color='#d62728', width=1, dash='dash')
-    ))
+    df_press = df.copy()
+    pension_income = df_press[PENSION_COL] if PENSION_COL in df_press.columns else 0
+    df_press["withdrawal_190"]    = (df_press[EXPENSE_COL] - (df_press[INCOME_COL] + pension_income)).clip(lower=0)
+    df_press["withdrawal_25"]     = (df_press[EXPENSE_COL] - df_press[INCOME_COL]).clip(lower=0)
+    df_press["withdrawal_hybrid"] = (df_press[EXPENSE_COL] - (df_press[INCOME_COL] + pension_income)).clip(lower=0)
 
-    fig5.update_layout(
-        xaxis_title="גיל", yaxis_title="שווי ירושה (₪)",
+    df_press_annual = (
+        df_press.assign(age_floor=df_press["גיל"].astype(int))
+        .groupby("age_floor", as_index=False)
+        .agg({"withdrawal_190": "sum", "withdrawal_25": "sum", "withdrawal_hybrid": "sum"})
+        .rename(columns={"age_floor": "גיל"})
+    )
+
+    WITHDRAWAL_COL = {"190": "withdrawal_190", "25": "withdrawal_25", "hybrid": "withdrawal_hybrid"}
+
+    fig_d = go.Figure()
+    for tid in active_d:
+        fig_d.add_trace(go.Bar(
+            x=df_press_annual["גיל"],
+            y=df_press_annual[WITHDRAWAL_COL[tid]],
+            name=TRACK_NAMES[tid],
+            marker_color=COLORS[tid],
+            opacity=0.82
+        ))
+    fig_d.update_layout(
+        barmode='group',
+        xaxis_title="גיל", yaxis_title="משיכה שנתית נדרשת (₪)",
         hovermode="x unified", template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    fig5.update_traces(hovertemplate="%{y:,.0f} ₪")
-    st.plotly_chart(fig5, use_container_width=True)
+    fig_d.update_traces(hovertemplate="%{y:,.0f} ₪")
+    st.plotly_chart(fig_d, use_container_width=True)

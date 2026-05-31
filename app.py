@@ -95,13 +95,28 @@ sim_results = st.session_state["sim_results"]
 display_inputs = st.session_state["last_inputs"]
 
 # 4. חלוקת המסך המרכזי ללשוניות תצוגה מקצועיות
-tab1, tab2, tab3, tab4 = st.tabs(["❓ שאלות ותשובות", "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
+# בדיקה אם יש מסלולים בסיכון (אוזלים לפני 105) לשם אינדיקטור ב-QA
+try:
+    df_full = sim_results["df_full"]
+    def _track_runs_out(col):
+        return any(float(v) <= 0 for v in df_full[col])
+    tracks_at_risk = any([
+        _track_runs_out("צבירה תיקון 190"),
+        _track_runs_out("צבירה מסלול ריאלי"),
+        _track_runs_out("צבירה מסלול היברידי"),
+        _track_runs_out("צבירה מסלול שכירות"),
+    ])
+    qa_tab_label = "🔴 QA — ניתוח מסלולים" if tracks_at_risk else "🟢 QA — ניתוח מסלולים"
+except Exception:
+    qa_tab_label = "🔬 QA — ניתוח מסלולים"
+
+tab1, tab2, tab3, tab4 = st.tabs([qa_tab_label, "📈 גרפים השוואתיים", "📋 טבלת נתונים מלאה", "📋 העתקה מהירה לבדיקות"])
 
 with tab1:
     render_qa_section(sim_results, display_inputs)
 
 with tab2:
-    render_charts(sim_results["df"])
+    render_charts(sim_results["df_full"], display_inputs)
 
 with tab3:
     st.subheader("🔍 גיליון סימולציה חודשי מלא (חודש-בחודשו)")

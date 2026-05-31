@@ -1,56 +1,51 @@
 import streamlit as st
 from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_BLUE, COLOR_RED, DEFAULTS
 
-def render_190_inputs(remaining_for_gimel):
-    st.subheader("📑 מסלול תיקון 190 וחישוב קצבה")
-    st.caption(f"הון התחלתי זמין לקופת גמל: {format_shekel(remaining_for_gimel)}")
-
-    st.markdown("##### 🎯 הגדרת קצבה רצויה לרכישה")
-    desired_pension = compact_number_input(
-        "קצבה רצויה לרכישה (₪ חודשי)",
-        value=DEFAULTS["desired_pension"], min_value=0, step=50, unit="₪", color=COLOR_GREEN
-    )
-
-    st.divider()
-    st.markdown("##### 🎲 תנאים אקטואריים (מודל שוק ריאלי)")
-    securing_years = compact_number_input(
-        "תקופת אבטחה בשנים (חודשי הבטחה ליורשים)",
-        value=20, min_value=0, max_value=35, step=1, unit="שנים", color=COLOR_BLUE
-    )
-    base_coefficient = compact_number_input(
-        "מקדם המרה בסיסי לקצבה (ללא אבטחה)",
-        value=200.0, min_value=150.0, max_value=300.0, step=1.0, unit=None, color=COLOR_BLUE
-    )
-
-    adjusted_coefficient = base_coefficient + (securing_years * 1.0)
-    capital_for_pension = int(desired_pension * adjusted_coefficient)
-
-    st.divider()
-    st.markdown("##### 📊 חישובים אקטואריים אוטומטיים:")
-    col1, col2 = st.columns(2)
-    with col1: st.metric(label="מקדם המרה משוקלל", value=f"{adjusted_coefficient:.1f}")
-    with col2: st.metric(label="הון נדרש שינוכה", value=format_shekel(capital_for_pension))
-
+def render_190_inputs(remaining_for_gimel, capital_for_pension=0):
     net_for_190 = max(0, remaining_for_gimel - capital_for_pension)
-    if remaining_for_gimel < capital_for_pension:
-        st.error(f"⚠️ אזהרה: ההון הנדרש לקצבה גבוה מסך ההון הזמין!")
-    else:
-        show_net_summary(title="יתרת הון נטו פנויה בתיקון 190", amount=net_for_190)
+
+    st.markdown("##### 📑 מסלול 1 — תיקון 190 + קצבה מזערית")
+    st.info(
+        "ההון מוחזק בקופת גמל ומשלמים **15% מס נומינלי בלבד** (לא ריאלי) בעת המשיכה. "
+        "חלק מההון נמיר לקצבה חודשית מובטחת לכל החיים — ביטוח אריכות ימים. "
+        "**יתרון:** מגן מס אפקטיבי בתנאי אינפלציה גבוהה ודמי ניהול נמוכים בשוק."
+    )
+
+    if capital_for_pension > 0:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(
+                f"<div style='font-size:0.78em;color:#666;'>הון לקצבה</div>"
+                f"<div style='font-size:1em;font-weight:700;color:#c0392b;'>{format_shekel(capital_for_pension)}</div>",
+                unsafe_allow_html=True
+            )
+        with col2:
+            st.markdown(
+                f"<div style='font-size:0.78em;color:#666;'>יתרה נזילה לתיק</div>"
+                f"<div style='font-size:1em;font-weight:700;color:#1a7a3a;'>{format_shekel(net_for_190)}</div>",
+                unsafe_allow_html=True
+            )
+        if remaining_for_gimel < capital_for_pension:
+            st.error("⚠️ ההון הנדרש לקצבה גבוה מסך ההון הזמין!")
 
     st.divider()
-    st.markdown("##### 📈 תשואה ודמי ניהול ליתרת ההון")
+    st.markdown("##### 📈 תשואה ודמי ניהול")
     annual_return_190 = compact_number_input(
-        "תשואה שנתית צפויה במסלול 190 (%)",
+        "תשואה שנתית צפויה — מסלול 190 (%)",
         value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE
     ) / 100
     management_fee_190 = compact_number_input(
-        "דמי ניהול שנתיים מהצבירה במסלול 190 (%)",
+        "דמי ניהול שנתיים — מסלול 190 (%)",
         value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
     ) / 100
 
     return {
-        "desired_pension": desired_pension, "securing_years": securing_years,
-        "base_coefficient": base_coefficient, "adjusted_coefficient": adjusted_coefficient,
-        "capital_for_pension": capital_for_pension, "net_for_190": net_for_190,
-        "annual_return_190": annual_return_190, "management_fee_190": management_fee_190
+        "desired_pension": 0,  # set from incomes
+        "securing_years": 0,   # set from incomes
+        "base_coefficient": 0, # set from incomes
+        "adjusted_coefficient": 0, # set from incomes
+        "capital_for_pension": capital_for_pension,
+        "net_for_190": net_for_190,
+        "annual_return_190": annual_return_190,
+        "management_fee_190": management_fee_190
     }
