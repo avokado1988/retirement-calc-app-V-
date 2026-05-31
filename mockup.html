@@ -2,196 +2,196 @@
 <html dir="rtl" lang="he">
 <head>
 <meta charset="UTF-8">
-<title>הדמיית עיצוב מסלולי פרישה</title>
+<title>הדמיית עיצוב — מסלולי פרישה (Light Mode)</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0e1117; color: #e0e0e0; font-family: 'Segoe UI', Arial, sans-serif; padding: 32px 24px; direction: rtl; }
-  h1 { text-align: center; font-size: 1.5em; color: #f0f0f0; margin-bottom: 8px; }
-  .subtitle { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 32px; }
+  body { background: #f4f6fa; color: #1a1a2e; font-family: 'Segoe UI', Arial, sans-serif; padding: 32px 24px; direction: rtl; }
+  h1 { text-align: center; font-size: 1.5em; color: #1a1a2e; margin-bottom: 32px; font-weight: 700; }
 
   /* ===== CARDS ===== */
   .cards-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1.55fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 14px;
     margin-bottom: 36px;
-    align-items: start;
+    align-items: stretch;
   }
 
   .card {
-    background: #1e1e2e;
-    border-radius: 10px;
-    padding: 16px;
-    border-top: 4px solid #555;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 18px 16px 16px 16px;
+    border-top: 4px solid #ccc;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 240px;
   }
 
-  .card.winner {
-    border-top: 4px solid #f0c040;
-    box-shadow: 0 0 20px rgba(240,192,64,0.25), 0 2px 12px rgba(0,0,0,0.4);
-    padding: 20px;
-  }
+  .card.rank1 { border-top-color: #e8a000; box-shadow: 0 4px 18px rgba(232,160,0,0.18); }
+  .card.rank2 { border-top-color: #888; }
+  .card.rank3 { border-top-color: #a0522d; }
+  .card.rank4 { border-top-color: #c0392b; }
 
-  .card-header { text-align: center; margin-bottom: 14px; }
-  .card-tracknum { font-size: 0.7em; color: #aaa; margin-bottom: 3px; }
-  .card-name { font-size: 0.95em; font-weight: 700; color: #f0f0f0; margin-bottom: 12px; }
-  .card.winner .card-name { font-size: 1.1em; }
-
-  .score-circle {
+  /* rank badge */
+  .rank-badge {
     display: inline-block;
-    font-size: 2.8em;
-    font-weight: 900;
+    font-size: 1.8em;
+    margin-bottom: 6px;
     line-height: 1;
-    margin-bottom: 4px;
   }
-  .card.winner .score-circle { font-size: 3.6em; }
-  .score-max { font-size: 0.38em; color: #aaa; font-weight: 400; }
-  .health-label { font-size: 0.95em; color: #e0e0e0; margin-bottom: 4px; }
-  .card.winner .health-label { font-size: 1.1em; }
+  .rank-text {
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+  .rank1 .rank-text { color: #c07800; }
+  .rank2 .rank-text { color: #666; }
+  .rank3 .rank-text { color: #8b4513; }
+  .rank4 .rank-text { color: #c0392b; }
 
-  .resiliency-line {
-    margin-top: 10px;
-    font-size: 0.82em;
-    color: #4dbb4d;
+  .card-header { text-align: center; margin-bottom: 12px; }
+  .card-name { font-size: 0.92em; font-weight: 700; color: #1a1a2e; margin-bottom: 12px; line-height: 1.35; }
+
+  .health-label {
+    display: inline-block;
+    font-size: 0.78em;
     font-weight: 600;
-    padding: 6px 10px;
-    background: rgba(77,187,77,0.1);
-    border-radius: 6px;
-    text-align: center;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
   }
-  .card.winner .resiliency-line { font-size: 0.95em; padding: 8px 12px; }
+  .health-green { background: #e8f8ee; color: #1a7a3a; }
+  .health-yellow { background: #fffbe6; color: #856400; }
+  .health-orange { background: #fff0e6; color: #b84c00; }
+  .health-red { background: #fde8e8; color: #b71c1c; }
+
+  /* bottom section */
+  .card-bottom { border-top: 1px solid #eee; padding-top: 12px; text-align: right; }
+  .card-label { font-size: 0.65em; color: #999; margin-bottom: 2px; }
+  .card-value { font-size: 0.88em; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; }
+  .card-delta-pos { font-size: 0.75em; color: #1a7a3a; font-weight: 600; }
+  .card-delta-neg { font-size: 0.75em; color: #c0392b; font-weight: 600; }
+  .card-baseline { font-size: 0.65em; color: #aaa; margin-top: 1px; }
+
+  .res-green { color: #1a7a3a; font-weight: 700; }
+  .res-orange { color: #b84c00; font-weight: 700; }
+  .res-red { color: #b71c1c; font-weight: 700; }
 
   /* expander mock */
-  .expander {
-    margin-top: 12px;
-    border: 1px solid #333;
-    border-radius: 6px;
-    overflow: hidden;
-  }
+  .expander { margin-top: 12px; border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; }
   .expander-toggle {
-    background: #2a2a3e;
-    padding: 7px 12px;
-    font-size: 0.75em;
-    color: #aaa;
+    background: #f8f9fc;
+    padding: 8px 12px;
+    font-size: 0.78em;
+    color: #666;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    text-align: right;
   }
-  .expander-toggle span { color: #666; font-size: 1.1em; }
-  .expander-body {
-    padding: 10px 12px;
-    display: none;
-    font-size: 0.8em;
-    line-height: 1.6;
-  }
+  .expander-toggle:hover { background: #f0f2f8; }
+  .expander-body { padding: 10px 12px; display: none; font-size: 0.8em; line-height: 1.7; background: #fff; }
   .expander-body.open { display: block; }
-  .pro { color: #4dbb4d; margin-bottom: 4px; }
-  .con { color: #ff8c42; margin-bottom: 4px; }
+  .pro { color: #1a7a3a; margin-bottom: 3px; }
+  .con { color: #b84c00; margin-bottom: 3px; }
 
   /* ===== TABLES ===== */
   .section-title {
     text-align: center;
-    font-size: 1.1em;
+    font-size: 1em;
     font-weight: 700;
-    color: #e0e0e0;
-    margin-bottom: 14px;
-    margin-top: 32px;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+    margin-top: 28px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   }
+  .section-title:hover { background: #f0f2f8; }
+  .section-title .arrow { font-size: 0.75em; color: #aaa; }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    direction: rtl;
-    font-size: 0.88em;
-    margin-bottom: 8px;
-  }
+  table { width: 100%; border-collapse: collapse; direction: rtl; font-size: 0.87em; margin-bottom: 4px; }
   thead th {
-    background: #2a2a3e;
-    color: #e0e0e0;
+    background: #eef0f7;
+    color: #1a1a2e;
     padding: 10px 12px;
     text-align: right;
-    border-bottom: 2px solid #444;
+    border-bottom: 2px solid #d0d4e8;
     font-weight: 700;
+    font-size: 0.9em;
   }
   tbody th {
-    background: #1e1e2e;
-    color: #c0c0c0;
+    background: #f8f9fc;
+    color: #555;
     padding: 8px 12px;
     font-weight: 600;
     text-align: right;
-    border-bottom: 1px solid #2a2a3e;
-    border-left: 2px solid #333;
+    border-bottom: 1px solid #eef;
+    font-size: 0.88em;
   }
-  tbody td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #2a2a3e;
-    text-align: right;
-    color: #e0e0e0;
-  }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid #eef; text-align: right; color: #1a1a2e; }
 
-  .green { background: #1a3a1a; color: #4dbb4d; font-weight: 700; border-radius: 4px; padding: 3px 8px; display: inline-block; }
-  .orange { background: #3a2a10; color: #ffb347; font-weight: 700; border-radius: 4px; padding: 3px 8px; display: inline-block; }
-  .red-val { color: #ff6666; font-weight: 700; }
-  .delta-up { color: #00e676; font-size: 0.85em; }
-  .pension-note { color: #aaa; font-size: 0.78em; display: block; margin-top: 2px; }
+  .tgreen { color: #1a7a3a; font-weight: 600; }
+  .torange { color: #b84c00; font-weight: 600; }
+  .tred { color: #b71c1c; font-weight: 600; }
+  .tdelta-pos { color: #1a7a3a; font-size: 0.85em; }
+  .tdelta-neg { color: #b71c1c; font-size: 0.85em; }
+  .pension-note { color: #999; font-size: 0.78em; display: block; margin-top: 2px; }
 
-  .table-expander {
-    border: 1px solid #333;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: 4px;
-  }
-  .table-expander-toggle {
-    background: #1e1e2e;
+  .table-section { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.07); margin-bottom: 8px; }
+  .table-detail-toggle {
+    background: #f8f9fc;
     padding: 8px 14px;
-    font-size: 0.82em;
+    font-size: 0.8em;
     color: #888;
     cursor: pointer;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
-    border-top: 1px solid #333;
+    gap: 6px;
+    border-top: 1px solid #eee;
+    text-align: right;
   }
-  .table-expander-toggle:hover { color: #bbb; }
-  .table-expander-body { display: none; }
-  .table-expander-body.open { display: block; }
-  .table-expander-body table { margin: 0; }
-
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 700; }
-  .badge-green { background: rgba(77,187,77,0.15); color: #4dbb4d; }
-  .badge-orange { background: rgba(255,179,71,0.15); color: #ffb347; }
-  .badge-red { background: rgba(255,100,100,0.15); color: #ff6666; }
-
-  .winner-badge {
-    display: inline-block;
-    background: rgba(240,192,64,0.15);
-    color: #f0c040;
-    font-size: 0.7em;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-bottom: 6px;
-    font-weight: 700;
-  }
+  .table-detail-toggle:hover { color: #555; }
+  .table-detail-body { display: none; }
+  .table-detail-body.open { display: block; }
 </style>
 </head>
 <body>
 
-<h1>סימולטור פרישה השוואתי</h1>
-<p class="subtitle">טעון ב-2 שניות, כל המידע הקריטי נגיש מיד</p>
+<h1>🧭 סיכום מנהלים — השוואת מסלולים</h1>
 
 <!-- CARDS -->
 <div class="cards-row">
 
-  <!-- Track 4 -->
-  <div class="card" style="border-top-color: #e67e22;">
-    <div class="card-header">
-      <div class="card-tracknum">מסלול 4</div>
-      <div class="card-name">שכירות</div>
-      <div class="score-circle" style="color:#e67e22;">52<span class="score-max">/100</span></div>
-      <div class="health-label">🟠 מוגבל</div>
+  <!-- Rank 4 — שכירות -->
+  <div class="card rank4">
+    <div>
+      <div class="card-header">
+        <div class="rank-badge">4️⃣</div>
+        <div class="rank-text">מקום רביעי</div>
+        <div class="card-name">שכירות</div>
+        <span class="health-label health-red">🔴 בסיכון</span>
+      </div>
     </div>
-    <div class="resiliency-line" style="color:#ffb347; background:rgba(255,179,71,0.1);">⏳ הכסף מחזיק עד גיל 98</div>
+    <div class="card-bottom">
+      <div class="card-label">⏳ הכסף מחזיק עד</div>
+      <div class="card-value res-red">גיל 65.5</div>
+      <div class="card-label">💰 תיק בגיל 95</div>
+      <div class="card-value">₪560,000−</div>
+      <div class="card-delta-neg">↓ −₪3,900,000 | −116.8%</div>
+      <div class="card-baseline">מ-₪3,340,000</div>
+    </div>
     <div class="expander">
       <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
       <div class="expander-body">
@@ -203,56 +203,24 @@
     </div>
   </div>
 
-  <!-- Track 3 -->
-  <div class="card" style="border-top-color: #1565c0;">
-    <div class="card-header">
-      <div class="card-tracknum">מסלול 3</div>
-      <div class="card-name">היברידי</div>
-      <div class="score-circle" style="color:#1565c0;">71<span class="score-max">/100</span></div>
-      <div class="health-label">🟡 יציב</div>
-    </div>
-    <div class="resiliency-line" style="color:#4dbb4d; background:rgba(77,187,77,0.1);">⏳ הכסף מחזיק עד 105+</div>
-    <div class="expander">
-      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
-      <div class="expander-body">
-        <div class="pro">✅ קצבה קטנה ועוד נזילות</div>
-        <div class="pro">✅ מאזן ביטחון וגמישות</div>
-        <div class="con">⚠️ מורכב לתכנן</div>
-        <div class="con">⚠️ פחות ירושה ממסלול 2</div>
+  <!-- Rank 3 — 25% ריאלי ללא קצבה -->
+  <div class="card rank3">
+    <div>
+      <div class="card-header">
+        <div class="rank-badge">🥉</div>
+        <div class="rank-text">מקום שלישי</div>
+        <div class="card-name">25% ריאלי (ללא קצבה)</div>
+        <span class="health-label health-green">🟢 חסין</span>
       </div>
     </div>
-  </div>
-
-  <!-- Track 1 — WINNER -->
-  <div class="card winner" style="border-top-color: #f0c040;">
-    <div class="card-header">
-      <div class="winner-badge">🏆 המסלול המומלץ</div>
-      <div class="card-tracknum">מסלול 1</div>
-      <div class="card-name">תיקון 190</div>
-      <div class="score-circle" style="color:#f0c040;">88<span class="score-max">/100</span></div>
-      <div class="health-label">🟢 חסין</div>
+    <div class="card-bottom">
+      <div class="card-label">⏳ הכסף מחזיק עד</div>
+      <div class="card-value res-green">105+</div>
+      <div class="card-label">💰 תיק בגיל 95</div>
+      <div class="card-value">₪3,869,004</div>
+      <div class="card-delta-pos">↑ +₪529,004 | +15.8%</div>
+      <div class="card-baseline">מ-₪3,340,000</div>
     </div>
-    <div class="resiliency-line">⏳ הכסף מחזיק עד 105+</div>
-    <div class="expander">
-      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
-      <div class="expander-body">
-        <div class="pro">✅ קצבה מובטחת לכל החיים</div>
-        <div class="pro">✅ מיסוי נמוך, 15% נומינלי בלבד</div>
-        <div class="con">⚠️ פחות גמיש לצורכי הוצאה גדולה</div>
-        <div class="con">⚠️ דורש הון גדול לקצבה משמעותית</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Track 2 -->
-  <div class="card" style="border-top-color: #2ca02c;">
-    <div class="card-header">
-      <div class="card-tracknum">מסלול 2</div>
-      <div class="card-name">25% ריאלי</div>
-      <div class="score-circle" style="color:#2ca02c;">79<span class="score-max">/100</span></div>
-      <div class="health-label">🟢 חסין</div>
-    </div>
-    <div class="resiliency-line">⏳ הכסף מחזיק עד 105+</div>
     <div class="expander">
       <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
       <div class="expander-body">
@@ -264,184 +232,208 @@
     </div>
   </div>
 
+  <!-- Rank 2 — 25% ריאלי + קצבה -->
+  <div class="card rank2">
+    <div>
+      <div class="card-header">
+        <div class="rank-badge">🥈</div>
+        <div class="rank-text">מקום שני</div>
+        <div class="card-name">25% ריאלי + קצבה מזערית</div>
+        <span class="health-label health-green">🟢 חסין</span>
+      </div>
+    </div>
+    <div class="card-bottom">
+      <div class="card-label">⏳ הכסף מחזיק עד</div>
+      <div class="card-value res-green">105+</div>
+      <div class="card-label">💰 תיק בגיל 95</div>
+      <div class="card-value">₪4,530,117</div>
+      <div class="card-delta-pos">↑ +₪1,190,117 | +35.6%</div>
+      <div class="card-baseline">מ-₪3,340,000</div>
+    </div>
+    <div class="expander">
+      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
+      <div class="expander-body">
+        <div class="pro">✅ קצבה קטנה ועוד נזילות</div>
+        <div class="pro">✅ מאזן ביטחון וגמישות</div>
+        <div class="con">⚠️ מורכב לתכנן</div>
+        <div class="con">⚠️ פחות ירושה ממסלול ריאלי</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rank 1 — 190 + קצבה -->
+  <div class="card rank1">
+    <div>
+      <div class="card-header">
+        <div class="rank-badge">🏆</div>
+        <div class="rank-text">המסלול המומלץ</div>
+        <div class="card-name">190 + קצבה מזערית</div>
+        <span class="health-label health-green">🟢 חסין</span>
+      </div>
+    </div>
+    <div class="card-bottom">
+      <div class="card-label">⏳ הכסף מחזיק עד</div>
+      <div class="card-value res-green">105+</div>
+      <div class="card-label">💰 תיק בגיל 95</div>
+      <div class="card-value">₪4,514,139</div>
+      <div class="card-delta-pos">↑ +₪1,174,139 | +35.2%</div>
+      <div class="card-baseline">מ-₪3,340,000</div>
+    </div>
+    <div class="expander">
+      <div class="expander-toggle" onclick="toggle(this)">יתרונות וסיכונים <span>▼</span></div>
+      <div class="expander-body">
+        <div class="pro">✅ קצבה מובטחת לכל החיים</div>
+        <div class="pro">✅ מיסוי נמוך, 15% נומינלי בלבד</div>
+        <div class="con">⚠️ פחות גמיש לצורכי הוצאה גדולה</div>
+        <div class="con">⚠️ דורש הון גדול לקצבה משמעותית</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- TABLE 1 -->
-<div class="section-title" style="cursor:pointer; display:flex; justify-content:center; align-items:center; gap:10px;" onclick="toggleSection('table1')">
-  <span>📊 מצב ביום הפרישה, גיל 67</span>
-  <span id="table1-arrow" style="font-size:0.8em; color:#888;">▲</span>
+<div class="section-title" onclick="toggleSection('table1')">
+  <span>📊 מצב ביום הפרישה — גיל 67</span>
+  <span class="arrow" id="table1-arrow">▲</span>
 </div>
-<div id="table1">
-<table>
-  <thead>
-    <tr>
-      <th>שאלה</th>
-      <th>מסלול 1 — תיקון 190</th>
-      <th>מסלול 2 — 25% ריאלי</th>
-      <th>מסלול 3 — היברידי</th>
-      <th>מסלול 4 — שכירות</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>מה שווי ההון הכולל שלי?</th>
-      <td>₪4,500,000 <span class="pension-note">מתוכם ₪1,200,000 ערך קצבה</span></td>
-      <td>₪3,340,000</td>
-      <td>₪4,100,000 <span class="pension-note">מתוכם ₪900,000 ערך קצבה</span></td>
-      <td>₪440,000</td>
-    </tr>
-    <tr>
-      <th>כמה אצטרך למשוך כל חודש?</th>
-      <td><span class="red-val">−₪2,800</span></td>
-      <td><span class="red-val">−₪5,500</span></td>
-      <td><span class="red-val">−₪2,800</span></td>
-      <td><span class="red-val">−₪1,200</span></td>
-    </tr>
-    <tr>
-      <th>מה קצב המשיכה השנתי?</th>
-      <td><span class="badge badge-green">0.75%</span></td>
-      <td><span class="badge badge-orange">1.97%</span></td>
-      <td><span class="badge badge-green">0.82%</span></td>
-      <td>ל"ר</td>
-    </tr>
-    <tr>
-      <th>מה סך כלל הנכסים שלי?</th>
-      <td>₪15,800,000</td>
-      <td>₪14,600,000</td>
-      <td>₪15,400,000</td>
-      <td>₪12,740,000</td>
-    </tr>
-  </tbody>
-</table>
-
-<div class="table-expander">
-  <div class="table-expander-toggle" onclick="toggleTable(this)">
-    ▼ פרטים נוספים — חוק 400, קרן חירום, שווי נדל"ן
+<div id="table1" class="table-section">
+  <table>
+    <thead>
+      <tr>
+        <th>שאלה</th>
+        <th>190 + קצבה מזערית</th>
+        <th>25% ריאלי + קצבה מזערית</th>
+        <th>25% ריאלי (ללא קצבה)</th>
+        <th>שכירות</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>מה שווי ההון הכולל שלי?</th>
+        <td>₪4,500,000 <span class="pension-note">מתוכם ₪1,200,000 ערך קצבה</span></td>
+        <td>₪4,100,000 <span class="pension-note">מתוכם ₪900,000 ערך קצבה</span></td>
+        <td>₪3,340,000</td>
+        <td>₪440,000</td>
+      </tr>
+      <tr>
+        <th>כמה אצטרך למשוך כל חודש?</th>
+        <td>−₪2,800</td>
+        <td>−₪2,800</td>
+        <td>−₪5,500</td>
+        <td>−₪1,200</td>
+      </tr>
+      <tr>
+        <th>מה קצב המשיכה השנתי?</th>
+        <td class="tgreen">0.75%</td>
+        <td class="tgreen">0.82%</td>
+        <td class="tgreen">1.97%</td>
+        <td>ל"ר</td>
+      </tr>
+      <tr>
+        <th>מה סך כלל הנכסים שלי?</th>
+        <td>₪15,800,000</td>
+        <td>₪15,400,000</td>
+        <td>₪14,600,000</td>
+        <td>₪12,740,000</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-detail-toggle" onclick="toggleDetail(this)">
+    פרטים נוספים ▼
   </div>
-  <div class="table-expander-body">
+  <div class="table-detail-body">
     <table>
       <tbody>
         <tr>
-          <th>מה מדד החסינות, חוק 400?</th>
-          <td><span class="badge badge-green">∞</span></td>
-          <td><span class="badge badge-green">1.42</span></td>
-          <td><span class="badge badge-green">∞</span></td>
-          <td>ל"ר</td>
+          <th>מה גובה התיק הנזיל ביום הפרישה?</th>
+          <td>₪3,300,000</td><td>₪3,200,000</td><td>₪3,340,000</td><td>₪440,000</td>
+        </tr>
+        <tr>
+          <th>מה שווי הנדל"ן שלי בפרישה?</th>
+          <td>₪8,200,000</td><td>₪8,200,000</td><td>₪8,200,000</td><td>₪12,000,000</td>
+        </tr>
+        <tr>
+          <th>מה סך הקצבאות החודשיות שלי?</th>
+          <td>₪9,700</td><td>₪9,700</td><td>₪2,500</td><td>₪2,500</td>
+        </tr>
+        <tr>
+          <th>מה מדד החסינות (חוק 400)?</th>
+          <td class="tgreen">∞</td><td class="tgreen">∞</td><td class="tgreen">1.42</td><td>ל"ר</td>
         </tr>
         <tr>
           <th>כמה שנים קרן החירום מכסה?</th>
-          <td><span class="badge badge-green">∞</span></td>
-          <td><span class="badge badge-green">4.5 שנים</span></td>
-          <td><span class="badge badge-green">∞</span></td>
-          <td>ל"ר</td>
-        </tr>
-        <tr>
-          <th>מה שווי הנדל"ן בפרישה?</th>
-          <td>₪8,200,000</td>
-          <td>₪8,200,000</td>
-          <td>₪8,200,000</td>
-          <td>₪12,000,000</td>
-        </tr>
-        <tr>
-          <th>מה סך הקצבאות החודשיות?</th>
-          <td>₪9,700</td>
-          <td>₪2,500</td>
-          <td>₪9,700</td>
-          <td>₪2,500</td>
+          <td class="tgreen">∞</td><td class="tgreen">∞</td><td class="tgreen">4.5</td><td>ל"ר</td>
         </tr>
       </tbody>
     </table>
   </div>
 </div>
 
-
-</div>
-
 <!-- TABLE 2 -->
-<div class="section-title" style="cursor:pointer; display:flex; justify-content:center; align-items:center; gap:10px;" onclick="toggleSection('table2')">
-  <span>🔮 מצב בגיל נבדק, גיל 97</span>
-  <span id="table2-arrow" style="font-size:0.8em; color:#888;">▲</span>
+<div class="section-title" onclick="toggleSection('table2')">
+  <span>🔮 מצב בגיל נבדק — גיל 97</span>
+  <span class="arrow" id="table2-arrow">▲</span>
 </div>
-<div id="table2">
-<table>
-  <thead>
-    <tr>
-      <th>שאלה</th>
-      <th>מסלול 1 — תיקון 190</th>
-      <th>מסלול 2 — 25% ריאלי</th>
-      <th>מסלול 3 — היברידי</th>
-      <th>מסלול 4 — שכירות</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>מה שווי ההון הכולל שלי?</th>
-      <td>
-        ₪4,510,000<br>
-        <span class="delta-up">↑+35.0%</span>
-        <span class="pension-note">מתוכם ₪0 ערך קצבה</span>
-      </td>
-      <td>₪3,900,000<br><span class="delta-up">↑+16.8%</span></td>
-      <td>
-        ₪4,200,000<br>
-        <span class="delta-up">↑+25.7%</span>
-        <span class="pension-note">מתוכם ₪0 ערך קצבה</span>
-      </td>
-      <td>₪1,100,000<br><span style="color:#ff5555; font-size:0.85em;">↓−67.1%</span></td>
-    </tr>
-    <tr>
-      <th>כמה אמשוך מהתיק כל חודש?</th>
-      <td><span class="red-val">−₪5,200</span></td>
-      <td><span class="red-val">−₪9,800</span></td>
-      <td><span class="red-val">−₪5,200</span></td>
-      <td><span class="red-val">−₪3,100</span></td>
-    </tr>
-    <tr>
-      <th>מה קצב המשיכה בגיל זה?</th>
-      <td><span class="badge badge-green">1.38%</span></td>
-      <td><span class="badge badge-orange">3.01%</span></td>
-      <td><span class="badge badge-green">1.49%</span></td>
-      <td>ל"ר</td>
-    </tr>
-    <tr>
-      <th>מה סך כלל הנכסים שלי?</th>
-      <td>₪22,100,000</td>
-      <td>₪21,200,000</td>
-      <td>₪21,800,000</td>
-      <td>₪20,400,000</td>
-    </tr>
-  </tbody>
-</table>
-
-<div class="table-expander">
-  <div class="table-expander-toggle" onclick="toggleTable(this)">
-    ▼ פרטים נוספים — שימור הון, גיל התאוששות
+<div id="table2" class="table-section">
+  <table>
+    <thead>
+      <tr>
+        <th>שאלה</th>
+        <th>190 + קצבה מזערית</th>
+        <th>25% ריאלי + קצבה מזערית</th>
+        <th>25% ריאלי (ללא קצבה)</th>
+        <th>שכירות</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>מה שווי ההון הכולל שלי?</th>
+        <td>₪4,514,139<br><span class="tdelta-pos">↑ +₪1,174,139 | +35.2%</span><span class="pension-note">מתוכם ₪0 ערך קצבה</span></td>
+        <td>₪4,530,117<br><span class="tdelta-pos">↑ +₪1,190,117 | +35.6%</span><span class="pension-note">מתוכם ₪0 ערך קצבה</span></td>
+        <td>₪3,869,004<br><span class="tdelta-pos">↑ +₪529,004 | +15.8%</span></td>
+        <td>₪1,100,000<br><span class="tdelta-neg">↓ −₪2,240,000 | −67.1%</span></td>
+      </tr>
+      <tr>
+        <th>כמה אמשוך מהתיק כל חודש?</th>
+        <td>−₪5,200</td><td>−₪5,200</td><td>−₪9,800</td><td>−₪3,100</td>
+      </tr>
+      <tr>
+        <th>מה קצב המשיכה בגיל זה?</th>
+        <td class="tgreen">1.38%</td><td class="tgreen">1.38%</td><td class="torange">3.04%</td><td>ל"ר</td>
+      </tr>
+      <tr>
+        <th>מה סך כלל הנכסים שלי?</th>
+        <td>₪22,100,000</td><td>₪21,800,000</td><td>₪21,200,000</td><td>₪20,400,000</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-detail-toggle" onclick="toggleDetail(this)">
+    פרטים נוספים ▼
   </div>
-  <div class="table-expander-body">
+  <div class="table-detail-body">
     <table>
       <tbody>
         <tr>
           <th>האם נשמר ההון עד גיל 95?</th>
-          <td style="color:#4dbb4d; font-weight:700;">✅ כן</td>
-          <td style="color:#4dbb4d; font-weight:700;">✅ כן</td>
-          <td style="color:#4dbb4d; font-weight:700;">✅ כן</td>
-          <td style="color:#ff6666; font-weight:700;">❌ לא</td>
+          <td class="tgreen">✅ כן</td><td class="tgreen">✅ כן</td><td class="tgreen">✅ כן</td><td class="tred">❌ לא</td>
         </tr>
         <tr>
           <th>מאיזה גיל התיק עולה מעל ההון הראשוני?</th>
-          <td>68.5</td>
-          <td>71.2</td>
-          <td>69.8</td>
-          <td>לא עובר</td>
+          <td>68.5</td><td>69.8</td><td>71.2</td><td>לא עובר</td>
         </tr>
       </tbody>
     </table>
   </div>
 </div>
 
-</div>
-
 <script>
+function toggle(btn) {
+  const body = btn.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open');
+  btn.querySelector('span').textContent = isOpen ? '▼' : '▲';
+}
 function toggleSection(id) {
   const el = document.getElementById(id);
   const arrow = document.getElementById(id + '-arrow');
@@ -449,18 +441,10 @@ function toggleSection(id) {
   el.style.display = isOpen ? 'none' : 'block';
   arrow.textContent = isOpen ? '▼' : '▲';
 }
-function toggle(btn) {
-  const body = btn.nextElementSibling;
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open');
-  btn.querySelector('span').textContent = isOpen ? '▼' : '▲';
-}
-function toggleTable(btn) {
+function toggleDetail(btn) {
   const body = btn.nextElementSibling;
   body.classList.toggle('open');
-  btn.textContent = body.classList.contains('open')
-    ? btn.textContent.replace('▼','▲')
-    : btn.textContent.replace('▲','▼');
+  btn.textContent = body.classList.contains('open') ? 'פרטים נוספים ▲' : 'פרטים נוספים ▼';
 }
 </script>
 </body>
