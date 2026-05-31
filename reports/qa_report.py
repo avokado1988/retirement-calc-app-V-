@@ -527,30 +527,3 @@ def render_qa_section(results, user_inputs):
     })
     st.markdown(t2.set_index("שאלה").rename_axis(None).to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
 
-    # -------------------------------------------------------
-    # Table 3: Resiliency
-    # -------------------------------------------------------
-    st.markdown("<h3 style='text-align: center;'>🏁 שורה תחתונה וחסינות אקטוארית</h3>", unsafe_allow_html=True)
-    t3 = pd.DataFrame({
-        "שורה תחתונה": [
-            "עד איזה גיל הכסף יחזיק?",
-            "כמה מההון הראשוני נשמר בגיל 97?"
-        ],
-        "מסלול 1 — תיקון 190": [
-            wrap_html_style(fmt_empty(empty_190), get_resiliency_style(fmt_empty(empty_190))),
-            wrap_html_style(ratio_190_str, get_preservation_pct_style(ratio_190_pct))
-        ],
-        "מסלול 2 — 25% ריאלי": [
-            wrap_html_style(fmt_empty(empty_25), get_resiliency_style(fmt_empty(empty_25))),
-            wrap_html_style(ratio_25_str, get_preservation_pct_style(ratio_25_pct))
-        ],
-        "מסלול 3 — קצבה + 25% ריאלי": [
-            wrap_html_style(fmt_empty(empty_h), get_resiliency_style(fmt_empty(empty_h))),
-            wrap_html_style(ratio_h_str, get_preservation_pct_style(ratio_h_pct))
-        ],
-        "מסלול 4 — שכירות": [
-            wrap_html_style(fmt_empty(empty_r), get_resiliency_style(fmt_empty(empty_r))),
-            wrap_html_style(ratio_r_str, get_preservation_pct_style(ratio_r_pct))
-        ]
-    })
-    st.markdown(t3.set_index("שורה תחתונה").rename_axis(None).to_html(escape=False, classes="styled-table"), unsafe_allow_html=True)
