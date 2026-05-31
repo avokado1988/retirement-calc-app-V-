@@ -298,9 +298,26 @@ def render_qa_section(results, user_inputs):
         4: "שכירות",
     }
 
-    # Winner only if best score >= 60 (at least "יציב")
-    best_score = sorted_by_score[0][1]
-    has_winner = best_score >= 60
+    # -------------------------------------------------------
+    # Health model: a track is "healthy" only if it lasts past 105
+    # AND preserves at least 90% of its starting capital at age 95.
+    # Preservation proves resilience — enough buffer if life or
+    # markets change, not just leftover for inheritance.
+    # -------------------------------------------------------
+    def track_health(empty_age, portfolio_95):
+        is_resilient = empty_age >= 105.0
+        preservation = (portfolio_95 / baseline_capital) if baseline_capital > 0 else 0.0
+        is_preserving = preservation >= 0.90
+        is_healthy = is_resilient and is_preserving
+        return is_resilient, is_preserving, is_healthy
+
+    # Winner declared only if the top track is genuinely healthy —
+    # lasts past 105 AND preserves >=90% of starting capital at 95.
+    # A real depletion risk means no track wins.
+    _top_empty = sorted_by_score[0][2]
+    _top_p95 = sorted_by_score[0][3]
+    _top_resilient, _top_preserving, _top_healthy = track_health(_top_empty, _top_p95)
+    has_winner = _top_healthy
 
     RANK_CFG = {
         1: {"bg": "#FFFDF0" if has_winner else "#F8F8F8",
@@ -322,16 +339,14 @@ def render_qa_section(results, user_inputs):
             "health_bg": "#fde8e8", "health_color": "#b71c1c"},
     }
 
-    def get_health_label(score):
-        if score >= 80: return "🟢 חסין"
-        elif score >= 60: return "🟡 יציב"
-        elif score >= 40: return "🟠 מוגבל"
-        else: return "🔴 בסיכון"
+    def get_health_label(is_resilient, is_preserving):
+        if is_resilient and is_preserving: return "🟢 חסין"
+        elif is_resilient: return "🟡 מחזיק מעמד"
+        else: return "🔴 נשחק"
 
-    def get_health_style(score):
-        if score >= 80: return "#e8f8ee", "#1a7a3a"
-        elif score >= 60: return "#fffbe6", "#856400"
-        elif score >= 40: return "#fff0e6", "#b84c00"
+    def get_health_style(is_resilient, is_preserving):
+        if is_resilient and is_preserving: return "#e8f8ee", "#1a7a3a"
+        elif is_resilient: return "#fffbe6", "#856400"
         else: return "#fde8e8", "#b71c1c"
 
     # -------------------------------------------------------
@@ -349,7 +364,45 @@ def render_qa_section(results, user_inputs):
     st.markdown("<h3 style='text-align: center; color: #1a1a2e;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
 
     if not has_winner:
-        st.warning("⚠️ אין מסלול מומלץ — אף מסלול אינו עומד בסף בריאות פיננסי מינימלי. מומלץ לבחון מחדש את ההנחות, ההכנסות וההוצאות.")
+        st.warning("⚠️ אין מסלול מומלץ — אף מסלול אינו שומר על עצמו עד גיל 105. בכל המסלולים התיק נשחק בצורה מסוכנת. מומלץ לבחון מחדש את ההכנסות וההוצאות.")
+
+    # Reference portfolios for relative comparison
+    winner_p95 = ranked_order[0][4]
+    winner_name = TRACK_NAMES[ranked_order[0][1]]
+    second_p95 = ranked_order[1][4] if len(ranked_order) > 1 else winner_p95
+    second_name = TRACK_NAMES[ranked_order[1][1]] if len(ranked_order) > 1 else ""
+
+    def delta_block(label, val, ref):
+        """Build a comparison line: amount + percent vs a reference."""
+        if ref is None or ref == 0:
+            return ""
+        d = val - ref
+        pct = d / abs(ref) * 100
+        arr = "↑" if d >= 0 else "↓"
+        sgn = "+" if d >= 0 else "−"
+        col = "#1a7a3a" if d >= 0 else "#c0392b"
+        return (
+            f"<div style='font-size:0.62em;color:#999;margin-top:6px;'>{label}</div>"
+            f"<div style='font-size:0.74em;color:{col};font-weight:600;'>"
+            f"{arr} {sgn}{format_shekel(abs(int(d)))} | {sgn}{abs(pct):.1f}%</div>"
+        )
+
+    def build_why_line(is_winner, is_resilient, is_preserving, empty_age, has_pension):
+        """Short plain-language reason, tailored to the scenario."""
+        if is_winner:
+            base = "נשאר איתן עד גיל 105 ומעבר, שומר על ההון שלך גם אם החיים יתארכו או השוק ישתנה"
+            if has_pension:
+                base += ", ומבטיח לך קצבה חודשית לכל החיים"
+            return "✓ " + base
+        if not is_resilient:
+            reason = "בלי קצבה מובטחת התיק " if not has_pension else "התיק "
+            return f"✗ {reason}מתחיל להישחק ועלול להיגמר סביב גיל {empty_age:.0f} — חסר רשת ביטחון לאריכות ימים"
+        if not is_preserving:
+            return "△ מחזיק עד 105, אך ההון נשחק משמעותית — פחות טווח ביטחון אם דברים ישתנו"
+        return "△ מסלול בריא, אך משאיר פחות הון מהמסלול המומלץ"
+
+    # Tracks that include a guaranteed pension (190 and hybrid)
+    PENSION_TRACKS = {1, 3}
 
     # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
     cols = st.columns(4)
@@ -357,18 +410,25 @@ def render_qa_section(results, user_inputs):
         pc = track_pros_cons[track_id]
         rc = RANK_CFG[rank]
         is_winner = rank == 1 and has_winner
-        health = get_health_label(score)
-        health_bg, health_color = get_health_style(score)
+        is_resilient, is_preserving, is_healthy = track_health(empty_age, portfolio_95)
+        health = get_health_label(is_resilient, is_preserving)
+        health_bg, health_color = get_health_style(is_resilient, is_preserving)
         res_color = "#1a7a3a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#c0392b")
-        res_label = "105+" if empty_age >= 105.0 else f"גיל {empty_age:.1f}"
+        res_label = "105+" if empty_age >= 105.0 else f"גיל {empty_age:.0f}"
 
-        delta_95 = portfolio_95 - baseline_capital
-        delta_pct_95 = (delta_95 / baseline_capital * 100) if baseline_capital > 0 else 0
-        arrow = "↑" if delta_95 >= 0 else "↓"
-        delta_color = "#1a7a3a" if delta_95 >= 0 else "#c0392b"
-        sign = "+" if delta_95 >= 0 else "−"
-        abs_delta = abs(int(delta_95))
-        abs_pct = abs(delta_pct_95)
+        # Comparison 1: vs the leading alternative
+        if is_winner:
+            cmp_label = f"מול הבא בתור ({second_name})"
+            cmp_html = delta_block(cmp_label, portfolio_95, second_p95)
+        else:
+            cmp_label = "מול המסלול המומלץ" if has_winner else "מול המסלול המוביל"
+            cmp_html = delta_block(cmp_label, portfolio_95, winner_p95)
+
+        # Comparison 2: vs starting capital
+        base_html = delta_block("מול ההון ההתחלתי", portfolio_95, baseline_capital)
+
+        why_line = build_why_line(is_winner, is_resilient, is_preserving, empty_age, track_id in PENSION_TRACKS)
+        why_color = "#1a7a3a" if (is_winner or is_healthy) else ("#856400" if is_resilient else "#b71c1c")
 
         if is_winner:
             shadow = "0 12px 40px rgba(232,160,0,0.30), 0 4px 16px rgba(0,0,0,0.12)"
@@ -399,15 +459,16 @@ def render_qa_section(results, user_inputs):
             f"<div style='text-align:center;margin-bottom:10px;'>"
             f"<span style='display:inline-block;font-size:0.78em;font-weight:600;padding:2px 10px;border-radius:20px;"
             f"background:{health_bg};color:{health_color};'>{health}</span></div>"
+            f"<div style='text-align:center;font-size:0.74em;color:{res_color};font-weight:700;margin-bottom:4px;'>"
+            f"⏳ מחזיק עד {res_label}</div>"
             f"</div>"
             f"<div style='border-top:1px solid #e8e8e8;padding-top:10px;'>"
-            f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>⏳ הכסף מחזיק עד</div>"
-            f"<div style='font-size:0.88em;font-weight:700;color:{res_color};margin-bottom:10px;'>{res_label}</div>"
             f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
-            f"<div style='font-size:0.9em;font-weight:700;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
-            f"<div style='font-size:0.75em;color:{delta_color};font-weight:600;margin-top:2px;'>"
-            f"{arrow} {sign}{format_shekel(abs_delta)} | {sign}{abs_pct:.1f}%</div>"
-            f"<div style='font-size:0.65em;color:#aaa;margin-top:1px;'>מ-{format_shekel(int(baseline_capital))}</div>"
+            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
+            f"{cmp_html}"
+            f"{base_html}"
+            f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
+            f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
             f"</div></div>"
         )
 
@@ -540,49 +601,69 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Table 2: At check_age
     # -------------------------------------------------------
+    # Resilience formatter for the table: highlight the lifespan of the portfolio
+    def fmt_lifespan(empty_age):
+        if empty_age >= 105.0:
+            return "<span style='color:#1a7a3a; font-weight:bold;'>105+ (חסין)</span>"
+        color = "#b84c00" if empty_age >= 90 else "#b71c1c"
+        return f"<span style='color:{color}; font-weight:bold;'>גיל {empty_age:.0f}</span>"
+
+    # Preservation % at age 95 (the core health metric, shown numerically)
+    def fmt_preservation(portfolio_95):
+        pct = (portfolio_95 / baseline_capital * 100) if baseline_capital > 0 else 0
+        if pct >= 90: color = "#1a7a3a"
+        elif pct >= 75: color = "#b84c00"
+        else: color = "#b71c1c"
+        return f"<span style='color:{color}; font-weight:bold;'>{pct:.0f}%</span>"
+
     t2_cols = {
         "190 + קצבה מזערית": {
+            "גיל חוסן":     fmt_lifespan(empty_190),
             "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
             "משיכה חודשית": fmt_withdrawal(nn_190_c),
             "קצב משיכה":    wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
             "סך נכסים":     format_shekel(tw_190_c),
-            "שימור הון":    wrap_html_style(bool_preserve_95_190, get_boolean_style(bool_preserve_95_190)),
+            "שימור הון":    fmt_preservation(b190_95),
             "גיל התאוששות": recovery_190,
         },
         "25% ריאלי (ללא קצבה)": {
+            "גיל חוסן":     fmt_lifespan(empty_25),
             "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
             "משיכה חודשית": fmt_withdrawal(nn_25_c),
             "קצב משיכה":    wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             "סך נכסים":     format_shekel(tw_25_c),
-            "שימור הון":    wrap_html_style(bool_preserve_95_25, get_boolean_style(bool_preserve_95_25)),
+            "שימור הון":    fmt_preservation(b25_95),
             "גיל התאוששות": recovery_25,
         },
         "25% ריאלי + קצבה מזערית": {
+            "גיל חוסן":     fmt_lifespan(empty_h),
             "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
             "משיכה חודשית": fmt_withdrawal(nn_h_c),
             "קצב משיכה":    wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
             "סך נכסים":     format_shekel(tw_h_c),
-            "שימור הון":    wrap_html_style(bool_preserve_95_h, get_boolean_style(bool_preserve_95_h)),
+            "שימור הון":    fmt_preservation(bh_95),
             "גיל התאוששות": recovery_h,
         },
         "שכירות": {
+            "גיל חוסן":     fmt_lifespan(empty_r),
             "הון כולל":     fmt_with_delta(br_c, baseline_capital),
             "משיכה חודשית": fmt_withdrawal(nn_rent_c),
             "קצב משיכה":    wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
             "סך נכסים":     format_shekel(tw_rent_c),
-            "שימור הון":    wrap_html_style(bool_preserve_95_r, get_boolean_style(bool_preserve_95_r)),
+            "שימור הון":    fmt_preservation(br_95),
             "גיל התאוששות": recovery_r,
         },
     }
 
     KEY_ROWS_2 = [
+        ("עד איזה גיל הכסף מחזיק?",          "גיל חוסן"),
+        ("כמה מההון ההתחלתי נשמר בגיל 95?",  "שימור הון"),
         ("מה שווי ההון הכולל כולל הקצבה?",  "הון כולל"),
-        ("כמה אמשוך מהתיק כל חודש?",         "משיכה חודשית"),
-        ("מה קצב המשיכה בגיל זה?",           "קצב משיכה"),
         ("מה סך כלל הנכסים שלי?",             "סך נכסים"),
     ]
     DETAIL_ROWS_2 = [
-        ("האם נשמר ההון ההתחלתי עד גיל 95?",          "שימור הון"),
+        ("כמה אמשוך מהתיק כל חודש?",                  "משיכה חודשית"),
+        ("מה קצב המשיכה בגיל זה?",                    "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?",     "גיל התאוששות"),
     ]
 
