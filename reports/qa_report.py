@@ -184,6 +184,26 @@ def render_qa_section(results, user_inputs):
     recovery_h = find_recovery_age("צבירה מסלול היברידי")
     recovery_r = find_recovery_age("צבירה מסלול שכירות")
 
+    # -------------------------------------------------------
+    # Rental cash flow analysis
+    # -------------------------------------------------------
+    # Monthly surplus = (NI + net_rental) - (expenses + rent_paid)
+    df_full["rental_cashflow"] = (
+        df_full["הכנסה נומינלית"] + df_full["הכנסת שכירות נטו"]
+        - df_full["הוצאה נומינלית"] - df_full["הוצאת שכירות"]
+    )
+
+    row_ret_r = df_full[df_full["גיל"] >= retire_age].iloc[0] if not df_full[df_full["גיל"] >= retire_age].empty else df_full.iloc[0]
+    rental_cashflow_at_retire = float(row_ret_r["rental_cashflow"])
+
+    # Find age cash flow first turns negative (after retirement)
+    df_after_retire = df_full[df_full["גיל"] >= retire_age]
+    negative_rows = df_after_retire[df_after_retire["rental_cashflow"] < 0]
+    rental_flip_age = float(negative_rows.iloc[0]["גיל"]) if not negative_rows.empty else None
+
+    rental_always_positive = rental_flip_age is None
+    rental_starts_negative = rental_cashflow_at_retire < 0
+
     df_97 = df_full[df_full["גיל"] >= 97.0]
     row_97 = df_97.iloc[0] if not df_97.empty else df_full.iloc[-1]
 
@@ -404,6 +424,31 @@ def render_qa_section(results, user_inputs):
     # Tracks that include a guaranteed pension (190 and hybrid)
     PENSION_TRACKS = {1, 3}
 
+    # -------------------------------------------------------
+    # Rental card bottom — cash flow test
+    # -------------------------------------------------------
+    def _build_rental_card_bottom(cf, flip_age, always_positive, starts_negative, total_assets_check, why_line, why_color):
+        cf_color = "#1a7a3a" if cf >= 0 else "#c0392b"
+        cf_sign  = "+" if cf >= 0 else ""
+        cf_label = "✅ תזרים חיובי" if cf >= 0 else "🔴 תזרים שלילי"
+
+        if starts_negative:
+            flip_html = "<div style='font-size:0.72em;color:#c0392b;font-weight:700;margin-top:4px;'>⚠️ מתחיל בגירעון מיום הפרישה</div>"
+        elif always_positive:
+            flip_html = "<div style='font-size:0.72em;color:#1a7a3a;font-weight:700;margin-top:4px;'>✅ תזרים חיובי לכל האורך</div>"
+        else:
+            flip_html = f"<div style='font-size:0.72em;color:#b84c00;font-weight:700;margin-top:4px;'>⚠️ הופך שלילי בגיל {flip_age:.0f}</div>"
+
+        return (
+            f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💸 תזרים חודשי נטו בפרישה</div>"
+            f"<div style='font-size:1.05em;font-weight:800;color:{cf_color};'>{cf_sign}{format_shekel(int(cf))}</div>"
+            f"{flip_html}"
+            f"<div style='font-size:0.65em;color:#999;margin-top:8px;margin-bottom:2px;'>🏠 שווי כלל נכסים בגיל {check_age:.0f}</div>"
+            f"<div style='font-size:0.88em;font-weight:700;color:#1a1a2e;'>{format_shekel(int(total_assets_check))}</div>"
+            f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
+            f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
+        )
+
     # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
     cols = st.columns(4)
     for col_idx, (rank, track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(ranked_order)):
@@ -463,13 +508,20 @@ def render_qa_section(results, user_inputs):
             f"⏳ מחזיק עד {res_label}</div>"
             f"</div>"
             f"<div style='border-top:1px solid #e8e8e8;padding-top:10px;'>"
-            f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
-            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
-            f"{cmp_html}"
-            f"{base_html}"
-            f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
-            f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
-            f"</div></div>"
+            + (
+                # Track 4: show cash flow test instead of portfolio metrics
+                _build_rental_card_bottom(rental_cashflow_at_retire, rental_flip_age,
+                                          rental_always_positive, rental_starts_negative,
+                                          tw_rent_c, why_line, why_color)
+                if track_id == 4 else
+                f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
+                f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
+                f"{cmp_html}"
+                f"{base_html}"
+                f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
+                f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
+            )
+            + f"</div></div>"
         )
 
         card_html = (
@@ -574,15 +626,23 @@ def render_qa_section(results, user_inputs):
             "קרן חירום":       wrap_html_style(emer(nn_h_r), get_emergency_style(emer(nn_h_r))),
         },
         "שכירות": {
-            "הון כולל":        format_shekel(br_r),
-            "משיכה חודשית":    fmt_withdrawal(nn_rent_r),
-            "קצב משיכה":       'ל"ר',
+            "הון כולל":        format_shekel(tw_rent_r),
+            "משיכה חודשית":    (
+                f"<span style='color:#1a7a3a;font-weight:700;'>תזרים חיובי<br/>+{format_shekel(int(rental_cashflow_at_retire))}</span>"
+                if rental_cashflow_at_retire >= 0 else
+                f"<span style='color:#c0392b;font-weight:700;'>גירעון<br/>{format_shekel(int(rental_cashflow_at_retire))}−</span>"
+            ),
+            "קצב משיכה":       (
+                "<span style='color:#1a7a3a;'>✅ לא נדרש</span>"
+                if rental_cashflow_at_retire >= 0 else
+                wrap_html_style(f"{pct_rent_r:.2f}%", get_withdrawal_style(pct_rent_r))
+            ),
             "סך נכסים":        format_shekel(tw_rent_r),
             "תיק נזיל":        format_shekel(br_r),
             "שווי נדלן":       format_shekel(rental_prop_retire),
-            "קצבאות חודשיות":  format_shekel(base_income_retire),
-            "חוק 400":         'ל"ר',
-            "קרן חירום":       'ל"ר',
+            "קצבאות חודשיות":  format_shekel(base_income_retire + float(row_ret_r.get("הכנסת שכירות נטו", 0))),
+            "חוק 400":         "<span style='color:#888;'>לא רלוונטי<br/>(מבחן תזרים)</span>",
+            "קרן חירום":       wrap_html_style(emer(nn_rent_r), get_emergency_style(emer(nn_rent_r))) if nn_rent_r > 0 else "<span style='color:#1a7a3a;'>לא נדרש</span>",
         },
     }
 
@@ -632,6 +692,8 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_190_c),
             "שימור הון":    fmt_preservation(b190_95),
             "גיל התאוששות": recovery_190,
+            "תזרים חודשי":  "—",
+            "גיל היפוך":    "—",
         },
         "25% ריאלי (ללא קצבה)": {
             "גיל חוסן":     fmt_lifespan(empty_25),
@@ -641,6 +703,8 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_25_c),
             "שימור הון":    fmt_preservation(b25_95),
             "גיל התאוששות": recovery_25,
+            "תזרים חודשי":  "—",
+            "גיל היפוך":    "—",
         },
         "25% ריאלי + קצבה מזערית": {
             "גיל חוסן":     fmt_lifespan(empty_h),
@@ -650,12 +714,22 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_h_c),
             "שימור הון":    fmt_preservation(bh_95),
             "גיל התאוששות": recovery_h,
+            "תזרים חודשי":  "—",
+            "גיל היפוך":    "—",
         },
         "שכירות": {
             "גיל חוסן":     fmt_lifespan(empty_r),
-            "הון כולל":     fmt_with_delta(br_c, baseline_capital),
-            "משיכה חודשית": fmt_withdrawal(nn_rent_c),
-            "קצב משיכה":    wrap_html_style(f"{pct_rent_c:.2f}%", get_withdrawal_style(pct_rent_c)),
+            "הון כולל":     format_shekel(tw_rent_c),
+            "תזרים חודשי":  (
+                f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(rental_cashflow_at_retire))}</span>"
+                if rental_cashflow_at_retire >= 0 else
+                f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(rental_cashflow_at_retire))}−</span>"
+            ),
+            "גיל היפוך":    (
+                "<span style='color:#1a7a3a;'>✅ נשאר חיובי</span>" if rental_always_positive
+                else f"<span style='color:#b84c00;font-weight:700;'>גיל {rental_flip_age:.0f}</span>"
+                if rental_flip_age else "<span style='color:#c0392b;'>מתחיל שלילי</span>"
+            ),
             "סך נכסים":     format_shekel(tw_rent_c),
             "שימור הון":    fmt_preservation(br_95),
             "גיל התאוששות": recovery_r,
@@ -667,11 +741,13 @@ def render_qa_section(results, user_inputs):
         ("כמה מההון ההתחלתי נשמר בגיל 95?",  "שימור הון"),
         ("מה שווי ההון הכולל כולל הקצבה?",  "הון כולל"),
         ("מה סך כלל הנכסים שלי?",             "סך נכסים"),
+        ("תזרים חודשי נטו / גיל היפוך",       "תזרים חודשי"),
     ]
     DETAIL_ROWS_2 = [
         ("כמה אמשוך מהתיק כל חודש?",                  "משיכה חודשית"),
         ("מה קצב המשיכה בגיל זה?",                    "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?",     "גיל התאוששות"),
+        ("מתי התזרים הופך שלילי?",                     "גיל היפוך"),
     ]
 
     with st.expander(f"🔮 מצב בגיל נבדק — גיל {check_age:.1f}", expanded=True):
