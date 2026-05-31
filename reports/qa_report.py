@@ -337,6 +337,15 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Render Executive Summary
     # -------------------------------------------------------
+    st.markdown("""
+        <style>
+        [data-testid="stHorizontalBlock"] { align-items: stretch !important; }
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div { height: 100%; }
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div > div { height: 100%; }
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div > div > div:first-child { height: 100%; }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("<h3 style='text-align: center; color: #1a1a2e;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
 
     if not has_winner:
@@ -347,6 +356,7 @@ def render_qa_section(results, user_inputs):
     for col_idx, (rank, track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(ranked_order)):
         pc = track_pros_cons[track_id]
         rc = RANK_CFG[rank]
+        is_winner = rank == 1 and has_winner
         health = get_health_label(score)
         health_bg, health_color = get_health_style(score)
         res_color = "#1a7a3a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#c0392b")
@@ -360,10 +370,31 @@ def render_qa_section(results, user_inputs):
         abs_delta = abs(int(delta_95))
         abs_pct = abs(delta_pct_95)
 
-        card_html = (
-            f"<div style='background:{rc['bg']};border-top:4px solid {rc['border']};border-radius:12px;"
-            f"padding:16px 14px 14px 14px;box-shadow:0 2px 10px rgba(0,0,0,0.08);font-family:sans-serif;"
-            f"direction:rtl;text-align:right;min-height:240px;display:flex;flex-direction:column;justify-content:space-between;'>"
+        if is_winner:
+            shadow = "0 12px 40px rgba(232,160,0,0.30), 0 4px 16px rgba(0,0,0,0.12)"
+            border_top = "5px solid #E8A000"
+            margin = "margin-top:-14px; margin-bottom:-14px;"
+            top_padding = "28px"
+            outline = "outline: 2px solid #E8A000; outline-offset: 2px;"
+            floating_badge = (
+                f"<div style='position:absolute;top:-14px;left:50%;transform:translateX(-50%);"
+                f"background:linear-gradient(135deg,#E8A000,#f5c842);color:#fff;"
+                f"padding:4px 18px;border-radius:20px;font-size:0.72em;font-weight:800;"
+                f"white-space:nowrap;box-shadow:0 3px 10px rgba(232,160,0,0.45);"
+                f"letter-spacing:0.05em;'>⭐ המסלול המומלץ</div>"
+            )
+        else:
+            shadow = "0 2px 10px rgba(0,0,0,0.07)"
+            border_top = f"4px solid {rc['border']}"
+            margin = ""
+            top_padding = "16px"
+            outline = ""
+            floating_badge = ""
+
+        inner_card = (
+            f"<div style='background:{rc['bg']};border-top:{border_top};border-radius:12px;"
+            f"padding:{top_padding} 14px 14px 14px;box-shadow:{shadow};{outline}font-family:sans-serif;"
+            f"direction:rtl;text-align:right;height:100%;display:flex;flex-direction:column;justify-content:space-between;'>"
             f"<div>"
             f"<div style='text-align:center;margin-bottom:6px;font-size:1.7em;line-height:1;'>{rc['badge']}</div>"
             f"<div style='text-align:center;font-size:0.72em;font-weight:700;color:{rc['rank_color']};margin-bottom:8px;letter-spacing:0.04em;'>{rc['label']}</div>"
@@ -381,6 +412,13 @@ def render_qa_section(results, user_inputs):
             f"{arrow} {sign}{format_shekel(abs_delta)} | {sign}{abs_pct:.1f}%</div>"
             f"<div style='font-size:0.65em;color:#aaa;margin-top:1px;'>מ-{format_shekel(int(baseline_capital))}</div>"
             f"</div></div>"
+        )
+
+        card_html = (
+            f"<div style='position:relative;{margin}height:100%;'>"
+            f"{floating_badge}"
+            f"{inner_card}"
+            f"</div>"
         )
 
         with cols[col_idx]:
