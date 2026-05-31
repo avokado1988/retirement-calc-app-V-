@@ -196,6 +196,10 @@ def render_qa_section(results, user_inputs):
     row_ret_r = df_full[df_full["גיל"] >= retire_age].iloc[0] if not df_full[df_full["גיל"] >= retire_age].empty else df_full.iloc[0]
     rental_cashflow_at_retire = float(row_ret_r["rental_cashflow"])
 
+    # Cash flow at the checked age (גיל נבדק) — so the deficit is visible there too
+    row_check_r = df_full[df_full["גיל"] >= check_age].iloc[0] if not df_full[df_full["גיל"] >= check_age].empty else df_full.iloc[-1]
+    rental_cashflow_at_check = float(row_check_r["rental_cashflow"])
+
     # Find age cash flow first turns negative (after retirement)
     df_after_retire = df_full[df_full["גיל"] >= retire_age]
     negative_rows = df_after_retire[df_after_retire["rental_cashflow"] < 0]
@@ -723,9 +727,9 @@ def render_qa_section(results, user_inputs):
             "גיל חוסן":     fmt_lifespan(empty_r),
             "הון כולל":     format_shekel(tw_rent_c),
             "תזרים חודשי":  (
-                f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(rental_cashflow_at_retire))}</span>"
-                if rental_cashflow_at_retire >= 0 else
-                f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(rental_cashflow_at_retire))}−</span>"
+                f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(rental_cashflow_at_check))}</span>"
+                if rental_cashflow_at_check >= 0 else
+                f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(abs(rental_cashflow_at_check)))}−</span>"
             ),
             "גיל היפוך":    (
                 "<span style='color:#1a7a3a;'>✅ נשאר חיובי</span>" if rental_always_positive
