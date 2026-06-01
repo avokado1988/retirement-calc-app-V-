@@ -227,6 +227,36 @@ def render_qa_section(results, user_inputs):
     rental_always_positive = rental_flip_age is None
     rental_starts_negative = rental_cashflow_at_retire < 0
 
+    # -------------------------------------------------------
+    # Cumulative deficit — how much external support needed
+    # -------------------------------------------------------
+    # Tracks 1-3: sum of monthly shortfalls AFTER portfolio hits zero
+    df_190_empty = df_full[df_full["צבירה תיקון 190"] <= 0]
+    cum_deficit_190 = float((df_190_empty["הוצאה נומינלית"] - df_190_empty["הכנסה נומינלית"] - df_190_empty["הכנסה מקצבה מזערית"]).clip(lower=0).sum())
+    months_deficit_190 = len(df_190_empty)
+
+    df_25_empty = df_full[df_full["צבירה מסלול ריאלי"] <= 0]
+    cum_deficit_25 = float((df_25_empty["הוצאה נומינלית"] - df_25_empty["הכנסה נומינלית"]).clip(lower=0).sum())
+    months_deficit_25 = len(df_25_empty)
+
+    df_h_empty = df_full[df_full["צבירה מסלול היברידי"] <= 0]
+    cum_deficit_h = float((df_h_empty["הוצאה נומינלית"] - df_h_empty["הכנסה נומינלית"] - df_h_empty["הכנסה מקצבה מזערית"]).clip(lower=0).sum())
+    months_deficit_h = len(df_h_empty)
+
+    # Track 4: sum of negative monthly cashflows after retirement
+    df_r_neg = df_full[(df_full["גיל"] >= retire_age) & (df_full["rental_cashflow"] < 0)]
+    cum_deficit_r = float((-df_r_neg["rental_cashflow"]).sum())
+    months_deficit_r = len(df_r_neg)
+
+    def fmt_cum_deficit(total, months):
+        if total <= 0 or months == 0:
+            return "<span style='color:#1a7a3a;font-weight:700;'>✅ אין גירעון</span>"
+        monthly_avg = total / months
+        yrs = months / 12
+        return (f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(total))}</span>"
+                f"<br/><span style='color:#888;font-size:0.75em;'>על פני {yrs:.1f} שנים</span>"
+                f"<br/><span style='color:#c0392b;font-size:0.78em;'>≈ {format_shekel(int(monthly_avg))}/חודש</span>")
+
     df_97 = df_full[df_full["גיל"] >= 97.0]
     row_97 = df_97.iloc[0] if not df_97.empty else df_full.iloc[-1]
 
@@ -732,6 +762,7 @@ def render_qa_section(results, user_inputs):
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
             "משיכה / תזרים": fmt_cashflow(nn_190_c),
+            "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_190, months_deficit_190),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_190),
             "שימור הון":    fmt_preservation(b190_95),
             "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
@@ -746,6 +777,7 @@ def render_qa_section(results, user_inputs):
             "הכנסות חודשיות": format_shekel(int(base_income_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
             "משיכה / תזרים": fmt_cashflow(nn_25_c),
+            "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_25, months_deficit_25),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_25),
             "שימור הון":    fmt_preservation(b25_95),
             "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
@@ -760,6 +792,7 @@ def render_qa_section(results, user_inputs):
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
             "משיכה / תזרים": fmt_cashflow(nn_h_c),
+            "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_h, months_deficit_h),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_h),
             "שימור הון":    fmt_preservation(bh_95),
             "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
@@ -774,6 +807,7 @@ def render_qa_section(results, user_inputs):
             "הכנסות חודשיות": format_shekel(int(base_income_check + net_rental_c)),
             "הוצאות חודשיות": format_shekel(int(exp_check + rent_paid_c)),
             "משיכה / תזרים": fmt_cashflow(nn_rent_c, cashflow=rental_cashflow_at_check, withdrawal_pct=pct_rent_c),
+            "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_r, months_deficit_r),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_r),
             "שימור הון":    fmt_preservation(br_95),
             "הון כולל":     format_shekel(br_c),
@@ -801,9 +835,10 @@ def render_qa_section(results, user_inputs):
         ("מה סך כלל הנכסים שלי?",              "סך נכסים"),
     ]
     CASHFLOW_ROWS_2 = [
-        ("הכנסות (קצבאות / שכירות)",            "הכנסות חודשיות"),
-        ("הוצאות (קבועות / שכירות)",            "הוצאות חודשיות"),
-        ("כמה אצטרך להשלים מהתיק (תזרים)",      "משיכה / תזרים"),
+        ("הכנסות (קצבאות / שכירות)",                        "הכנסות חודשיות"),
+        ("הוצאות (קבועות / שכירות)",                        "הוצאות חודשיות"),
+        ("כמה אצטרך להשלים מהתיק (תזרים)",                  "משיכה / תזרים"),
+        ("סה\"כ גירעון מצטבר — תמיכה חיצונית נדרשת לכל החיים", "גירעון מצטבר"),
     ]
     ACTUARIAL_ROWS_2 = [
         ("עד איזה גיל הכסף מחזיק?",            "עד איזה גיל הכסף מחזיק?"),
