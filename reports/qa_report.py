@@ -723,6 +723,7 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_190_c),
             "קצב משיכה":    wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
             "גיל התאוששות": recovery_190,
+            "גיל היפוך":    f"<span style='color:#888;'>גיל {retire_age:.0f} (מהיום הראשון)</span>",
         },
         "25% ריאלי (ללא קצבה)": {
             "הכנסות חודשיות": format_shekel(int(base_income_check)),
@@ -736,6 +737,7 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_25_c),
             "קצב משיכה":    wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             "גיל התאוששות": recovery_25,
+            "גיל היפוך":    f"<span style='color:#888;'>גיל {retire_age:.0f} (מהיום הראשון)</span>",
         },
         "25% ריאלי + קצבה מזערית": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
@@ -749,6 +751,7 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_h_c),
             "קצב משיכה":    wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
             "גיל התאוששות": recovery_h,
+            "גיל היפוך":    f"<span style='color:#888;'>גיל {retire_age:.0f} (מהיום הראשון)</span>",
         },
         "שכירות": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + net_rental_c)),
@@ -790,7 +793,7 @@ def render_qa_section(results, user_inputs):
         ("כמה מההון ההתחלתי נשמר בגיל 95?",    "שימור הון"),
         ("מה קצב המשיכה בגיל זה?",             "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?", "גיל התאוששות"),
-        ("מתי התזרים הופך שלילי?",             "גיל היפוך"),
+        ("מתי התיק מתחיל להישחק / היפוך תזרים?", "גיל היפוך"),
     ]
 
     st.markdown(f"### 🔮 מצב בגיל {check_age:.1f}")
