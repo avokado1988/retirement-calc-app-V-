@@ -113,11 +113,12 @@ def run_simulation(user_inputs):
             net_needed_25 = 0.0
             net_needed_hybrid = 0.0
 
-        # Track 4: no pre-retirement block — rental covers from day 1
         total_out_rental = nominal_expense + rent_paid_indexed
         total_in_rental = base_income + net_rental_income
         rental_cashflow_net = total_in_rental - total_out_rental  # positive = surplus, negative = deficit
         net_needed_rental = max(0.0, -rental_cashflow_net)
+        if current_age < retirement_age:
+            net_needed_rental = 0.0
 
         # --- Pension asset value (tracks 1 and 3 only) ---
         if current_age < retirement_age:
