@@ -114,7 +114,7 @@ def render_qa_section(results, user_inputs):
     tw_190_r = b190_r + pension_asset_retire + property_value_retire + emergency_fund
     tw_25_r = b25_r + property_value_retire + emergency_fund
     tw_h_r = bh_r + pension_asset_retire + property_value_retire + emergency_fund
-    tw_rent_r = br_r + rental_prop_retire + emergency_fund
+    tw_rent_r = br_r + rental_prop_retire  # no separate emergency_fund — savings serve that role in track 4
 
     # -------------------------------------------------------
     # Extract values at check_age
@@ -148,7 +148,7 @@ def render_qa_section(results, user_inputs):
     tw_190_c = b190_c + pension_asset_check + property_value_check + emergency_fund
     tw_25_c = b25_c + property_value_check + emergency_fund
     tw_h_c = bh_c + pension_asset_check + property_value_check + emergency_fund
-    tw_rent_c = br_c + rental_prop_check + emergency_fund
+    tw_rent_c = br_c + rental_prop_check  # no separate emergency_fund — savings serve that role in track 4
 
     # -------------------------------------------------------
     # Extract values at age 95
