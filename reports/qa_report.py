@@ -176,6 +176,16 @@ def render_qa_section(results, user_inputs):
                 return f"{df_full.iloc[idx]['גיל']:.1f}"
         return "לא עובר"
 
+    def find_peak_age(col):
+        """Age at which the portfolio reaches its maximum — after this it only declines."""
+        peak_idx = df_full[col].idxmax()
+        peak_age = float(df_full.loc[peak_idx, "גיל"])
+        peak_val = float(df_full.loc[peak_idx, col])
+        if peak_age <= retire_age + 0.5:
+            return f"<span style='color:#888;'>גיל {retire_age:.0f} (יורד מהרגע הראשון)</span>"
+        color = "#1a7a3a" if peak_age >= 85 else ("#b84c00" if peak_age >= 75 else "#b71c1c")
+        return f"<span style='color:{color};font-weight:700;'>גיל {peak_age:.0f}</span>"
+
     empty_190 = find_empty_age("צבירה תיקון 190")
     empty_25 = find_empty_age("צבירה מסלול ריאלי")
     empty_h = find_empty_age("צבירה מסלול היברידי")
@@ -185,6 +195,11 @@ def render_qa_section(results, user_inputs):
     recovery_25 = find_recovery_age("צבירה מסלול ריאלי")
     recovery_h = find_recovery_age("צבירה מסלול היברידי")
     recovery_r = find_recovery_age("צבירה מסלול שכירות")
+
+    peak_190 = find_peak_age("צבירה תיקון 190")
+    peak_25 = find_peak_age("צבירה מסלול ריאלי")
+    peak_h = find_peak_age("צבירה מסלול היברידי")
+    peak_r = find_peak_age("צבירה מסלול שכירות")
 
     # -------------------------------------------------------
     # Rental cash flow analysis
@@ -723,7 +738,7 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_190_c),
             "קצב משיכה":    wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
             "גיל התאוששות": recovery_190,
-            "גיל היפוך":    f"<span style='color:#888;'>גיל {retire_age:.0f} (מהיום הראשון)</span>",
+            "גיל היפוך":    peak_190,
         },
         "25% ריאלי (ללא קצבה)": {
             "הכנסות חודשיות": format_shekel(int(base_income_check)),
@@ -737,7 +752,7 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_25_c),
             "קצב משיכה":    wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             "גיל התאוששות": recovery_25,
-            "גיל היפוך":    f"<span style='color:#888;'>גיל {retire_age:.0f} (מהיום הראשון)</span>",
+            "גיל היפוך":    peak_25,
         },
         "25% ריאלי + קצבה מזערית": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
@@ -751,7 +766,7 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":     format_shekel(tw_h_c),
             "קצב משיכה":    wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
             "גיל התאוששות": recovery_h,
-            "גיל היפוך":    f"<span style='color:#888;'>גיל {retire_age:.0f} (מהיום הראשון)</span>",
+            "גיל היפוך":    peak_h,
         },
         "שכירות": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + net_rental_c)),
@@ -770,9 +785,9 @@ def render_qa_section(results, user_inputs):
             ),
             "גיל התאוששות": recovery_r,
             "גיל היפוך":    (
-                "<span style='color:#1a7a3a;'>✅ נשאר חיובי</span>" if rental_always_positive
+                "<span style='color:#1a7a3a;'>✅ תזרים חיובי לאורך כל הדרך</span>" if rental_always_positive
                 else f"<span style='color:#b84c00;font-weight:700;'>גיל {rental_flip_age:.0f}</span>"
-                if rental_flip_age else "<span style='color:#c0392b;'>מתחיל שלילי</span>"
+                if rental_flip_age else "<span style='color:#c0392b;'>מתחיל שלילי מהרגע הראשון</span>"
             ),
         },
     }
