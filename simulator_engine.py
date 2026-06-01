@@ -65,6 +65,7 @@ def run_simulation(user_inputs):
     rm_max_ltv         = float(rental.get("rm_max_ltv", 0.55))
     rm_orig_fee        = float(rental.get("rm_origination_fee", 0.02))
     rm_draw_strategy   = rental.get("rm_draw_strategy", "monthly_deficit")
+    rm_auto_threshold  = float(rental.get("rm_auto_threshold", 50000))
 
     rm_active        = False
     rm_loan_balance  = 0.0
@@ -180,7 +181,7 @@ def run_simulation(user_inputs):
         rm_draw_this_month = 0.0
         rm_interest_this_month = 0.0
         if rm_enabled and current_age >= retirement_age:
-            trigger_auto   = (rm_trigger == "auto"   and balance_rental <= 0)
+            trigger_auto   = (rm_trigger == "auto"   and balance_rental <= rm_auto_threshold)
             trigger_manual = (rm_trigger == "manual" and current_age >= rm_manual_age)
             if not rm_active and (trigger_auto or trigger_manual):
                 rm_active = True

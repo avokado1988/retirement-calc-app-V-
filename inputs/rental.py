@@ -71,7 +71,13 @@ def render_rental_inputs(wealth_data):
             key="rm_trigger"
         )
         rm_manual_age = 80
-        if rm_trigger == "manual":
+        rm_auto_threshold = 50000
+        if rm_trigger == "auto":
+            rm_auto_threshold = compact_number_input(
+                "הפעל כשהחיסכון יורד מתחת ל- (₪)",
+                value=50000, min_value=0, step=10000, unit="₪", color=COLOR_BLUE
+            )
+        elif rm_trigger == "manual":
             rm_manual_age = compact_number_input(
                 "גיל הפעלה ידנית",
                 value=80, min_value=60, max_value=100, step=1, unit="גיל", color=COLOR_BLUE
@@ -100,6 +106,7 @@ def render_rental_inputs(wealth_data):
     else:
         rm_trigger = "auto"
         rm_manual_age = 80
+        rm_auto_threshold = 50000
         rm_annual_rate_pct = 5.5
         rm_max_ltv_pct = 55.0
         rm_origination_fee_pct = 2.0
@@ -117,6 +124,7 @@ def render_rental_inputs(wealth_data):
         "rm_enabled": enable_rm,
         "rm_trigger": rm_trigger,
         "rm_manual_age": rm_manual_age,
+        "rm_auto_threshold": rm_auto_threshold,
         "rm_annual_rate": rm_annual_rate_pct / 100,
         "rm_max_ltv": rm_max_ltv_pct / 100,
         "rm_origination_fee": rm_origination_fee_pct / 100,
