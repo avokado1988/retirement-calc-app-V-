@@ -116,7 +116,8 @@ def run_simulation(user_inputs):
         # Track 4: no pre-retirement block — rental covers from day 1
         total_out_rental = nominal_expense + rent_paid_indexed
         total_in_rental = base_income + net_rental_income
-        net_needed_rental = max(0.0, total_out_rental - total_in_rental)
+        rental_cashflow_net = total_in_rental - total_out_rental  # positive = surplus, negative = deficit
+        net_needed_rental = max(0.0, -rental_cashflow_net)
 
         # --- Pension asset value (tracks 1 and 3 only) ---
         if current_age < retirement_age:
@@ -204,6 +205,7 @@ def run_simulation(user_inputs):
             "שווי ירושה היברידי": inheritance_hybrid,
             "הכנסת שכירות נטו": net_rental_income,
             "הוצאת שכירות": rent_paid_indexed,
+            "תזרים נטו שכירות": rental_cashflow_net,
             "משיכה מתיק שכירות": withdrawal_rental,
             "inflation_factor": inflation_factor
         })

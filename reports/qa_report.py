@@ -205,11 +205,8 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Rental cash flow analysis
     # -------------------------------------------------------
-    # Monthly surplus = (NI + net_rental) - (expenses + rent_paid)
-    df_full["rental_cashflow"] = (
-        df_full["הכנסה נומינלית"] + df_full["הכנסת שכירות נטו"]
-        - df_full["הוצאה נומינלית"] - df_full["הוצאת שכירות"]
-    )
+    # Monthly surplus pre-computed by engine; alias for compatibility
+    df_full["rental_cashflow"] = df_full["תזרים נטו שכירות"]
 
     row_ret_r = df_full[df_full["גיל"] >= retire_age].iloc[0] if not df_full[df_full["גיל"] >= retire_age].empty else df_full.iloc[0]
     rental_cashflow_at_retire = float(row_ret_r["rental_cashflow"])

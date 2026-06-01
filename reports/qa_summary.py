@@ -101,10 +101,7 @@ def render_qa_summary_page(results, user_inputs):
     brent_100  = float(row_100.get("צבירה מסלול שכירות", 0))
 
     # ─── תזרים מסלול שכירות ──────────────────────────────────────────────────
-    df_full["rental_cashflow"] = (
-        df_full["הכנסה נומינלית"] + df_full["הכנסת שכירות נטו"]
-        - df_full["הוצאה נומינלית"] - df_full["הוצאת שכירות"]
-    )
+    df_full["rental_cashflow"] = df_full["תזרים נטו שכירות"]
     cf_retire = float(_row(df_full, retire_age)["rental_cashflow"])
     cf_check  = float(_row(df_full, check_age)["rental_cashflow"])
 
