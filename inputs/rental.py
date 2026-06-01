@@ -87,21 +87,25 @@ def render_rental_inputs(wealth_data, check_age=90.0):
 
             if not depleting_rows.empty:
                 rm_trigger_age = float(depleting_rows.iloc[0]["גיל"])
-                # Cumulative deficit from that age to check_age
+                # Cumulative deficit from that age to check_age — deflated to today's money
                 df_neg = df_hint[
                     (df_hint["תזרים נטו שכירות"] < 0) &
                     (df_hint["גיל"] >= rm_trigger_age) &
                     (df_hint["גיל"] <= check_age)
                 ]
                 if not df_neg.empty:
-                    cum_def = float(df_neg["תזרים נטו שכירות"].abs().sum())
-                    min_def = float(df_neg["תזרים נטו שכירות"].abs().min())
-                    max_def = float(df_neg["תזרים נטו שכירות"].abs().max())
+                    # Deflate by inflation_factor → real values in today's ₪
+                    inf_factors = df_neg["inflation_factor"].replace(0, 1)
+                    real_def = (df_neg["תזרים נטו שכירות"] / inf_factors).abs()
+                    cum_def = float(real_def.sum())
+                    min_def = float(real_def.min())
+                    max_def = float(real_def.max())
                     st.info(
                         f"💡 **החסכונות מגיעים ל-₪100K בגיל {rm_trigger_age:.0f}** — "
                         f"זה הגיל הרלוונטי להפעיל משכנתה הפוכה.\n\n"
-                        f"גרעון מצטבר מגיל {rm_trigger_age:.0f} עד גיל {check_age:.0f}: "
-                        f"**₪{cum_def:,.0f}** | גרעון חודשי טיפוסי: **₪{min_def:,.0f} – ₪{max_def:,.0f}**"
+                        f"גרעון מצטבר מגיל {rm_trigger_age:.0f} עד גיל {check_age:.0f} "
+                        f"**במחירי היום**: **₪{cum_def:,.0f}** | "
+                        f"גרעון חודשי טיפוסי: **₪{min_def:,.0f} – ₪{max_def:,.0f}**"
                     )
                 else:
                     st.info(
