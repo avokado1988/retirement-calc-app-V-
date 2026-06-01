@@ -230,21 +230,21 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Cumulative deficit — how much external support needed
     # -------------------------------------------------------
-    # Tracks 1-3: sum of monthly shortfalls AFTER portfolio hits zero
-    df_190_empty = df_full[df_full["צבירה תיקון 190"] <= 0]
+    # Tracks 1-3: sum of monthly shortfalls AFTER portfolio hits zero, up to check_age
+    df_190_empty = df_full[(df_full["צבירה תיקון 190"] <= 0) & (df_full["גיל"] <= check_age)]
     cum_deficit_190 = float((df_190_empty["הוצאה נומינלית"] - df_190_empty["הכנסה נומינלית"] - df_190_empty["הכנסה מקצבה מזערית"]).clip(lower=0).sum())
     months_deficit_190 = len(df_190_empty)
 
-    df_25_empty = df_full[df_full["צבירה מסלול ריאלי"] <= 0]
+    df_25_empty = df_full[(df_full["צבירה מסלול ריאלי"] <= 0) & (df_full["גיל"] <= check_age)]
     cum_deficit_25 = float((df_25_empty["הוצאה נומינלית"] - df_25_empty["הכנסה נומינלית"]).clip(lower=0).sum())
     months_deficit_25 = len(df_25_empty)
 
-    df_h_empty = df_full[df_full["צבירה מסלול היברידי"] <= 0]
+    df_h_empty = df_full[(df_full["צבירה מסלול היברידי"] <= 0) & (df_full["גיל"] <= check_age)]
     cum_deficit_h = float((df_h_empty["הוצאה נומינלית"] - df_h_empty["הכנסה נומינלית"] - df_h_empty["הכנסה מקצבה מזערית"]).clip(lower=0).sum())
     months_deficit_h = len(df_h_empty)
 
-    # Track 4: sum of negative monthly cashflows after retirement
-    df_r_neg = df_full[(df_full["גיל"] >= retire_age) & (df_full["rental_cashflow"] < 0)]
+    # Track 4: sum of negative monthly cashflows after retirement, up to check_age
+    df_r_neg = df_full[(df_full["גיל"] >= retire_age) & (df_full["גיל"] <= check_age) & (df_full["rental_cashflow"] < 0)]
     cum_deficit_r = float((-df_r_neg["rental_cashflow"]).sum())
     months_deficit_r = len(df_r_neg)
 
@@ -838,7 +838,7 @@ def render_qa_section(results, user_inputs):
         ("הכנסות (קצבאות / שכירות)",                        "הכנסות חודשיות"),
         ("הוצאות (קבועות / שכירות)",                        "הוצאות חודשיות"),
         ("כמה אצטרך להשלים מהתיק (תזרים)",                  "משיכה / תזרים"),
-        ("סה\"כ גירעון מצטבר — תמיכה חיצונית נדרשת לכל החיים", "גירעון מצטבר"),
+        (f"סה\"כ גירעון מצטבר עד גיל {check_age:.0f} — תמיכה חיצונית נדרשת", "גירעון מצטבר"),
     ]
     ACTUARIAL_ROWS_2 = [
         ("עד איזה גיל הכסף מחזיק?",            "עד איזה גיל הכסף מחזיק?"),
