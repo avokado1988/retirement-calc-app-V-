@@ -46,10 +46,9 @@ def render_qa_section(results, user_inputs):
 
     property_value_retire = float(row_retire.get("שווי נדלן", property_value_start))
     property_value_check = float(row_check.get("שווי נדלן", property_value_start))
-    years_to_retire = retire_age - start_age
-    years_to_check = check_age - start_age
-    rental_prop_retire = rental_property_start * ((1 + rental_appreciation_rate) ** years_to_retire)
-    rental_prop_check = rental_property_start * ((1 + rental_appreciation_rate) ** years_to_check)
+    # Read rental property value from engine (monthly-compounded) instead of recalculating with annual rate
+    rental_prop_retire = float(row_retire.get("שווי נדלן מסלול 4", rental_property_start))
+    rental_prop_check = float(row_check.get("שווי נדלן מסלול 4", rental_property_start))
 
     # -------------------------------------------------------
     # Extract values at retirement
@@ -243,9 +242,9 @@ def render_qa_section(results, user_inputs):
     cum_deficit_h = float((df_h_empty["הוצאה נומינלית"] - df_h_empty["הכנסה נומינלית"] - df_h_empty["הכנסה מקצבה מזערית"]).clip(lower=0).sum())
     months_deficit_h = len(df_h_empty)
 
-    # Track 4: sum of negative monthly cashflows after retirement, up to check_age
-    df_r_neg = df_full[(df_full["גיל"] >= retire_age) & (df_full["גיל"] <= check_age) & (df_full["rental_cashflow"] < 0)]
-    cum_deficit_r = float((-df_r_neg["rental_cashflow"]).sum())
+    # Track 4: like tracks 1-3 — only count deficit after savings are depleted
+    df_r_neg = df_full[(df_full["צבירה מסלול שכירות"] <= 0) & (df_full["גיל"] >= retire_age) & (df_full["גיל"] <= check_age)]
+    cum_deficit_r = float((df_r_neg["הוצאה נומינלית"] + df_r_neg["הוצאת שכירות"] - df_r_neg["הכנסה נומינלית"] - df_r_neg["הכנסת שכירות נטו"]).clip(lower=0).sum())
     months_deficit_r = len(df_r_neg)
 
     def fmt_cum_deficit(total, months):

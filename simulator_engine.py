@@ -137,6 +137,7 @@ def run_simulation(user_inputs):
             balance_190 -= pull
 
         # --- Track 2: Withdrawal (25% real) ---
+        if m > 0: basis_25 *= (1 + i_monthly)
         tax_25 = 0.0
         if net_needed_25 > 0 and balance_25 > 0:
             rpr = max(0.0, (balance_25 - basis_25) / balance_25)
@@ -145,9 +146,9 @@ def run_simulation(user_inputs):
             tax_25 = pull25 * rpr * 0.25
             basis_25 *= (1 - (pull25 / balance_25))
             balance_25 -= pull25
-        if m > 0: basis_25 *= (1 + i_monthly)
 
         # --- Track 3: Withdrawal (25% real, hybrid) ---
+        if m > 0: basis_hybrid *= (1 + i_monthly)
         tax_hybrid = 0.0
         if net_needed_hybrid > 0 and balance_hybrid > 0:
             rpr_h = max(0.0, (balance_hybrid - basis_hybrid) / balance_hybrid)
@@ -156,9 +157,9 @@ def run_simulation(user_inputs):
             tax_hybrid = pull_h * rpr_h * 0.25
             basis_hybrid *= (1 - (pull_h / balance_hybrid))
             balance_hybrid -= pull_h
-        if m > 0: basis_hybrid *= (1 + i_monthly)
 
         # --- Track 4: Withdrawal (25% real, rental) ---
+        if m > 0: basis_rental *= (1 + i_monthly)
         tax_rental = 0.0
         if net_needed_rental > 0 and balance_rental > 0:
             rpr_r = max(0.0, (balance_rental - basis_rental) / balance_rental)
@@ -167,7 +168,6 @@ def run_simulation(user_inputs):
             tax_rental = pull_r * rpr_r * 0.25
             basis_rental *= (1 - (pull_r / balance_rental))
             balance_rental -= pull_r
-        if m > 0: basis_rental *= (1 + i_monthly)
 
         # --- Apply returns (after withdrawals, before next month) ---
         if balance_190 > 0: balance_190 *= (1 + r_monthly_190)
