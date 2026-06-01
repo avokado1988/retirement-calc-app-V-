@@ -715,7 +715,7 @@ def render_qa_section(results, user_inputs):
     # Resilience formatter for the table: highlight the lifespan of the portfolio
     def fmt_lifespan(empty_age):
         if empty_age >= 105.0:
-            return "<span style='color:#1a7a3a; font-weight:bold;'>105+ (חסין)</span>"
+            return "<span style='color:#1a7a3a; font-weight:bold;'>✅ לא נשחק</span>"
         color = "#b84c00" if empty_age >= 90 else "#b71c1c"
         return f"<span style='color:{color}; font-weight:bold;'>גיל {empty_age:.0f}</span>"
 
