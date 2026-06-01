@@ -66,9 +66,9 @@ def run_simulation(user_inputs):
     rm_orig_fee        = float(rental.get("rm_origination_fee", 0.02))
     rm_draw_strategy   = rental.get("rm_draw_strategy", "monthly_deficit")
 
-    rm_active           = False
-    rm_loan_balance     = 0.0
-    rm_available_credit = 0.0
+    rm_active        = False
+    rm_loan_balance  = 0.0
+    rm_max_balance   = 0.0  # fixed at origination: property_value_at_activation * max_ltv
 
     history = []
     inflation_factor = 1.0
@@ -174,6 +174,9 @@ def run_simulation(user_inputs):
             balance_hybrid -= pull_h
 
         # --- Reverse mortgage: activate when trigger condition met ---
+        # Model: LTV cap is dynamic — available headroom = current_property_value * max_ltv - loan_balance
+        # This allows the borrower to keep drawing as long as property appreciation keeps equity above 0.
+        # Interest accrues monthly. Non-recourse cap: loan cannot exceed property value.
         rm_draw_this_month = 0.0
         rm_interest_this_month = 0.0
         if rm_enabled and current_age >= retirement_age:
@@ -181,27 +184,30 @@ def run_simulation(user_inputs):
             trigger_manual = (rm_trigger == "manual" and current_age >= rm_manual_age)
             if not rm_active and (trigger_auto or trigger_manual):
                 rm_active = True
-                max_loan = property_rental_value * rm_max_ltv
-                rm_available_credit = max_loan * (1 - rm_orig_fee)
-                if rm_draw_strategy == "lump_sum" and rm_available_credit > 0:
-                    lump = rm_available_credit
-                    rm_loan_balance    += lump
-                    rm_available_credit = 0.0
-                    balance_rental     += lump
-                    rm_draw_this_month  = lump
+                # Max balance fixed at origination (LTV × property value at that moment)
+                rm_max_balance = property_rental_value * rm_max_ltv
+                # Origination fee immediately reduces available headroom
+                rm_loan_balance += rm_max_balance * rm_orig_fee
+                if rm_draw_strategy == "lump_sum":
+                    headroom = max(0.0, rm_max_balance - rm_loan_balance)
+                    if headroom > 0:
+                        rm_loan_balance    += headroom
+                        balance_rental     += headroom
+                        rm_draw_this_month  = headroom
 
-            # Monthly deficit draw (after activation)
-            if rm_active and rm_draw_strategy == "monthly_deficit" and net_needed_rental > 0 and rm_available_credit > 0:
-                draw = min(net_needed_rental, rm_available_credit)
-                rm_loan_balance     += draw
-                rm_available_credit -= draw
-                balance_rental      += draw
-                rm_draw_this_month   = draw
+            # Monthly deficit draw: headroom = fixed max_balance - current loan (interest erodes headroom too)
+            if rm_active and rm_draw_strategy == "monthly_deficit" and net_needed_rental > 0:
+                headroom = max(0.0, rm_max_balance - rm_loan_balance)
+                draw = min(net_needed_rental, headroom)
+                if draw > 0:
+                    rm_loan_balance    += draw
+                    balance_rental     += draw
+                    rm_draw_this_month  = draw
 
-            # Accrue interest on outstanding loan
-            if rm_active and rm_loan_balance > 0:
+            # Accrue interest — non-recourse cap: loan cannot exceed current property value
+            if rm_active and rm_loan_balance > 0 and rm_loan_balance < property_rental_value:
                 rm_interest_this_month = rm_loan_balance * rm_rate_monthly
-                rm_loan_balance       += rm_interest_this_month
+                rm_loan_balance = min(rm_loan_balance + rm_interest_this_month, property_rental_value)
 
         rm_equity = max(0.0, property_rental_value - rm_loan_balance)
         rm_ltv    = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
