@@ -599,17 +599,29 @@ def render_qa_section(results, user_inputs):
     bool_preserve_95_h   = "✅ כן" if bh_95   >= baseline_capital else "❌ לא"
     bool_preserve_95_r   = "✅ כן" if br_95 > 0 else "❌ לא"
 
+    # Unified cashflow / withdrawal cell.
+    #  Tracks 1-3: nn is the monthly deficit pulled from the portfolio.
+    #  Track 4 (rental): pass cashflow (positive=surplus, negative=deficit) + withdrawal_pct for the note.
+    def fmt_cashflow(nn, cashflow=None, withdrawal_pct=0.0):
+        if cashflow is None:
+            return fmt_withdrawal(nn)
+        if cashflow >= 0:
+            return (f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(cashflow))}</span>"
+                    f"<br/><span style='color:#1a7a3a;font-size:0.72em;'>עודף תזרימי משכירות</span>")
+        return (f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(abs(cashflow)))}−</span>"
+                f"<br/><span style='color:#c0392b;font-size:0.72em;'>גירעון תזרימי משכירות<br/>"
+                f"({withdrawal_pct:.1f}% שיעור משיכה מהתיק)</span>")
+
     t1_cols = {
         "190 + קצבה מזערית": {
             "הכנסות חודשיות":  format_shekel(int(base_income_retire + pension_retire)),
             "הוצאות חודשיות":  format_shekel(int(exp_retire)),
             "הון כולל":        fmt_with_pension_note(inherit_190_r, pension_asset_retire),
-            "משיכה חודשית":    fmt_withdrawal(nn_190_r),
+            "משיכה / תזרים":   fmt_cashflow(nn_190_r),
             "קצב משיכה":       wrap_html_style(f"{pct_190_r:.2f}%", get_withdrawal_style(pct_190_r)),
             "סך נכסים":        format_shekel(tw_190_r),
             "תיק נזיל":        format_shekel(b190_r),
             "שווי נדלן":       format_shekel(property_value_retire),
-            "קצבאות חודשיות":  format_shekel(base_income_retire + pension_retire),
             "חוק 400":         wrap_html_style(rule400(b190_r, nn_190_r), get_400_rule_style(rule400(b190_r, nn_190_r))),
             "קרן חירום":       wrap_html_style(emer(nn_190_r), get_emergency_style(emer(nn_190_r))),
         },
@@ -617,12 +629,11 @@ def render_qa_section(results, user_inputs):
             "הכנסות חודשיות":  format_shekel(int(base_income_retire)),
             "הוצאות חודשיות":  format_shekel(int(exp_retire)),
             "הון כולל":        format_shekel(b25_r),
-            "משיכה חודשית":    fmt_withdrawal(nn_25_r),
+            "משיכה / תזרים":   fmt_cashflow(nn_25_r),
             "קצב משיכה":       wrap_html_style(f"{pct_25_r:.2f}%", get_withdrawal_style(pct_25_r)),
             "סך נכסים":        format_shekel(tw_25_r),
             "תיק נזיל":        format_shekel(b25_r),
             "שווי נדלן":       format_shekel(property_value_retire),
-            "קצבאות חודשיות":  format_shekel(base_income_retire),
             "חוק 400":         wrap_html_style(rule400(b25_r, nn_25_r), get_400_rule_style(rule400(b25_r, nn_25_r))),
             "קרן חירום":       wrap_html_style(emer(nn_25_r), get_emergency_style(emer(nn_25_r))),
         },
@@ -630,12 +641,11 @@ def render_qa_section(results, user_inputs):
             "הכנסות חודשיות":  format_shekel(int(base_income_retire + pension_retire)),
             "הוצאות חודשיות":  format_shekel(int(exp_retire)),
             "הון כולל":        fmt_with_pension_note(inherit_h_r, pension_asset_retire),
-            "משיכה חודשית":    fmt_withdrawal(nn_h_r),
+            "משיכה / תזרים":   fmt_cashflow(nn_h_r),
             "קצב משיכה":       wrap_html_style(f"{pct_h_r:.2f}%", get_withdrawal_style(pct_h_r)),
             "סך נכסים":        format_shekel(tw_h_r),
             "תיק נזיל":        format_shekel(bh_r),
             "שווי נדלן":       format_shekel(property_value_retire),
-            "קצבאות חודשיות":  format_shekel(base_income_retire + pension_retire),
             "חוק 400":         wrap_html_style(rule400(bh_r, nn_h_r), get_400_rule_style(rule400(bh_r, nn_h_r))),
             "קרן חירום":       wrap_html_style(emer(nn_h_r), get_emergency_style(emer(nn_h_r))),
         },
@@ -643,11 +653,7 @@ def render_qa_section(results, user_inputs):
             "הכנסות חודשיות":  format_shekel(int(base_income_retire + net_rental_r)),
             "הוצאות חודשיות":  format_shekel(int(exp_retire + rent_paid_r)),
             "הון כולל":        format_shekel(br_r),
-            "משיכה חודשית":    (
-                f"<span style='color:#1a7a3a;font-weight:700;'>תזרים חיובי<br/>+{format_shekel(int(rental_cashflow_at_retire))}</span>"
-                if rental_cashflow_at_retire >= 0 else
-                f"<span style='color:#c0392b;font-weight:700;'>גירעון<br/>{format_shekel(int(rental_cashflow_at_retire))}−</span>"
-            ),
+            "משיכה / תזרים":   fmt_cashflow(nn_rent_r, cashflow=rental_cashflow_at_retire, withdrawal_pct=pct_rent_r),
             "קצב משיכה":       (
                 "<span style='color:#1a7a3a;'>✅ לא נדרש</span>"
                 if rental_cashflow_at_retire >= 0 else
@@ -656,31 +662,35 @@ def render_qa_section(results, user_inputs):
             "סך נכסים":        format_shekel(tw_rent_r),
             "תיק נזיל":        format_shekel(br_r),
             "שווי נדלן":       format_shekel(rental_prop_retire),
-            "קצבאות חודשיות":  format_shekel(base_income_retire + float(row_ret_r.get("הכנסת שכירות נטו", 0))),
             "חוק 400":         "<span style='color:#888;'>לא רלוונטי<br/>(מבחן תזרים)</span>",
             "קרן חירום":       wrap_html_style(emer(nn_rent_r), get_emergency_style(emer(nn_rent_r))) if nn_rent_r > 0 else "<span style='color:#1a7a3a;'>לא נדרש</span>",
         },
     }
 
-    KEY_ROWS_1 = [
-        ("סה\"כ הכנסות חודשיות (ב\"ל + קצבה + שכ\"ד)",  "הכנסות חודשיות"),
-        ("סה\"כ הוצאות חודשיות (כולל שכ\"ד תשלום)",     "הוצאות חודשיות"),
-        ("כמה אצטרך למשוך מהתיק כל חודש?",              "משיכה חודשית"),
-        ("מה קצב המשיכה השנתי מהתיק?",                  "קצב משיכה"),
-        ("מה שווי ההון הכולל כולל הקצבה?",              "הון כולל"),
-        ("מה סך כלל הנכסים שלי?",                        "סך נכסים"),
-    ]
-    DETAIL_ROWS_1 = [
+    ASSETS_ROWS_1 = [
         ("מה גובה התיק הנזיל ביום הפרישה?",   "תיק נזיל"),
-        ("מה שווי הנדל\"ן שלי בפרישה?",       "שווי נדלן"),
-        ("מה מדד החסינות של התיק (חוק 400)?", "חוק 400"),
-        ("כמה שנים קרן החירום מכסה?",          "קרן חירום"),
+        ("שווי הון כולל כולל קצבה",            "הון כולל"),
+        ("מה שווי הנדל\"ן שלי בפרישה?",        "שווי נדלן"),
+        ("מה סך כלל הנכסים שלי?",              "סך נכסים"),
+    ]
+    CASHFLOW_ROWS_1 = [
+        ("הכנסות (קצבאות / שכירות)",            "הכנסות חודשיות"),
+        ("הוצאות (קבועות / שכירות)",            "הוצאות חודשיות"),
+        ("כמה אצטרך להשלים מהתיק (תזרים)",      "משיכה / תזרים"),
+    ]
+    ACTUARIAL_ROWS_1 = [
+        ("מה קצב המשיכה השנתי מהתיק?",         "קצב משיכה"),
+        ("מה מדד החסינות של התיק (חוק 400)?",  "חוק 400"),
+        ("כמה שנים קרן החירום מכסה?",           "קרן חירום"),
     ]
 
-    with st.expander(f"📊 מצב ביום הפרישה — גיל {retire_age:.1f}", expanded=True):
-        render_metric_columns(KEY_ROWS_1, t1_cols, show_header=True)
-        with st.expander("פרטים נוספים"):
-            render_metric_columns(DETAIL_ROWS_1, t1_cols, show_header=False)
+    st.markdown(f"### 📊 מצב ביום הפרישה — גיל {retire_age:.1f}")
+    with st.expander("💰 סיכום שווי נכסים", expanded=True):
+        render_metric_columns(ASSETS_ROWS_1, t1_cols, show_header=True)
+    with st.expander("💸 סיכום תזרים", expanded=True):
+        render_metric_columns(CASHFLOW_ROWS_1, t1_cols, show_header=True)
+    with st.expander("📊 ניתוח אקטוארי", expanded=False):
+        render_metric_columns(ACTUARIAL_ROWS_1, t1_cols, show_header=True)
 
     # -------------------------------------------------------
     # Table 2: At check_age
@@ -700,24 +710,16 @@ def render_qa_section(results, user_inputs):
         else: color = "#b71c1c"
         return f"<span style='color:{color}; font-weight:bold;'>{pct:.0f}%</span>"
 
-    # For tracks 1-3: withdrawal = cashflow deficit. For track 4: cashflow is the primary metric.
-    # Unified "משיכה / תזרים" row — same concept across all tracks.
-    def fmt_unified_cashflow(nn, cashflow=None):
-        if cashflow is not None:
-            if cashflow >= 0:
-                return f"<span style='color:#1a7a3a;font-weight:700;'>+{format_shekel(int(cashflow))}</span>"
-            else:
-                return f"<span style='color:#c0392b;font-weight:700;'>{format_shekel(int(abs(cashflow)))}−</span>"
-        return fmt_withdrawal(nn)
-
     t2_cols = {
         "190 + קצבה מזערית": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
-            "משיכה / תזרים": fmt_unified_cashflow(nn_190_c),
+            "משיכה / תזרים": fmt_cashflow(nn_190_c),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_190),
             "שימור הון":    fmt_preservation(b190_95),
             "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
+            "תיק נזיל":     format_shekel(b190_c),
+            "שווי נדלן":    format_shekel(property_value_check),
             "סך נכסים":     format_shekel(tw_190_c),
             "קצב משיכה":    wrap_html_style(f"{pct_190_c:.2f}%", get_withdrawal_style(pct_190_c)),
             "גיל התאוששות": recovery_190,
@@ -725,10 +727,12 @@ def render_qa_section(results, user_inputs):
         "25% ריאלי (ללא קצבה)": {
             "הכנסות חודשיות": format_shekel(int(base_income_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
-            "משיכה / תזרים": fmt_unified_cashflow(nn_25_c),
+            "משיכה / תזרים": fmt_cashflow(nn_25_c),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_25),
             "שימור הון":    fmt_preservation(b25_95),
             "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
+            "תיק נזיל":     format_shekel(b25_c),
+            "שווי נדלן":    format_shekel(property_value_check),
             "סך נכסים":     format_shekel(tw_25_c),
             "קצב משיכה":    wrap_html_style(f"{pct_25_c:.2f}%", get_withdrawal_style(pct_25_c)),
             "גיל התאוששות": recovery_25,
@@ -736,10 +740,12 @@ def render_qa_section(results, user_inputs):
         "25% ריאלי + קצבה מזערית": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
             "הוצאות חודשיות": format_shekel(int(exp_check)),
-            "משיכה / תזרים": fmt_unified_cashflow(nn_h_c),
+            "משיכה / תזרים": fmt_cashflow(nn_h_c),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_h),
             "שימור הון":    fmt_preservation(bh_95),
             "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
+            "תיק נזיל":     format_shekel(bh_c),
+            "שווי נדלן":    format_shekel(property_value_check),
             "סך נכסים":     format_shekel(tw_h_c),
             "קצב משיכה":    wrap_html_style(f"{pct_h_c:.2f}%", get_withdrawal_style(pct_h_c)),
             "גיל התאוששות": recovery_h,
@@ -747,10 +753,12 @@ def render_qa_section(results, user_inputs):
         "שכירות": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + net_rental_c)),
             "הוצאות חודשיות": format_shekel(int(exp_check + rent_paid_c)),
-            "משיכה / תזרים": fmt_unified_cashflow(nn_rent_c, cashflow=rental_cashflow_at_check),
+            "משיכה / תזרים": fmt_cashflow(nn_rent_c, cashflow=rental_cashflow_at_check, withdrawal_pct=pct_rent_c),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_r),
             "שימור הון":    fmt_preservation(br_95),
             "הון כולל":     format_shekel(br_c),
+            "תיק נזיל":     format_shekel(br_c),
+            "שווי נדלן":    format_shekel(rental_prop_check),
             "סך נכסים":     format_shekel(tw_rent_c),
             "קצב משיכה":    (
                 "<span style='color:#1a7a3a;'>✅ לא נדרש</span>"
@@ -766,22 +774,29 @@ def render_qa_section(results, user_inputs):
         },
     }
 
-    KEY_ROWS_2 = [
-        ("סה\"כ הכנסות חודשיות (ב\"ל + קצבה + שכ\"ד)",  "הכנסות חודשיות"),
-        ("סה\"כ הוצאות חודשיות (כולל שכ\"ד תשלום)",     "הוצאות חודשיות"),
-        ("כמה אמשוך / מה התזרים החודשי?",               "משיכה / תזרים"),
-        ("עד איזה גיל הכסף מחזיק?",                     "עד איזה גיל הכסף מחזיק?"),
-        ("כמה מההון ההתחלתי נשמר בגיל 95?",             "שימור הון"),
-        ("מה שווי ההון הכולל כולל הקצבה?",              "הון כולל"),
-        ("מה סך כלל הנכסים שלי?",                       "סך נכסים"),
+    ASSETS_ROWS_2 = [
+        ("מה גובה התיק הנזיל בגיל זה?",        "תיק נזיל"),
+        ("שווי הון כולל כולל קצבה",            "הון כולל"),
+        ("מה שווי הנדל\"ן שלי בגיל זה?",       "שווי נדלן"),
+        ("מה סך כלל הנכסים שלי?",              "סך נכסים"),
     ]
-    DETAIL_ROWS_2 = [
-        ("מה קצב המשיכה בגיל זה?",                    "קצב משיכה"),
-        ("מאיזה גיל התיק עולה מעל ההון הראשוני?",     "גיל התאוששות"),
-        ("מתי תזרים השכירות הופך שלילי?",              "גיל היפוך"),
+    CASHFLOW_ROWS_2 = [
+        ("הכנסות (קצבאות / שכירות)",            "הכנסות חודשיות"),
+        ("הוצאות (קבועות / שכירות)",            "הוצאות חודשיות"),
+        ("כמה אצטרך להשלים מהתיק (תזרים)",      "משיכה / תזרים"),
+    ]
+    ACTUARIAL_ROWS_2 = [
+        ("עד איזה גיל הכסף מחזיק?",            "עד איזה גיל הכסף מחזיק?"),
+        ("כמה מההון ההתחלתי נשמר בגיל 95?",    "שימור הון"),
+        ("מה קצב המשיכה בגיל זה?",             "קצב משיכה"),
+        ("מאיזה גיל התיק עולה מעל ההון הראשוני?", "גיל התאוששות"),
+        ("מתי התזרים הופך שלילי?",             "גיל היפוך"),
     ]
 
-    with st.expander(f"🔮 מצב בגיל נבדק — גיל {check_age:.1f}", expanded=True):
-        render_metric_columns(KEY_ROWS_2, t2_cols, show_header=True)
-        with st.expander("פרטים נוספים"):
-            render_metric_columns(DETAIL_ROWS_2, t2_cols, show_header=False)
+    st.markdown(f"### 🔮 מצב בגיל {check_age:.1f}")
+    with st.expander("💰 סיכום שווי נכסים", expanded=True):
+        render_metric_columns(ASSETS_ROWS_2, t2_cols, show_header=True)
+    with st.expander("💸 סיכום תזרים", expanded=True):
+        render_metric_columns(CASHFLOW_ROWS_2, t2_cols, show_header=True)
+    with st.expander("📊 ניתוח אקטוארי", expanded=False):
+        render_metric_columns(ACTUARIAL_ROWS_2, t2_cols, show_header=True)
