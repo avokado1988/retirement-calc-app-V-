@@ -1,10 +1,8 @@
 import streamlit as st
 from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_RED, COLOR_BLUE
 
-def render_rental_inputs(wealth_data):
+def render_rental_inputs(wealth_data, check_age=90.0):
     existing_savings = float(wealth_data.get("existing_savings", 440000))
-    kids_help = float(wealth_data.get("kids_help", 1000000))
-    emergency_fund = float(wealth_data.get("emergency_fund", 300000))
     net_sale = float(wealth_data.get("net_sale", 10000000))
 
     net_for_rental = existing_savings
@@ -57,24 +55,47 @@ def render_rental_inputs(wealth_data):
     )
     st.caption("ברירת מחדל 10% — מסלול סעיף 122 (ללא ניכוי הוצאות). ניתן להתאים.")
 
-    st.markdown("**הוצאות תחזוקה חודשיות — מגיל ההשכרה (גיל 66)**")
-    maintenance_early_monthly = compact_number_input(
-        "תחזוקה — 10 שנים ראשונות (₪/חודש)",
-        value=500, min_value=0, step=100, unit="₪", color=COLOR_RED
+    st.markdown("**הוצאות תחזוקה — % מדמי השכירות (מגיל ההשכרה, גיל 66)**")
+    maintenance_early_pct = compact_number_input(
+        "תחזוקה — 10 שנים ראשונות (% מהשכירות)",
+        value=7.0, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
     )
-    st.caption("תיקונים שוטפים, ועד בית, ביטוח — בעשור הראשון להשכרה.")
-    maintenance_late_monthly = compact_number_input(
-        "תחזוקה — מ-10 שנים ואילך (₪/חודש)",
-        value=1000, min_value=0, step=100, unit="₪", color=COLOR_RED
+    st.caption("דירה חדשה מקבלן — תיקונים שוטפים, ועד בית, ביטוח. נהוג 5–8% בשנים הראשונות.")
+    maintenance_late_pct = compact_number_input(
+        "תחזוקה — מ-10 שנים ואילך (% מהשכירות)",
+        value=12.0, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
     )
-    st.caption("עלייה בהוצאות תחזוקה עם גיל הדירה — תיקונים גדולים יותר.")
+    st.caption("לאחר עשור — תיקונים גדולים, שיפוצים, בלאי. נהוג 10–15% מהשכירות.")
 
     st.divider()
     st.markdown("##### 🏦 משכנתה הפוכה — קצבה חודשית קבועה מהנכס")
-    st.caption("הבנק מחשב קצבה חודשית קבועה לכל החיים לפי שווי הנכס, גיל ההפעלה וריבית. החיסכון נשאר נזיל כקרן חירום.")
+    st.caption("הבנק מחשב קצבה חודשית קבועה לכל החיים. החיסכון נשאר נזיל כקרן חירום.")
     enable_rm = st.checkbox("הפעל משכנתה הפוכה", value=False, key="enable_rm")
 
     if enable_rm:
+        # Deficit hint from last simulation results
+        sim_res = st.session_state.get("sim_results")
+        if sim_res and "df_full" in sim_res:
+            df_hint = sim_res["df_full"]
+            last_inputs = st.session_state.get("last_inputs", {})
+            retire_age_hint = float(last_inputs.get("timeline", {}).get("retirement_age", 67))
+            df_neg = df_hint[
+                (df_hint["תזרים נטו שכירות"] < 0) &
+                (df_hint["גיל"] >= retire_age_hint) &
+                (df_hint["גיל"] <= check_age)
+            ]
+            if not df_neg.empty:
+                cum_def = float(df_neg["תזרים נטו שכירות"].abs().sum())
+                min_def = float(df_neg["תזרים נטו שכירות"].abs().min())
+                max_def = float(df_neg["תזרים נטו שכירות"].abs().max())
+                st.info(
+                    f"💡 **לפי הנתונים הנוכחיים — עד גיל {check_age:.0f}:** "
+                    f"גרעון תזרים מצטבר צפוי **₪{cum_def:,.0f}** | "
+                    f"גרעון חודשי טיפוסי: **₪{min_def:,.0f} – ₪{max_def:,.0f}**"
+                )
+            else:
+                st.success(f"✅ לפי הנתונים הנוכחיים — עד גיל {check_age:.0f}: אין גרעון תזרים צפוי.")
+
         rm_annual_rate_pct = compact_number_input(
             "ריבית שנתית ממוצעת (%)",
             value=5.5, min_value=1.0, max_value=12.0, step=0.1, unit="%", color=COLOR_RED
@@ -85,23 +106,60 @@ def render_rental_inputs(wealth_data):
         )
         rm_life_expectancy_age = compact_number_input(
             "גיל תוחלת חיים (לחישוב הקצבה)",
-            value=90, min_value=70, max_value=105, step=1, unit="גיל", color=COLOR_BLUE
+            value=int(check_age), min_value=70, max_value=105, step=1, unit="גיל", color=COLOR_BLUE
         )
-        st.caption("הבנק מחלק את ההלוואה על פני שנות החיים הצפויות. ככל שמפעיל מוקדם יותר — הקצבה גבוהה יותר.")
-        rm_max_ltv_pct = compact_number_input(
-            "LTV — תקרת הלוואה מול שווי נכס (%)",
-            value=55.0, min_value=10.0, max_value=80.0, step=5.0, unit="%", color=COLOR_BLUE
+        st.caption(f"ברירת מחדל = גיל הבדיקה ({check_age:.0f}). ככל שגבוה יותר — קצבה נמוכה יותר, הבנק לוקח יותר סיכון.")
+
+        rm_loan_amount_ils = compact_number_input(
+            "סכום ההלוואה הרצוי (₪)",
+            value=0, min_value=0, step=50000, unit="₪", color=COLOR_BLUE
         )
-        st.caption("בישראל: ~45% לגיל 60, ~55% לגיל 65–70, ~65% לגיל 75+.")
+        if rm_loan_amount_ils > 0 and current_property_value > 0:
+            ltv_pct = rm_loan_amount_ils / current_property_value * 100
+            ltv_icon = "🟢" if ltv_pct <= 55 else ("🟡" if ltv_pct <= 65 else "🔴")
+            st.caption(f"{ltv_icon} LTV: {ltv_pct:.1f}% מהנכס | בישראל: ~45–55% לגיל 65–70, ~65% לגיל 75+")
+
         rm_origination_fee_pct = compact_number_input(
             "עמלת פתיחת תיק — חד פעמית (%)",
             value=2.0, min_value=0.0, max_value=5.0, step=0.5, unit="%", color=COLOR_RED
         )
+
+        # Live annuity preview and loan summary
+        if rm_loan_amount_ils > 0 and rm_life_expectancy_age > rm_start_age:
+            r_m = (1 + rm_annual_rate_pct / 100) ** (1 / 12) - 1
+            n_m = (rm_life_expectancy_age - rm_start_age) * 12
+            net_loan = rm_loan_amount_ils * (1 - rm_origination_fee_pct / 100)
+            if r_m > 0 and n_m > 0:
+                annuity_preview = net_loan * r_m / ((1 + r_m) ** n_m - 1)
+            else:
+                annuity_preview = net_loan / max(1, n_m)
+            total_received = annuity_preview * n_m
+            interest_cost = rm_loan_amount_ils - total_received
+            orig_fee_ils = rm_loan_amount_ils * rm_origination_fee_pct / 100
+            years_span = rm_life_expectancy_age - rm_start_age
+
+            st.markdown(
+                f"<div style='background:#f0f4ff;border-radius:8px;padding:12px 14px;"
+                f"direction:rtl;font-family:sans-serif;font-size:0.88em;margin-top:8px;'>"
+                f"<b style='font-size:1.05em;'>📊 קצבה חודשית צפויה: ₪{annuity_preview:,.0f}</b>"
+                f"<hr style='margin:8px 0;border:none;border-top:1px solid #ccd;'/>"
+                f"<table style='width:100%;border-collapse:collapse;'>"
+                f"<tr><td>קרן — תביעת הבנק מהעיזבון</td>"
+                f"<td style='text-align:left;font-weight:700;'>₪{rm_loan_amount_ils:,.0f}</td></tr>"
+                f"<tr><td>עמלת פתיחת תיק ({rm_origination_fee_pct:.1f}%)</td>"
+                f"<td style='text-align:left;color:#c0392b;'>₪{orig_fee_ils:,.0f}</td></tr>"
+                f"<tr><td>סך תקבולים ({years_span:.0f} שנים)</td>"
+                f"<td style='text-align:left;color:#1a7a3a;font-weight:700;'>₪{total_received:,.0f}</td></tr>"
+                f"<tr style='border-top:1px solid #ccd;'><td><b>ריבית מצטברת</b></td>"
+                f"<td style='text-align:left;color:#c0392b;font-weight:700;'>₪{interest_cost:,.0f}</td></tr>"
+                f"</table></div>",
+                unsafe_allow_html=True
+            )
     else:
         rm_annual_rate_pct = 5.5
         rm_start_age = 72
-        rm_life_expectancy_age = 90
-        rm_max_ltv_pct = 55.0
+        rm_life_expectancy_age = float(check_age)
+        rm_loan_amount_ils = 0
         rm_origination_fee_pct = 2.0
 
     return {
@@ -111,14 +169,14 @@ def render_rental_inputs(wealth_data):
         "rent_paid_monthly": rent_paid_monthly,
         "rent_paid_growth_rate": rent_paid_growth_pct / 100,
         "rental_tax_rate": rental_tax_pct / 100,
-        "maintenance_early_monthly": maintenance_early_monthly,
-        "maintenance_late_monthly": maintenance_late_monthly,
+        "maintenance_early_pct": maintenance_early_pct / 100,
+        "maintenance_late_pct": maintenance_late_pct / 100,
         "current_property_value": current_property_value,
         "rental_property_appreciation": rental_appreciation_pct / 100,
         "rm_enabled": enable_rm,
         "rm_annual_rate": rm_annual_rate_pct / 100,
         "rm_start_age": rm_start_age,
         "rm_life_expectancy_age": rm_life_expectancy_age,
-        "rm_max_ltv": rm_max_ltv_pct / 100,
+        "rm_loan_amount_ils": rm_loan_amount_ils,
         "rm_origination_fee": rm_origination_fee_pct / 100,
     }

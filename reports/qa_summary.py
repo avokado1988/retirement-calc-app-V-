@@ -77,7 +77,7 @@ def render_qa_summary_page(results, user_inputs):
     rental_appreciation     = float(rental.get("rental_property_appreciation", 0.015))
     rm_enabled_s            = bool(rental.get("rm_enabled", False))
     rm_annual_rate_s        = float(rental.get("rm_annual_rate", 0.055))
-    rm_max_ltv_s            = float(rental.get("rm_max_ltv", 0.55))
+    rm_loan_amount_ils_s    = float(rental.get("rm_loan_amount_ils", 0))
 
     # ─── שליפת תוצאות מהמנוע ─────────────────────────────────────────────────
     def _row(df, age):
@@ -130,7 +130,7 @@ def render_qa_summary_page(results, user_inputs):
         _rm_int = f"{rm_interest_total_s:,.0f} ש\"ח" if rm_interest_total_s else "---"
         rm_summary_block = (
             f"  ריבית שנתית RM     : {rm_annual_rate_s*100:.1f}%\n"
-            f"  LTV מקסימלי        : {rm_max_ltv_s*100:.0f}%\n"
+            f"  סכום הלוואה        : {rm_loan_amount_ils_s:,.0f} ₪\n"
             f"  גיל הפעלה          : {_rm_act}\n"
             f"  הון עצמי בגיל {check_age:.0f}  : {_rm_eq}\n"
             f"  סהכ ריבית RM       : {_rm_int}"

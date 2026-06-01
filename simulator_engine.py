@@ -56,16 +56,16 @@ def run_simulation(user_inputs):
     rental_income_growth_monthly = (1 + float(rental.get("rental_income_growth_rate", 0.03))) ** (1/12) - 1
     rent_paid_growth_monthly = (1 + float(rental.get("rent_paid_growth_rate", 0.03))) ** (1/12) - 1
     rental_tax_rate = float(rental.get("rental_tax_rate", 0.10))
-    maintenance_early = float(rental.get("maintenance_early_monthly", 500))
-    maintenance_late  = float(rental.get("maintenance_late_monthly", 1000))
+    maintenance_early_pct = float(rental.get("maintenance_early_pct", 0.07))
+    maintenance_late_pct  = float(rental.get("maintenance_late_pct", 0.12))
     rental_start_age  = 66.0  # maintenance and tax calculated from this age
 
     # Reverse mortgage parameters (track 4)
     rm_enabled              = bool(rental.get("rm_enabled", False))
     rm_rate_monthly         = (1 + float(rental.get("rm_annual_rate", 0.055))) ** (1/12) - 1
     rm_start_age            = float(rental.get("rm_start_age", 72))
-    rm_life_expectancy_age  = float(rental.get("rm_life_expectancy_age", 90))
-    rm_max_ltv              = float(rental.get("rm_max_ltv", 0.55))
+    rm_life_expectancy_age  = float(rental.get("rm_life_expectancy_age", check_age))
+    rm_loan_amount_ils      = float(rental.get("rm_loan_amount_ils", 0))
     rm_orig_fee             = float(rental.get("rm_origination_fee", 0.02))
 
     rm_active          = False
@@ -116,10 +116,10 @@ def run_simulation(user_inputs):
         rental_income_gross = rental_income_base * rental_income_factor
         net_rental_income = rental_income_gross * (1 - rental_tax_rate)
         rent_paid_indexed = rent_paid_base * rent_paid_factor
-        # Maintenance cost: from rental_start_age, higher rate after 10 years
+        # Maintenance cost: % of gross rental income, from rental_start_age, higher rate after 10 years
         if current_age >= rental_start_age:
-            maintenance_base = maintenance_early if current_age < rental_start_age + 10 else maintenance_late
-            maintenance_indexed = maintenance_base * inflation_factor
+            maintenance_pct = maintenance_early_pct if current_age < rental_start_age + 10 else maintenance_late_pct
+            maintenance_indexed = rental_income_gross * maintenance_pct
         else:
             maintenance_indexed = 0.0
 
@@ -188,25 +188,20 @@ def run_simulation(user_inputs):
         # Non-recourse: loan capped at property value. Savings stay as emergency reserve.
         rm_annuity_this_month = 0.0
         rm_interest_this_month = 0.0
-        if rm_enabled and current_age >= rm_start_age:
+        if rm_enabled and rm_loan_amount_ils > 0 and current_age >= rm_start_age:
             if not rm_active:
                 rm_active = True
-                max_loan_gross = property_rental_value * rm_max_ltv
-                max_loan_net   = max_loan_gross * (1 - rm_orig_fee)
+                max_loan_net = rm_loan_amount_ils * (1 - rm_orig_fee)
                 n_months = max(1.0, (rm_life_expectancy_age - rm_start_age) * 12)
                 if rm_rate_monthly > 0:
                     rm_annuity_monthly = max_loan_net * rm_rate_monthly / ((1 + rm_rate_monthly) ** n_months - 1)
                 else:
                     rm_annuity_monthly = max_loan_net / n_months
 
-            # Pay annuity this month (stops only when loan reaches property value)
-            if rm_loan_balance < property_rental_value:
-                rm_annuity_this_month = rm_annuity_monthly
-                rm_loan_balance = min(
-                    (rm_loan_balance + rm_annuity_this_month) * (1 + rm_rate_monthly),
-                    property_rental_value
-                )
-                rm_interest_this_month = rm_loan_balance - (rm_loan_balance / (1 + rm_rate_monthly))
+            # Annuity always paid — bank absorbs when loan exceeds property value (non-recourse)
+            rm_annuity_this_month = rm_annuity_monthly
+            rm_loan_balance = (rm_loan_balance + rm_annuity_this_month) * (1 + rm_rate_monthly)
+            rm_interest_this_month = rm_loan_balance - (rm_loan_balance / (1 + rm_rate_monthly))
 
         # RM annuity reduces savings pressure; surplus (annuity > deficit) goes to savings
         cashflow_with_rm = rental_cashflow_net + rm_annuity_this_month

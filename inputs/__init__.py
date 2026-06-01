@@ -41,6 +41,7 @@ def render_all_sidebar_inputs():
     capital_for_pension = incomes_ui.get("capital_for_pension", 0)
 
     with st.sidebar.expander("5. מסלול 1 — תיקון 190", expanded=False):
+        _show_1 = st.checkbox("הצג מסלול זה בהשוואה", value=True, key="show_track_1")
         a190 = render_190_inputs(remaining_wealth, capital_for_pension)
         # Inject pension data from incomes
         a190["desired_pension"]      = incomes_ui["desired_pension"]
@@ -51,15 +52,23 @@ def render_all_sidebar_inputs():
         inputs_dict["amendment_190"] = a190
 
     with st.sidebar.expander("6. מסלול 2 — 25% מס ריאלי (ללא קצבה)", expanded=False):
+        _show_2 = st.checkbox("הצג מסלול זה בהשוואה", value=True, key="show_track_2")
         t2 = render_track2_inputs(remaining_wealth)
 
     net_for_hybrid = inputs_dict["amendment_190"].get("net_for_190", 0)
     with st.sidebar.expander("7. מסלול 3 — 25% ריאלי + קצבה מזערית (היברידי)", expanded=False):
+        _show_3 = st.checkbox("הצג מסלול זה בהשוואה", value=True, key="show_track_3")
         t3 = render_track3_inputs(net_for_hybrid)
 
     inputs_dict["real_tax_25"] = {**t2, **t3, "net_for_hybrid": net_for_hybrid}
 
     with st.sidebar.expander("8. מסלול 4 — השכרת הנכס", expanded=False):
-        inputs_dict["rental"] = render_rental_inputs(inputs_dict["wealth"])
+        _show_4 = st.checkbox("הצג מסלול זה בהשוואה", value=True, key="show_track_4")
+        _check_age = float(inputs_dict["timeline"].get("check_age", 90.0))
+        inputs_dict["rental"] = render_rental_inputs(inputs_dict["wealth"], _check_age)
+
+    inputs_dict["visible_tracks"] = [
+        t for t, show in [(1, _show_1), (2, _show_2), (3, _show_3), (4, _show_4)] if show
+    ]
 
     return inputs_dict

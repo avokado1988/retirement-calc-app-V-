@@ -16,6 +16,9 @@ def render_qa_section(results, user_inputs):
         .styled-table tbody th { background-color: #f8f9fc; color: #555; font-weight: 600; padding: 8px 12px !important; text-align: right !important; border-bottom: 1px solid #eef; border-left: 2px solid #d0d4e8; font-size: 0.88em; }
         [data-testid="stExpander"] summary { direction: rtl !important; text-align: right !important; }
         [data-testid="stExpander"] summary p { direction: rtl !important; text-align: right !important; }
+        .qa-tip { position: relative; display: inline-block; cursor: help; color: #7a9cc8; font-size: 0.85em; vertical-align: middle; }
+        .qa-tip .qa-tiptext { visibility: hidden; opacity: 0; background: #2c3e50; color: #fff; font-size: 0.8em; font-weight: 400; border-radius: 6px; padding: 6px 10px; position: absolute; z-index: 9999; bottom: 130%; right: 0; width: 240px; text-align: right; direction: rtl; transition: opacity 0.15s; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.25); line-height: 1.4; }
+        .qa-tip:hover .qa-tiptext { visibility: visible; opacity: 1; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -69,7 +72,7 @@ def render_qa_section(results, user_inputs):
     nn_190_r = max(0.0, exp_retire - (base_income_retire + pension_retire))
     nn_25_r = max(0.0, exp_retire - base_income_retire)
     nn_h_r = nn_190_r
-    nn_rent_r = max(0.0, (exp_retire + rent_paid_r) - (base_income_retire + net_rental_r))
+    nn_rent_r = max(0.0, -rental_cashflow_at_retire)  # uses full cashflow incl. maintenance
 
     def rule400(bal, nn): return f"{bal / (nn * 400):.2f}" if nn > 0 else "∞"
     def emer(nn): return f"{emergency_fund / (nn * 12):.1f}" if nn > 0 else "∞"
@@ -111,10 +114,14 @@ def render_qa_section(results, user_inputs):
     inherit_190_r = b190_r + pension_asset_retire
     inherit_h_r = bh_r + pension_asset_retire
 
+    # Track 4: property equity = property value minus RM loan (0 when RM not active)
+    rm_equity_retire = float(row_retire.get("משכנתה הפוכה — הון עצמי", rental_prop_retire))
+    rm_equity_check  = float(row_check.get("משכנתה הפוכה — הון עצמי", rental_prop_check))
+
     tw_190_r = b190_r + pension_asset_retire + property_value_retire + emergency_fund
     tw_25_r = b25_r + property_value_retire + emergency_fund
     tw_h_r = bh_r + pension_asset_retire + property_value_retire + emergency_fund
-    tw_rent_r = br_r + rental_prop_retire  # no separate emergency_fund — savings serve that role in track 4
+    tw_rent_r = br_r + rm_equity_retire  # net equity, not gross property value
 
     # -------------------------------------------------------
     # Extract values at check_age
@@ -135,7 +142,7 @@ def render_qa_section(results, user_inputs):
     nn_190_c = max(0.0, exp_check - (base_income_check + pension_check))
     nn_25_c = max(0.0, exp_check - base_income_check)
     nn_h_c = nn_190_c
-    nn_rent_c = max(0.0, (exp_check + rent_paid_c) - (base_income_check + net_rental_c))
+    nn_rent_c = max(0.0, -rental_cashflow_at_check)  # uses full cashflow incl. maintenance
 
     pct_190_c = wpct(nn_190_c, b190_c)
     pct_25_c = wpct(nn_25_c, b25_c)
@@ -148,7 +155,7 @@ def render_qa_section(results, user_inputs):
     tw_190_c = b190_c + pension_asset_check + property_value_check + emergency_fund
     tw_25_c = b25_c + property_value_check + emergency_fund
     tw_h_c = bh_c + pension_asset_check + property_value_check + emergency_fund
-    tw_rent_c = br_c + rental_prop_check  # no separate emergency_fund — savings serve that role in track 4
+    tw_rent_c = br_c + rm_equity_check  # net equity, not gross property value
 
     # -------------------------------------------------------
     # Extract values at age 95
@@ -259,9 +266,9 @@ def render_qa_section(results, user_inputs):
     cum_deficit_h = float((df_h_empty["הוצאה נומינלית"] - df_h_empty["הכנסה נומינלית"] - df_h_empty["הכנסה מקצבה מזערית"]).clip(lower=0).sum())
     months_deficit_h = len(df_h_empty)
 
-    # Track 4: like tracks 1-3 — only count deficit after savings are depleted
+    # Track 4: only count deficit after savings are depleted; cashflow column already includes maintenance
     df_r_neg = df_full[(df_full["צבירה מסלול שכירות"] <= 0) & (df_full["גיל"] >= retire_age) & (df_full["גיל"] <= check_age)]
-    cum_deficit_r = float((df_r_neg["הוצאה נומינלית"] + df_r_neg["הוצאת שכירות"] - df_r_neg["הכנסה נומינלית"] - df_r_neg["הכנסת שכירות נטו"]).clip(lower=0).sum())
+    cum_deficit_r = float(df_r_neg["תזרים נטו שכירות"].clip(upper=0).abs().sum())
     months_deficit_r = len(df_r_neg)
 
     def fmt_cum_deficit(total, months):
@@ -366,6 +373,10 @@ def render_qa_section(results, user_inputs):
         },
     }
 
+    visible_tracks = set(user_inputs.get("visible_tracks", [1, 2, 3, 4]))
+    if not visible_tracks:  # safety: show all if none selected
+        visible_tracks = {1, 2, 3, 4}
+
     tracks_exec = [
         (1, score_190, empty_190, b190_95, husn_190),
         (2, score_25, empty_25, b25_95, husn_25),
@@ -374,10 +385,14 @@ def render_qa_section(results, user_inputs):
     ]
 
     # -------------------------------------------------------
-    # Rank: sort by score desc, lower track_id wins ties
+    # Rank: sort by score desc, lower track_id wins ties; filter hidden tracks
     # -------------------------------------------------------
     sorted_by_score = sorted(tracks_exec, key=lambda x: (-x[1], x[0]))
-    ranked_order = [(i + 1, tid, sc, ea, p95, husn) for i, (tid, sc, ea, p95, husn) in enumerate(sorted_by_score)]
+    ranked_order = [
+        (i + 1, tid, sc, ea, p95, husn)
+        for i, (tid, sc, ea, p95, husn) in enumerate(sorted_by_score)
+        if tid in visible_tracks
+    ]
     rank_for_track = {tid: rank for rank, tid, *_ in ranked_order}
 
     TRACK_NAMES = {
@@ -519,7 +534,8 @@ def render_qa_section(results, user_inputs):
         )
 
     # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
-    cols = st.columns(4)
+    n_visible = max(1, len(ranked_order))
+    cols = st.columns(n_visible)
     for col_idx, (rank, track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(ranked_order)):
         pc = track_pros_cons[track_id]
         rc = RANK_CFG[rank]
@@ -635,8 +651,7 @@ def render_qa_section(results, user_inputs):
         for question, key in rows:
             tip = tooltips.get(key, "")
             tip_html = (
-                f" <span title='{tip}' style='cursor:help;color:#7a9cc8;font-size:0.85em;"
-                f"vertical-align:middle;'>ⓘ</span>"
+                f" <span class='qa-tip'>ⓘ<span class='qa-tiptext'>{tip}</span></span>"
                 if tip else ""
             )
             rp = [
@@ -730,7 +745,7 @@ def render_qa_section(results, user_inputs):
             ),
             "סך נכסים":        format_shekel(tw_rent_r),
             "תיק נזיל":        format_shekel(br_r),
-            "שווי נדלן":       format_shekel(rental_prop_retire),
+            "שווי נדלן":       format_shekel(rm_equity_retire),  # net equity (property minus RM loan)
             "חוק 400":         "<span style='color:#888;'>לא רלוונטי<br/>(מבחן תזרים)</span>",
             "קרן חירום":       wrap_html_style(emer(nn_rent_r), get_emergency_style(emer(nn_rent_r))) if nn_rent_r > 0 else "<span style='color:#1a7a3a;'>לא נדרש</span>",
         },
@@ -851,7 +866,7 @@ def render_qa_section(results, user_inputs):
             "שימור הון":    fmt_preservation(br_95),
             "הון כולל":     format_shekel(br_c),
             "תיק נזיל":     format_shekel(br_c),
-            "שווי נדלן":    format_shekel(rental_prop_check),
+            "שווי נדלן":    format_shekel(rm_equity_check),  # net equity (property minus RM loan)
             "סך נכסים":     format_shekel(tw_rent_c),
             "קצב משיכה":    (
                 "<span style='color:#1a7a3a;'>✅ לא נדרש</span>"
