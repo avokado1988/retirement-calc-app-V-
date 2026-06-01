@@ -68,11 +68,13 @@ def render_qa_section(results, user_inputs):
 
     rent_paid_r = float(row_retire.get("הוצאת שכירות", 0.0))
     net_rental_r = float(row_retire.get("הכנסת שכירות נטו", 0.0))
+    _cf_retire_raw = float(row_retire.get("תזרים נטו שכירות", 0.0))
+    _cf_check_raw  = float(row_check.get("תזרים נטו שכירות", 0.0))
 
     nn_190_r = max(0.0, exp_retire - (base_income_retire + pension_retire))
     nn_25_r = max(0.0, exp_retire - base_income_retire)
     nn_h_r = nn_190_r
-    nn_rent_r = max(0.0, -rental_cashflow_at_retire)  # uses full cashflow incl. maintenance
+    nn_rent_r = max(0.0, -_cf_retire_raw)  # full cashflow incl. maintenance
 
     def rule400(bal, nn): return f"{bal / (nn * 400):.2f}" if nn > 0 else "∞"
     def emer(nn): return f"{emergency_fund / (nn * 12):.1f}" if nn > 0 else "∞"
@@ -142,7 +144,7 @@ def render_qa_section(results, user_inputs):
     nn_190_c = max(0.0, exp_check - (base_income_check + pension_check))
     nn_25_c = max(0.0, exp_check - base_income_check)
     nn_h_c = nn_190_c
-    nn_rent_c = max(0.0, -rental_cashflow_at_check)  # uses full cashflow incl. maintenance
+    nn_rent_c = max(0.0, -_cf_check_raw)  # full cashflow incl. maintenance
 
     pct_190_c = wpct(nn_190_c, b190_c)
     pct_25_c = wpct(nn_25_c, b25_c)
