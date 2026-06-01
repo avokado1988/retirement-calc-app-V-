@@ -57,6 +57,18 @@ def render_rental_inputs(wealth_data):
     )
     st.caption("ברירת מחדל 10% — מסלול סעיף 122 (ללא ניכוי הוצאות). ניתן להתאים.")
 
+    st.markdown("**הוצאות תחזוקה חודשיות — מגיל ההשכרה (גיל 66)**")
+    maintenance_early_monthly = compact_number_input(
+        "תחזוקה — 10 שנים ראשונות (₪/חודש)",
+        value=500, min_value=0, step=100, unit="₪", color=COLOR_RED
+    )
+    st.caption("תיקונים שוטפים, ועד בית, ביטוח — בעשור הראשון להשכרה.")
+    maintenance_late_monthly = compact_number_input(
+        "תחזוקה — מ-10 שנים ואילך (₪/חודש)",
+        value=1000, min_value=0, step=100, unit="₪", color=COLOR_RED
+    )
+    st.caption("עלייה בהוצאות תחזוקה עם גיל הדירה — תיקונים גדולים יותר.")
+
     st.divider()
     st.markdown("##### 🏦 משכנתה הפוכה — כגיבוי לאפס נכסים נזילים")
     st.caption("מנגנון נזילות חירום: כאשר החיסכון הנזיל אוזל, ניתן למשוך כנגד הון הדירה ללא החזר חודשי. החוב צובר ריבית ד\"ר.")
@@ -119,6 +131,8 @@ def render_rental_inputs(wealth_data):
         "rent_paid_monthly": rent_paid_monthly,
         "rent_paid_growth_rate": rent_paid_growth_pct / 100,
         "rental_tax_rate": rental_tax_pct / 100,
+        "maintenance_early_monthly": maintenance_early_monthly,
+        "maintenance_late_monthly": maintenance_late_monthly,
         "current_property_value": current_property_value,
         "rental_property_appreciation": rental_appreciation_pct / 100,
         "rm_enabled": enable_rm,

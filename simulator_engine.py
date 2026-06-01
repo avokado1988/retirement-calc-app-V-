@@ -56,6 +56,9 @@ def run_simulation(user_inputs):
     rental_income_growth_monthly = (1 + float(rental.get("rental_income_growth_rate", 0.03))) ** (1/12) - 1
     rent_paid_growth_monthly = (1 + float(rental.get("rent_paid_growth_rate", 0.03))) ** (1/12) - 1
     rental_tax_rate = float(rental.get("rental_tax_rate", 0.10))
+    maintenance_early = float(rental.get("maintenance_early_monthly", 500))
+    maintenance_late  = float(rental.get("maintenance_late_monthly", 1000))
+    rental_start_age  = 66.0  # maintenance and tax calculated from this age
 
     # Reverse mortgage parameters (track 4)
     rm_enabled         = bool(rental.get("rm_enabled", False))
@@ -116,6 +119,12 @@ def run_simulation(user_inputs):
         rental_income_gross = rental_income_base * rental_income_factor
         net_rental_income = rental_income_gross * (1 - rental_tax_rate)
         rent_paid_indexed = rent_paid_base * rent_paid_factor
+        # Maintenance cost: from rental_start_age, higher rate after 10 years
+        if current_age >= rental_start_age:
+            maintenance_base = maintenance_early if current_age < rental_start_age + 10 else maintenance_late
+            maintenance_indexed = maintenance_base * inflation_factor
+        else:
+            maintenance_indexed = 0.0
 
         # --- Shortfalls ---
         net_needed_190 = max(0.0, nominal_expense - (base_income + p_indexed))
@@ -128,7 +137,7 @@ def run_simulation(user_inputs):
             net_needed_25 = 0.0
             net_needed_hybrid = 0.0
 
-        total_out_rental = nominal_expense + rent_paid_indexed
+        total_out_rental = nominal_expense + rent_paid_indexed + maintenance_indexed
         total_in_rental = base_income + net_rental_income
         rental_cashflow_net = total_in_rental - total_out_rental  # positive = surplus, negative = deficit
         net_needed_rental = max(0.0, -rental_cashflow_net)
@@ -268,6 +277,7 @@ def run_simulation(user_inputs):
             "שווי ירושה היברידי": inheritance_hybrid,
             "הכנסת שכירות נטו": net_rental_income,
             "הוצאת שכירות": rent_paid_indexed,
+            "הוצאת תחזוקה": maintenance_indexed,
             "תזרים נטו שכירות": rental_cashflow_net,
             "משיכה מתיק שכירות": withdrawal_rental,
             "משכנתה הפוכה — משיכה חודשית": rm_draw_this_month,
