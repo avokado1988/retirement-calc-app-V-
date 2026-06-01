@@ -50,7 +50,7 @@ def render_rental_inputs(wealth_data):
     )
 
     st.divider()
-    st.markdown("##### 🧾 מיסוי על הכנסת שכירות")
+    st.markdown("##### 🧾 מיסוי והוצאות על הכנסת שכירות")
     rental_tax_pct = compact_number_input(
         "שיעור מס אפקטיבי על שכירות (%)",
         value=10.0, min_value=0.0, max_value=50.0, step=0.5, unit="%", color=COLOR_RED
