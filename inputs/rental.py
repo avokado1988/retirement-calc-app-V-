@@ -7,11 +7,11 @@ def render_rental_inputs(wealth_data):
     emergency_fund = float(wealth_data.get("emergency_fund", 300000))
     net_sale = float(wealth_data.get("net_sale", 10000000))
 
-    net_for_rental = max(0, existing_savings - kids_help - emergency_fund)
+    net_for_rental = existing_savings
 
     st.subheader("🏠 מסלול 4 — אסטרטגיית שכירות")
     st.caption("במסלול זה הדירה לא נמכרת. ההון הנזיל מגיע מחסכונות קיימים בלבד.")
-    st.caption(f"קרן חירום ({format_shekel(emergency_fund)}) נשמרת בנפרד כמזומן — אינה חלק מהתיק המושקע.")
+    st.caption("עזרה לילדים וקרן חירום — לא מנוכות במסלול זה. הדירה היא הירושה, והחסכונות הם כרית הביטחון.")
     st.caption("תשואה ודמי ניהול על החסכונות — נלקחים ממסלול 25% ריאלי.")
     show_net_summary("הון נזיל פנוי (חסכונות בלבד)", net_for_rental)
 
