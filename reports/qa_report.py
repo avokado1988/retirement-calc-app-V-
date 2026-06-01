@@ -595,7 +595,8 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Table helper — st.columns(4) aligned under cards
     # -------------------------------------------------------
-    def render_metric_columns(rows, data_dict, show_header=True):
+    def render_metric_columns(rows, data_dict, show_header=True, tooltips=None):
+        tooltips = tooltips or {}
         # RTL: data columns on the left (rank4..rank1), question labels on the far right
         *tcols, label_col = st.columns([1, 1, 1, 1, 1.5])
 
@@ -626,14 +627,20 @@ def render_qa_section(results, user_inputs):
         with label_col:
             if show_header:
                 st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-            for question, _ in rows:
+            for question, key in rows:
+                tip = tooltips.get(key, "")
+                tip_html = (
+                    f" <span title='{tip}' style='cursor:help;color:#7a9cc8;font-size:0.85em;"
+                    f"vertical-align:middle;'>ⓘ</span>"
+                    if tip else ""
+                )
                 st.markdown(
                     f"<div style='padding:6px 10px;border-radius:5px;margin-bottom:4px;"
                     f"background:#f8f9fc;border:1px solid #eee;border-right:3px solid #d0d4e8;"
                     f"direction:rtl;text-align:right;"
                     f"font-size:0.82em;font-weight:600;color:#333;min-height:46px;"
                     f"display:flex;align-items:center;justify-content:flex-start;'>"
-                    f"{question}</div>",
+                    f"{question}{tip_html}</div>",
                     unsafe_allow_html=True
                 )
 
@@ -730,13 +737,30 @@ def render_qa_section(results, user_inputs):
         ("כמה שנים קרן החירום מכסה?",           "קרן חירום"),
     ]
 
+    TOOLTIPS_ASSETS_1 = {
+        "תיק נזיל":   f"סך הצבירה הנזילה בתיק ההשקעות ביום הפרישה (גיל {retire_age:.1f}). לא כולל נדל\"ן ולא כולל ערך הקצבה.",
+        "הון כולל":   f"תיק נזיל + ערך נוכחי של הקצבה המובטחת (מסלולים 1 ו-3) — כלומר כמה שווה בפועל הנכס הפנסיוני כולו. במסלול 4: רק חסכונות נזילים.",
+        "שווי נדלן":  f"שווי הדירה ביום הפרישה (גיל {retire_age:.1f}), לפי עליית ערך שנתית שהוגדרה בקלט. מסלולים 1-3: דירה למגורים. מסלול 4: דירה להשקעה.",
+        "סך נכסים":   f"סכום כולל: תיק נזיל + ערך קצבה + שווי נדל\"ן + קרן חירום. מבטא את שווי הנכס נטו של הלקוח ביום הפרישה.",
+    }
+    TOOLTIPS_CASHFLOW_1 = {
+        "הכנסות חודשיות": f"סך ההכנסות החודשיות הצפויות בגיל {retire_age:.1f}: ביטוח לאומי + פנסיה (מסלולים 1/3) או שכ\"ד נטו אחרי מס (מסלול 4). לא כולל משיכות מהתיק.",
+        "הוצאות חודשיות": f"הוצאות חודשיות נומינליות (מוצמדות לאינפלציה) בגיל {retire_age:.1f}. מסלול 4: כולל גם שכ\"ד שמשולם על הדירה הנוכחית.",
+        "משיכה / תזרים":  f"הפרש בין הוצאות להכנסות — כמה יש להוציא מהתיק כל חודש. מסלול 4: מראה תזרים כולל (חיובי = עודף, שלילי = חסר).",
+    }
+    TOOLTIPS_ACTUARIAL_1 = {
+        "קצב משיכה":  f"משיכה שנתית מהתיק חלקי ערך התיק, באחוזים. מתחת ל-3%: בטוח מאוד. 3-4%: מקובל. מעל 4%: מסוכן. חוק ה-4% מבוסס על מחקר Trinity.",
+        "חוק 400":    f"יחס בטיחות: ערך התיק חלקי (משיכה חודשית × 400). מעל 1.3 = בטוח. מעל 1.0 = עומד בחוק 4%. מתחת ל-1.0 = מסוכן.",
+        "קרן חירום":  f"קרן החירום שהוגדרה (₪ {format_shekel(int(emergency_fund))}) חלקי (משיכה × 12). כמה שנים ניתן לחיות מקרן החירום בלבד אם התיק יפגע.",
+    }
+
     st.markdown(f"### 📊 מצב ביום הפרישה — גיל {retire_age:.1f}")
     with st.expander("💰 סיכום שווי נכסים", expanded=True):
-        render_metric_columns(ASSETS_ROWS_1, t1_cols, show_header=True)
+        render_metric_columns(ASSETS_ROWS_1, t1_cols, show_header=True, tooltips=TOOLTIPS_ASSETS_1)
     with st.expander("💸 סיכום תזרים", expanded=True):
-        render_metric_columns(CASHFLOW_ROWS_1, t1_cols, show_header=True)
+        render_metric_columns(CASHFLOW_ROWS_1, t1_cols, show_header=True, tooltips=TOOLTIPS_CASHFLOW_1)
     with st.expander("📊 ניתוח אקטוארי", expanded=False):
-        render_metric_columns(ACTUARIAL_ROWS_1, t1_cols, show_header=True)
+        render_metric_columns(ACTUARIAL_ROWS_1, t1_cols, show_header=True, tooltips=TOOLTIPS_ACTUARIAL_1)
 
     # -------------------------------------------------------
     # Table 2: At check_age
@@ -847,10 +871,30 @@ def render_qa_section(results, user_inputs):
         ("מתי התיק מתחיל להישחק / היפוך תזרים?", "גיל היפוך"),
     ]
 
+    TOOLTIPS_ASSETS_2 = {
+        "תיק נזיל":   f"יתרת חסכונות נזילים בתיק ההשקעות בגיל {check_age:.1f}. אפס = הכסף אזל לפני גיל זה.",
+        "הון כולל":   f"תיק נזיל + ערך קצבה נותר בגיל {check_age:.1f}. ערך הקצבה = חודשים שנותרו בתקופת הבטחה × קצבה חודשית.",
+        "שווי נדלן":  f"שווי הדירה בגיל {check_age:.1f} לפי הצמדה שנתית. מסלול 4: דירת השקעה לפי {rental_appreciation_rate*100:.1f}% עלייה שנתית.",
+        "סך נכסים":   f"סך כלל הנכסים: תיק + קצבה + נדל\"ן + קרן חירום. הסכום הכולל שניתן להוריש או לממש בגיל {check_age:.1f}.",
+    }
+    TOOLTIPS_CASHFLOW_2 = {
+        "הכנסות חודשיות": f"הכנסות חודשיות צפויות בגיל {check_age:.1f}: ב\"ל מוצמד + פנסיה מוצמדת / שכ\"ד נטו. כל ההכנסות מוצמדות לאינפלציה.",
+        "הוצאות חודשיות": f"הוצאות חודשיות בגיל {check_age:.1f} לאחר הצמדה לאינפלציה. כולל תוספת מטפל מגיל 85 אם הוגדרה.",
+        "משיכה / תזרים":  f"כמה יש להוציא מהתיק בגיל {check_age:.1f} = הוצאות פחות הכנסות. אם התיק אזל — הגירעון מופיע בשורת הגירעון המצטבר.",
+        "גירעון מצטבר":   f"סכום כל החסרים החודשיים לאחר שהתיק הגיע לאפס, עד גיל {check_age:.0f}. מייצג כמה כסף חיצוני (ילדים, עזרה) נדרש לכיסוי. אפס = אין גירעון.",
+    }
+    TOOLTIPS_ACTUARIAL_2 = {
+        "עד איזה גיל הכסף מחזיק?": "הגיל שבו יתרת התיק הנזיל מגיעה לאפס. אם לא מגיע לאפס עד גיל 105 — מסומן כ-✅ לא נשחק.",
+        "שימור הון":    f"אחוז מההון ההתחלתי ({format_shekel(int(baseline_capital))}) שנשאר בתיק בגיל 95. מעל 90% = מצוין. 75-90% = טוב. מתחת ל-75% = שחיקה משמעותית.",
+        "קצב משיכה":    f"קצב המשיכה השנתי בגיל {check_age:.1f}. נמוך מ-3% = בטוח. 3-4% = מקובל. מעל 4% = לחץ על התיק.",
+        "גיל התאוששות": f"הגיל שבו ערך התיק עולה מעל ההון ההתחלתי ({format_shekel(int(baseline_capital))}) בפעם הראשונה — מוכיח שהתיק גדל ולא רק נשמר.",
+        "גיל היפוך":    "הגיל שבו התיק מגיע לשיאו ומתחיל להישחק — כאשר המשיכות עולות על התשואה החודשית. לפני גיל זה התיק גדל, אחריו נשחק.",
+    }
+
     st.markdown(f"### 🔮 מצב בגיל {check_age:.1f}")
     with st.expander("💰 סיכום שווי נכסים", expanded=True):
-        render_metric_columns(ASSETS_ROWS_2, t2_cols, show_header=True)
+        render_metric_columns(ASSETS_ROWS_2, t2_cols, show_header=True, tooltips=TOOLTIPS_ASSETS_2)
     with st.expander("💸 סיכום תזרים", expanded=True):
-        render_metric_columns(CASHFLOW_ROWS_2, t2_cols, show_header=True)
+        render_metric_columns(CASHFLOW_ROWS_2, t2_cols, show_header=True, tooltips=TOOLTIPS_CASHFLOW_2)
     with st.expander("📊 ניתוח אקטוארי", expanded=False):
-        render_metric_columns(ACTUARIAL_ROWS_2, t2_cols, show_header=True)
+        render_metric_columns(ACTUARIAL_ROWS_2, t2_cols, show_header=True, tooltips=TOOLTIPS_ACTUARIAL_2)
