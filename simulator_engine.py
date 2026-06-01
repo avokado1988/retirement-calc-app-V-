@@ -61,19 +61,16 @@ def run_simulation(user_inputs):
     rental_start_age  = 66.0  # maintenance and tax calculated from this age
 
     # Reverse mortgage parameters (track 4)
-    rm_enabled         = bool(rental.get("rm_enabled", False))
-    rm_trigger         = rental.get("rm_trigger", "auto")
-    rm_manual_age      = float(rental.get("rm_manual_age", 80))
-    rm_rate_monthly    = (1 + float(rental.get("rm_annual_rate", 0.055))) ** (1/12) - 1
-    rm_max_ltv         = float(rental.get("rm_max_ltv", 0.55))
-    rm_orig_fee        = float(rental.get("rm_origination_fee", 0.02))
-    rm_draw_strategy   = rental.get("rm_draw_strategy", "monthly_deficit")
-    rm_auto_threshold  = float(rental.get("rm_auto_threshold", 50000))
+    rm_enabled              = bool(rental.get("rm_enabled", False))
+    rm_rate_monthly         = (1 + float(rental.get("rm_annual_rate", 0.055))) ** (1/12) - 1
+    rm_start_age            = float(rental.get("rm_start_age", 72))
+    rm_life_expectancy_age  = float(rental.get("rm_life_expectancy_age", 90))
+    rm_max_ltv              = float(rental.get("rm_max_ltv", 0.55))
+    rm_orig_fee             = float(rental.get("rm_origination_fee", 0.02))
 
     rm_active          = False
     rm_loan_balance    = 0.0
-    rm_max_balance     = 0.0   # fixed at origination: property_value_at_activation * max_ltv
-    rm_annuity_monthly = 0.0   # fixed monthly draw for "annuity" strategy (set at activation)
+    rm_annuity_monthly = 0.0   # fixed monthly payment — calculated actuarially at activation
 
     history = []
     inflation_factor = 1.0
@@ -184,49 +181,44 @@ def run_simulation(user_inputs):
             basis_hybrid *= (1 - (pull_h / balance_hybrid))
             balance_hybrid -= pull_h
 
-        # --- Reverse mortgage: activate when trigger condition met ---
-        # Model: max loan fixed at origination (property_value × max_ltv).
-        # Interest erodes the headroom (balance = principal draws + accrued interest).
-        # Non-recourse cap: loan cannot exceed current property value.
-        rm_draw_this_month = 0.0
+        # --- Reverse mortgage: Israeli actuarial annuity model ---
+        # At rm_start_age: bank calculates fixed monthly payment using annuity formula.
+        # M = loan_net × r / ((1+r)^n - 1)  where n = months from activation to life expectancy.
+        # Loan balance grows each month: balance = (balance + annuity) × (1 + r).
+        # Non-recourse: loan capped at property value. Savings stay as emergency reserve.
+        rm_annuity_this_month = 0.0
         rm_interest_this_month = 0.0
-        if rm_enabled and current_age >= retirement_age:
-            trigger_auto   = (rm_trigger == "auto"   and balance_rental <= rm_auto_threshold)
-            trigger_manual = (rm_trigger == "manual" and current_age >= rm_manual_age)
-            if not rm_active and (trigger_auto or trigger_manual):
+        if rm_enabled and current_age >= rm_start_age:
+            if not rm_active:
                 rm_active = True
-                # Max balance fixed at origination (LTV × property value at that moment)
-                rm_max_balance = property_rental_value * rm_max_ltv
-                # Origination fee immediately reduces available headroom
-                rm_loan_balance += rm_max_balance * rm_orig_fee
-                if rm_draw_strategy == "annuity":
-                    # Fixed monthly annuity = current deficit at activation moment
-                    rm_annuity_monthly = net_needed_rental
+                max_loan_gross = property_rental_value * rm_max_ltv
+                max_loan_net   = max_loan_gross * (1 - rm_orig_fee)
+                n_months = max(1.0, (rm_life_expectancy_age - rm_start_age) * 12)
+                if rm_rate_monthly > 0:
+                    rm_annuity_monthly = max_loan_net * rm_rate_monthly / ((1 + rm_rate_monthly) ** n_months - 1)
+                else:
+                    rm_annuity_monthly = max_loan_net / n_months
 
-            # Monthly deficit draw: variable, exactly covers the current month's deficit
-            if rm_active and rm_draw_strategy == "monthly_deficit" and net_needed_rental > 0:
-                headroom = max(0.0, rm_max_balance - rm_loan_balance)
-                draw = min(net_needed_rental, headroom)
-                if draw > 0:
-                    rm_loan_balance    += draw
-                    balance_rental     += draw
-                    basis_rental       += draw  # RM draw is debt, not gains — no taxable profit
-                    rm_draw_this_month  = draw
+            # Pay annuity this month (stops only when loan reaches property value)
+            if rm_loan_balance < property_rental_value:
+                rm_annuity_this_month = rm_annuity_monthly
+                rm_loan_balance = min(
+                    (rm_loan_balance + rm_annuity_this_month) * (1 + rm_rate_monthly),
+                    property_rental_value
+                )
+                rm_interest_this_month = rm_loan_balance - (rm_loan_balance / (1 + rm_rate_monthly))
 
-            # Annuity draw: fixed monthly amount set at activation, continues as long as headroom exists
-            if rm_active and rm_draw_strategy == "annuity" and rm_annuity_monthly > 0:
-                headroom = max(0.0, rm_max_balance - rm_loan_balance)
-                draw = min(rm_annuity_monthly, headroom)
-                if draw > 0:
-                    rm_loan_balance    += draw
-                    balance_rental     += draw
-                    basis_rental       += draw  # RM draw is debt, not gains — no taxable profit
-                    rm_draw_this_month  = draw
-
-            # Accrue interest — non-recourse cap: loan cannot exceed current property value
-            if rm_active and rm_loan_balance > 0 and rm_loan_balance < property_rental_value:
-                rm_interest_this_month = rm_loan_balance * rm_rate_monthly
-                rm_loan_balance = min(rm_loan_balance + rm_interest_this_month, property_rental_value)
+        # RM annuity reduces savings pressure; surplus (annuity > deficit) goes to savings
+        cashflow_with_rm = rental_cashflow_net + rm_annuity_this_month
+        if current_age >= retirement_age:
+            net_needed_rental = max(0.0, -cashflow_with_rm)
+            rm_savings_surplus = max(0.0, cashflow_with_rm)
+        else:
+            net_needed_rental = 0.0
+            rm_savings_surplus = 0.0
+        if rm_savings_surplus > 0:
+            balance_rental += rm_savings_surplus
+            basis_rental   += rm_savings_surplus  # RM-derived surplus is debt, not taxable gain
 
         rm_equity = max(0.0, property_rental_value - rm_loan_balance)
         rm_ltv    = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
@@ -280,7 +272,7 @@ def run_simulation(user_inputs):
             "הוצאת תחזוקה": maintenance_indexed,
             "תזרים נטו שכירות": rental_cashflow_net,
             "משיכה מתיק שכירות": withdrawal_rental,
-            "משכנתה הפוכה — משיכה חודשית": rm_draw_this_month,
+            "משכנתה הפוכה — משיכה חודשית": rm_annuity_this_month,
             "משכנתה הפוכה — יתרת חוב": rm_loan_balance,
             "משכנתה הפוכה — הון עצמי": rm_equity,
             "משכנתה הפוכה — LTV": rm_ltv,

@@ -70,59 +70,39 @@ def render_rental_inputs(wealth_data):
     st.caption("עלייה בהוצאות תחזוקה עם גיל הדירה — תיקונים גדולים יותר.")
 
     st.divider()
-    st.markdown("##### 🏦 משכנתה הפוכה — כגיבוי לאפס נכסים נזילים")
-    st.caption("מנגנון נזילות חירום: כאשר החיסכון הנזיל אוזל, ניתן למשוך כנגד הון הדירה ללא החזר חודשי. החוב צובר ריבית ד\"ר.")
-    enable_rm = st.checkbox("הפעל אופציית משכנתה הפוכה", value=False, key="enable_rm")
+    st.markdown("##### 🏦 משכנתה הפוכה — קצבה חודשית קבועה מהנכס")
+    st.caption("הבנק מחשב קצבה חודשית קבועה לכל החיים לפי שווי הנכס, גיל ההפעלה וריבית. החיסכון נשאר נזיל כקרן חירום.")
+    enable_rm = st.checkbox("הפעל משכנתה הפוכה", value=False, key="enable_rm")
 
     if enable_rm:
-        rm_trigger = st.radio(
-            "טריגר הפעלה",
-            options=["auto", "manual"],
-            format_func=lambda x: "אוטומטי — מרגע שהחיסכון מתרוקן" if x == "auto" else "ידני — מגיל מוגדר",
-            horizontal=True,
-            key="rm_trigger"
-        )
-        rm_manual_age = 80
-        rm_auto_threshold = 50000
-        if rm_trigger == "auto":
-            rm_auto_threshold = compact_number_input(
-                "הפעל כשהחיסכון יורד מתחת ל- (₪)",
-                value=50000, min_value=0, step=10000, unit="₪", color=COLOR_BLUE
-            )
-        elif rm_trigger == "manual":
-            rm_manual_age = compact_number_input(
-                "גיל הפעלה ידנית",
-                value=80, min_value=60, max_value=100, step=1, unit="גיל", color=COLOR_BLUE
-            )
-
         rm_annual_rate_pct = compact_number_input(
-            "ריבית שנתית על ההלוואה (%)",
+            "ריבית שנתית ממוצעת (%)",
             value=5.5, min_value=1.0, max_value=12.0, step=0.1, unit="%", color=COLOR_RED
         )
+        rm_start_age = compact_number_input(
+            "גיל התחלת קצבה מהמשכנתה",
+            value=72, min_value=60, max_value=90, step=1, unit="גיל", color=COLOR_BLUE
+        )
+        rm_life_expectancy_age = compact_number_input(
+            "גיל תוחלת חיים (לחישוב הקצבה)",
+            value=90, min_value=70, max_value=105, step=1, unit="גיל", color=COLOR_BLUE
+        )
+        st.caption("הבנק מחלק את ההלוואה על פני שנות החיים הצפויות. ככל שמפעיל מוקדם יותר — הקצבה גבוהה יותר.")
         rm_max_ltv_pct = compact_number_input(
-            "LTV מקסימלי — תקרת הלוואה מול שווי נכס (%)",
+            "LTV — תקרת הלוואה מול שווי נכס (%)",
             value=55.0, min_value=10.0, max_value=80.0, step=5.0, unit="%", color=COLOR_BLUE
         )
-        st.caption("בישראל: LTV מרבי ~45% לגיל 60, ~55% לגיל 65, ~65% לגיל 75+.")
+        st.caption("בישראל: ~45% לגיל 60, ~55% לגיל 65–70, ~65% לגיל 75+.")
         rm_origination_fee_pct = compact_number_input(
             "עמלת פתיחת תיק — חד פעמית (%)",
             value=2.0, min_value=0.0, max_value=5.0, step=0.5, unit="%", color=COLOR_RED
         )
-        rm_draw_strategy = st.radio(
-            "אסטרטגיית משיכה",
-            options=["monthly_deficit", "annuity"],
-            format_func=lambda x: "גמישה — משיכה כגודל הגרעון החודשי" if x == "monthly_deficit" else "אנונה — קצבה חודשית קבועה כגודל הגרעון בעת ההפעלה",
-            horizontal=True,
-            key="rm_draw_strategy"
-        )
     else:
-        rm_trigger = "auto"
-        rm_manual_age = 80
-        rm_auto_threshold = 50000
         rm_annual_rate_pct = 5.5
+        rm_start_age = 72
+        rm_life_expectancy_age = 90
         rm_max_ltv_pct = 55.0
         rm_origination_fee_pct = 2.0
-        rm_draw_strategy = "annuity"
 
     return {
         "net_for_rental": net_for_rental,
@@ -136,11 +116,9 @@ def render_rental_inputs(wealth_data):
         "current_property_value": current_property_value,
         "rental_property_appreciation": rental_appreciation_pct / 100,
         "rm_enabled": enable_rm,
-        "rm_trigger": rm_trigger,
-        "rm_manual_age": rm_manual_age,
-        "rm_auto_threshold": rm_auto_threshold,
         "rm_annual_rate": rm_annual_rate_pct / 100,
+        "rm_start_age": rm_start_age,
+        "rm_life_expectancy_age": rm_life_expectancy_age,
         "rm_max_ltv": rm_max_ltv_pct / 100,
         "rm_origination_fee": rm_origination_fee_pct / 100,
-        "rm_draw_strategy": rm_draw_strategy,
     }
