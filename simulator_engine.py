@@ -161,6 +161,7 @@ def run_simulation(user_inputs):
         # --- Track 4: Withdrawal (25% real, rental) ---
         if m > 0: basis_rental *= (1 + i_monthly)
         tax_rental = 0.0
+        withdrawal_rental = 0.0
         if net_needed_rental > 0 and balance_rental > 0:
             rpr_r = max(0.0, (balance_rental - basis_rental) / balance_rental)
             gross_r = net_needed_rental / (1 - (rpr_r * 0.25))
@@ -168,6 +169,7 @@ def run_simulation(user_inputs):
             tax_rental = pull_r * rpr_r * 0.25
             basis_rental *= (1 - (pull_r / balance_rental))
             balance_rental -= pull_r
+            withdrawal_rental = pull_r
 
         # --- Apply returns (after withdrawals, before next month) ---
         if balance_190 > 0: balance_190 *= (1 + r_monthly_190)
@@ -202,6 +204,7 @@ def run_simulation(user_inputs):
             "שווי ירושה היברידי": inheritance_hybrid,
             "הכנסת שכירות נטו": net_rental_income,
             "הוצאת שכירות": rent_paid_indexed,
+            "משיכה מתיק שכירות": withdrawal_rental,
             "inflation_factor": inflation_factor
         })
 

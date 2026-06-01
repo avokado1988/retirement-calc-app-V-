@@ -597,52 +597,51 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     def render_metric_columns(rows, data_dict, show_header=True, tooltips=None):
         tooltips = tooltips or {}
-        # RTL: data columns on the left (rank4..rank1), question labels on the far right
-        *tcols, label_col = st.columns([1, 1, 1, 1, 1.5])
+        # Render as single HTML block — each row is one flex div so all cells align perfectly.
+        # RTL flex: first child = rightmost visually → label first, then rank1..rank4.
+        html_parts = []
 
-        for col_idx, (rank, track_id, *_) in enumerate(reversed(ranked_order)):
-            rc = RANK_CFG[rank]
-            track_name = TRACK_NAMES[track_id]
-            with tcols[col_idx]:
-                if show_header:
-                    st.markdown(
-                        f"<div style='background:{rc['th_bg']};border-bottom:2px solid {rc['border']};"
-                        f"padding:4px 6px;border-radius:6px 6px 0 0;text-align:center;"
-                        f"font-size:0.72em;font-weight:700;color:{rc['rank_color']};margin-bottom:6px;'>"
-                        f"{rc['badge']} {track_name}</div>",
-                        unsafe_allow_html=True
-                    )
-                for _, key in rows:
-                    val = data_dict.get(track_name, {}).get(key, "—")
-                    st.markdown(
-                        f"<div style='background:{rc['col_bg']};padding:6px 8px;border-radius:5px;"
-                        f"margin-bottom:4px;text-align:center;border:1px solid #eee;"
-                        f"font-size:0.88em;font-weight:600;min-height:46px;line-height:1.35;"
-                        f"display:flex;flex-direction:column;align-items:center;justify-content:center;'>"
-                        f"{val}</div>",
-                        unsafe_allow_html=True
-                    )
+        if show_header:
+            hp = ["<div style='display:flex;direction:rtl;gap:4px;margin-bottom:4px;'>",
+                  "<div style='flex:1.5;'></div>"]
+            for rank, track_id, *_ in ranked_order:
+                rc = RANK_CFG[rank]
+                hp.append(
+                    f"<div style='flex:1;background:{rc['th_bg']};border-bottom:2px solid {rc['border']};"
+                    f"padding:4px 6px;border-radius:6px 6px 0 0;text-align:center;"
+                    f"font-size:0.72em;font-weight:700;color:{rc['rank_color']};'>"
+                    f"{rc['badge']} {TRACK_NAMES[track_id]}</div>"
+                )
+            hp.append("</div>")
+            html_parts.append("".join(hp))
 
-        # Question labels column — on the right, RTL aligned
-        with label_col:
-            if show_header:
-                st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-            for question, key in rows:
-                tip = tooltips.get(key, "")
-                tip_html = (
-                    f" <span title='{tip}' style='cursor:help;color:#7a9cc8;font-size:0.85em;"
-                    f"vertical-align:middle;'>ⓘ</span>"
-                    if tip else ""
+        for question, key in rows:
+            tip = tooltips.get(key, "")
+            tip_html = (
+                f" <span title='{tip}' style='cursor:help;color:#7a9cc8;font-size:0.85em;"
+                f"vertical-align:middle;'>ⓘ</span>"
+                if tip else ""
+            )
+            rp = [
+                "<div style='display:flex;direction:rtl;gap:4px;margin-bottom:4px;align-items:stretch;'>",
+                f"<div style='flex:1.5;padding:6px 10px;border-radius:5px;background:#f8f9fc;"
+                f"border:1px solid #eee;border-right:3px solid #d0d4e8;direction:rtl;text-align:right;"
+                f"font-size:0.82em;font-weight:600;color:#333;"
+                f"display:flex;align-items:center;'>{question}{tip_html}</div>",
+            ]
+            for rank, track_id, *_ in ranked_order:
+                rc = RANK_CFG[rank]
+                val = data_dict.get(TRACK_NAMES[track_id], {}).get(key, "—")
+                rp.append(
+                    f"<div style='flex:1;background:{rc['col_bg']};padding:6px 8px;border-radius:5px;"
+                    f"border:1px solid #eee;font-size:0.88em;font-weight:600;line-height:1.35;"
+                    f"display:flex;flex-direction:column;align-items:center;justify-content:center;"
+                    f"text-align:center;'>{val}</div>"
                 )
-                st.markdown(
-                    f"<div style='padding:6px 10px;border-radius:5px;margin-bottom:4px;"
-                    f"background:#f8f9fc;border:1px solid #eee;border-right:3px solid #d0d4e8;"
-                    f"direction:rtl;text-align:right;"
-                    f"font-size:0.82em;font-weight:600;color:#333;min-height:46px;"
-                    f"display:flex;align-items:center;justify-content:flex-start;'>"
-                    f"{question}{tip_html}</div>",
-                    unsafe_allow_html=True
-                )
+            rp.append("</div>")
+            html_parts.append("".join(rp))
+
+        st.markdown("\n".join(html_parts), unsafe_allow_html=True)
 
     # -------------------------------------------------------
     # Table 1: At retirement
@@ -864,11 +863,11 @@ def render_qa_section(results, user_inputs):
         (f"סה\"כ גירעון מצטבר עד גיל {check_age:.0f} — תמיכה חיצונית נדרשת", "גירעון מצטבר"),
     ]
     ACTUARIAL_ROWS_2 = [
-        ("עד איזה גיל הכסף מחזיק?",            "עד איזה גיל הכסף מחזיק?"),
-        ("כמה מההון ההתחלתי נשמר בגיל 95?",    "שימור הון"),
-        ("מה קצב המשיכה בגיל זה?",             "קצב משיכה"),
-        ("מאיזה גיל התיק עולה מעל ההון הראשוני?", "גיל התאוששות"),
-        ("מתי התיק מתחיל להישחק / היפוך תזרים?", "גיל היפוך"),
+        ("גיל מיצוי חסכונות — עד מתי הכסף מחזיק?", "עד איזה גיל הכסף מחזיק?"),
+        ("כמה מההון ההתחלתי נשמר בגיל 95?",         "שימור הון"),
+        ("מה קצב המשיכה בגיל זה?",                  "קצב משיכה"),
+        ("מאיזה גיל התיק עולה מעל ההון הראשוני?",    "גיל התאוששות"),
+        ("גיל גרעון שכירות / גיל היפוך תיק",         "גיל היפוך"),
     ]
 
     TOOLTIPS_ASSETS_2 = {
@@ -884,11 +883,11 @@ def render_qa_section(results, user_inputs):
         "גירעון מצטבר":   f"סכום כל החסרים החודשיים לאחר שהתיק הגיע לאפס, עד גיל {check_age:.0f}. מייצג כמה כסף חיצוני (ילדים, עזרה) נדרש לכיסוי. אפס = אין גירעון.",
     }
     TOOLTIPS_ACTUARIAL_2 = {
-        "עד איזה גיל הכסף מחזיק?": "הגיל שבו יתרת התיק הנזיל מגיעה לאפס. אם לא מגיע לאפס עד גיל 105 — מסומן כ-✅ לא נשחק.",
+        "עד איזה גיל הכסף מחזיק?": "גיל מיצוי חסכונות: הגיל שבו יתרת התיק הנזיל מגיעה לאפס לחלוטין. מסלול 4: החסכונות אזלו — הדירה ממשיכה לייצר הכנסה אבל אין יותר כרית נזילה. אם לא נגמר עד 105 — מסומן ✅ לא נשחק.",
         "שימור הון":    f"אחוז מההון ההתחלתי ({format_shekel(int(baseline_capital))}) שנשאר בתיק בגיל 95. מעל 90% = מצוין. 75-90% = טוב. מתחת ל-75% = שחיקה משמעותית.",
         "קצב משיכה":    f"קצב המשיכה השנתי בגיל {check_age:.1f}. נמוך מ-3% = בטוח. 3-4% = מקובל. מעל 4% = לחץ על התיק.",
         "גיל התאוששות": f"הגיל שבו ערך התיק עולה מעל ההון ההתחלתי ({format_shekel(int(baseline_capital))}) בפעם הראשונה — מוכיח שהתיק גדל ולא רק נשמר.",
-        "גיל היפוך":    "הגיל שבו התיק מגיע לשיאו ומתחיל להישחק — כאשר המשיכות עולות על התשואה החודשית. לפני גיל זה התיק גדל, אחריו נשחק.",
+        "גיל היפוך":    "מסלולים 1-3: הגיל שבו התיק מגיע לשיאו ומתחיל להישחק (משיכות > תשואה חודשית). מסלול 4 — גיל גרעון שכירות: הגיל הראשון שבו ההכנסות (שכ\"ד + ב\"ל) לא מכסות את ההוצאות ומתחילים למשוך מהחסכונות.",
     }
 
     st.markdown(f"### 🔮 מצב בגיל {check_age:.1f}")
