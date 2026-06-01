@@ -67,9 +67,10 @@ def run_simulation(user_inputs):
     rm_draw_strategy   = rental.get("rm_draw_strategy", "monthly_deficit")
     rm_auto_threshold  = float(rental.get("rm_auto_threshold", 50000))
 
-    rm_active        = False
-    rm_loan_balance  = 0.0
-    rm_max_balance   = 0.0  # fixed at origination: property_value_at_activation * max_ltv
+    rm_active          = False
+    rm_loan_balance    = 0.0
+    rm_max_balance     = 0.0   # fixed at origination: property_value_at_activation * max_ltv
+    rm_annuity_monthly = 0.0   # fixed monthly draw for "annuity" strategy (set at activation)
 
     history = []
     inflation_factor = 1.0
@@ -189,17 +190,23 @@ def run_simulation(user_inputs):
                 rm_max_balance = property_rental_value * rm_max_ltv
                 # Origination fee immediately reduces available headroom
                 rm_loan_balance += rm_max_balance * rm_orig_fee
-                if rm_draw_strategy == "lump_sum":
-                    headroom = max(0.0, rm_max_balance - rm_loan_balance)
-                    if headroom > 0:
-                        rm_loan_balance    += headroom
-                        balance_rental     += headroom
-                        rm_draw_this_month  = headroom
+                if rm_draw_strategy == "annuity":
+                    # Fixed monthly annuity = current deficit at activation moment
+                    rm_annuity_monthly = net_needed_rental
 
-            # Monthly deficit draw: headroom = fixed max_balance - current loan (interest erodes headroom too)
+            # Monthly deficit draw: variable, exactly covers the current month's deficit
             if rm_active and rm_draw_strategy == "monthly_deficit" and net_needed_rental > 0:
                 headroom = max(0.0, rm_max_balance - rm_loan_balance)
                 draw = min(net_needed_rental, headroom)
+                if draw > 0:
+                    rm_loan_balance    += draw
+                    balance_rental     += draw
+                    rm_draw_this_month  = draw
+
+            # Annuity draw: fixed monthly amount set at activation, continues as long as headroom exists
+            if rm_active and rm_draw_strategy == "annuity" and rm_annuity_monthly > 0:
+                headroom = max(0.0, rm_max_balance - rm_loan_balance)
+                draw = min(rm_annuity_monthly, headroom)
                 if draw > 0:
                     rm_loan_balance    += draw
                     balance_rental     += draw

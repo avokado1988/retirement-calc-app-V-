@@ -98,8 +98,8 @@ def render_rental_inputs(wealth_data):
         )
         rm_draw_strategy = st.radio(
             "אסטרטגיית משיכה",
-            options=["monthly_deficit", "lump_sum"],
-            format_func=lambda x: "גמישה — משיכה כגודל הגרעון החודשי" if x == "monthly_deficit" else "חד פעמית — משיכת כל המסגרת עם ההפעלה",
+            options=["monthly_deficit", "annuity"],
+            format_func=lambda x: "גמישה — משיכה כגודל הגרעון החודשי" if x == "monthly_deficit" else "אנונה — קצבה חודשית קבועה כגודל הגרעון בעת ההפעלה",
             horizontal=True,
             key="rm_draw_strategy"
         )
@@ -110,7 +110,7 @@ def render_rental_inputs(wealth_data):
         rm_annual_rate_pct = 5.5
         rm_max_ltv_pct = 55.0
         rm_origination_fee_pct = 2.0
-        rm_draw_strategy = "monthly_deficit"
+        rm_draw_strategy = "annuity"
 
     return {
         "net_for_rental": net_for_rental,
