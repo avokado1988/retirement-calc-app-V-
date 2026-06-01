@@ -176,9 +176,9 @@ def run_simulation(user_inputs):
             balance_hybrid -= pull_h
 
         # --- Reverse mortgage: activate when trigger condition met ---
-        # Model: LTV cap is dynamic — available headroom = current_property_value * max_ltv - loan_balance
-        # This allows the borrower to keep drawing as long as property appreciation keeps equity above 0.
-        # Interest accrues monthly. Non-recourse cap: loan cannot exceed property value.
+        # Model: max loan fixed at origination (property_value × max_ltv).
+        # Interest erodes the headroom (balance = principal draws + accrued interest).
+        # Non-recourse cap: loan cannot exceed current property value.
         rm_draw_this_month = 0.0
         rm_interest_this_month = 0.0
         if rm_enabled and current_age >= retirement_age:
@@ -201,6 +201,7 @@ def run_simulation(user_inputs):
                 if draw > 0:
                     rm_loan_balance    += draw
                     balance_rental     += draw
+                    basis_rental       += draw  # RM draw is debt, not gains — no taxable profit
                     rm_draw_this_month  = draw
 
             # Annuity draw: fixed monthly amount set at activation, continues as long as headroom exists
@@ -210,6 +211,7 @@ def run_simulation(user_inputs):
                 if draw > 0:
                     rm_loan_balance    += draw
                     balance_rental     += draw
+                    basis_rental       += draw  # RM draw is debt, not gains — no taxable profit
                     rm_draw_this_month  = draw
 
             # Accrue interest — non-recourse cap: loan cannot exceed current property value
