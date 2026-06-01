@@ -57,6 +57,54 @@ def render_rental_inputs(wealth_data):
     )
     st.caption("ברירת מחדל 10% — מסלול סעיף 122 (ללא ניכוי הוצאות). ניתן להתאים.")
 
+    st.divider()
+    st.markdown("##### 🏦 משכנתה הפוכה — כגיבוי לאפס נכסים נזילים")
+    st.caption("מנגנון נזילות חירום: כאשר החיסכון הנזיל אוזל, ניתן למשוך כנגד הון הדירה ללא החזר חודשי. החוב צובר ריבית ד\"ר.")
+    enable_rm = st.checkbox("הפעל אופציית משכנתה הפוכה", value=False, key="enable_rm")
+
+    if enable_rm:
+        rm_trigger = st.radio(
+            "טריגר הפעלה",
+            options=["auto", "manual"],
+            format_func=lambda x: "אוטומטי — מרגע שהחיסכון מתרוקן" if x == "auto" else "ידני — מגיל מוגדר",
+            horizontal=True,
+            key="rm_trigger"
+        )
+        rm_manual_age = 80
+        if rm_trigger == "manual":
+            rm_manual_age = compact_number_input(
+                "גיל הפעלה ידנית",
+                value=80, min_value=60, max_value=100, step=1, unit="גיל", color=COLOR_BLUE
+            )
+
+        rm_annual_rate_pct = compact_number_input(
+            "ריבית שנתית על ההלוואה (%)",
+            value=5.5, min_value=1.0, max_value=12.0, step=0.1, unit="%", color=COLOR_RED
+        )
+        rm_max_ltv_pct = compact_number_input(
+            "LTV מקסימלי — תקרת הלוואה מול שווי נכס (%)",
+            value=55.0, min_value=10.0, max_value=80.0, step=5.0, unit="%", color=COLOR_BLUE
+        )
+        st.caption("בישראל: LTV מרבי ~45% לגיל 60, ~55% לגיל 65, ~65% לגיל 75+.")
+        rm_origination_fee_pct = compact_number_input(
+            "עמלת פתיחת תיק — חד פעמית (%)",
+            value=2.0, min_value=0.0, max_value=5.0, step=0.5, unit="%", color=COLOR_RED
+        )
+        rm_draw_strategy = st.radio(
+            "אסטרטגיית משיכה",
+            options=["monthly_deficit", "lump_sum"],
+            format_func=lambda x: "גמישה — משיכה כגודל הגרעון החודשי" if x == "monthly_deficit" else "חד פעמית — משיכת כל המסגרת עם ההפעלה",
+            horizontal=True,
+            key="rm_draw_strategy"
+        )
+    else:
+        rm_trigger = "auto"
+        rm_manual_age = 80
+        rm_annual_rate_pct = 5.5
+        rm_max_ltv_pct = 55.0
+        rm_origination_fee_pct = 2.0
+        rm_draw_strategy = "monthly_deficit"
+
     return {
         "net_for_rental": net_for_rental,
         "rental_income_monthly": rental_income_monthly,
@@ -66,4 +114,11 @@ def render_rental_inputs(wealth_data):
         "rental_tax_rate": rental_tax_pct / 100,
         "current_property_value": current_property_value,
         "rental_property_appreciation": rental_appreciation_pct / 100,
+        "rm_enabled": enable_rm,
+        "rm_trigger": rm_trigger,
+        "rm_manual_age": rm_manual_age,
+        "rm_annual_rate": rm_annual_rate_pct / 100,
+        "rm_max_ltv": rm_max_ltv_pct / 100,
+        "rm_origination_fee": rm_origination_fee_pct / 100,
+        "rm_draw_strategy": rm_draw_strategy,
     }

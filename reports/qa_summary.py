@@ -75,6 +75,9 @@ def render_qa_summary_page(results, user_inputs):
     rental_tax_rate         = float(rental.get("rental_tax_rate", 0.10))
     rental_prop_value       = float(rental.get("current_property_value", wealth.get("net_sale", 0) or 0))
     rental_appreciation     = float(rental.get("rental_property_appreciation", 0.015))
+    rm_enabled_s            = bool(rental.get("rm_enabled", False))
+    rm_annual_rate_s        = float(rental.get("rm_annual_rate", 0.055))
+    rm_max_ltv_s            = float(rental.get("rm_max_ltv", 0.55))
 
     # ─── שליפת תוצאות מהמנוע ─────────────────────────────────────────────────
     def _row(df, age):
@@ -108,6 +111,32 @@ def render_qa_summary_page(results, user_inputs):
     df_after_retire = df_full[df_full["גיל"] >= retire_age]
     neg_rows = df_after_retire[df_after_retire["rental_cashflow"] < 0]
     flip_age = float(neg_rows.iloc[0]["גיל"]) if not neg_rows.empty else None
+
+    # ─── משכנתה הפוכה ────────────────────────────────────────────────────────
+    rm_activation_age_s = None
+    rm_equity_check_s   = None
+    rm_interest_total_s = None
+    if rm_enabled_s and "משכנתה הפוכה — יתרת חוב" in df_full.columns:
+        rm_rows = df_full[df_full["משכנתה הפוכה — יתרת חוב"] > 0]
+        if not rm_rows.empty:
+            rm_activation_age_s = float(rm_rows.iloc[0]["גיל"])
+        rm_equity_check_s   = float(_row(df_full, check_age).get("משכנתה הפוכה — הון עצמי", 0.0))
+        rm_interest_total_s = float(df_full["משכנתה הפוכה — ריבית חודשית"].sum())
+
+    # ─── בלוק טקסט משכנתה הפוכה לסיכום ─────────────────────────────────────
+    if rm_enabled_s:
+        _rm_act = f"גיל {rm_activation_age_s:.1f}" if rm_activation_age_s else "לא הופעלה"
+        _rm_eq  = f"{rm_equity_check_s:,.0f} ש\"ח" if rm_equity_check_s is not None else "---"
+        _rm_int = f"{rm_interest_total_s:,.0f} ש\"ח" if rm_interest_total_s else "---"
+        rm_summary_block = (
+            f"  ריבית שנתית RM     : {rm_annual_rate_s*100:.1f}%\n"
+            f"  LTV מקסימלי        : {rm_max_ltv_s*100:.0f}%\n"
+            f"  גיל הפעלה          : {_rm_act}\n"
+            f"  הון עצמי בגיל {check_age:.0f}  : {_rm_eq}\n"
+            f"  סהכ ריבית RM       : {_rm_int}"
+        )
+    else:
+        rm_summary_block = ""
 
     # ─── משיכה חודשית נדרשת (כל מסלול, גיל בדיקה) ───────────────────────────
     inf_chk    = float(row_check.get("inflation_factor", 1.0))
@@ -180,7 +209,8 @@ def render_qa_summary_page(results, user_inputs):
   מס שכירות          : {rental_tax_rate*100:.1f}%
   תזרים בפרישה       : {"+" if cf_retire >= 0 else ""}{cf_retire:,.0f} ₪/חודש
   תזרים בגיל {check_age:.0f}      : {"+" if cf_check >= 0 else ""}{cf_check:,.0f} ₪/חודש
-  גיל היפוך תזרים    : {f"גיל {flip_age:.1f}" if flip_age else "✅ נשאר חיובי לאורך כל הדרך"}
+  גיל היפוך תזרים    : {f"גיל {flip_age:.1f}" if flip_age else "נשאר חיובי לאורך כל הדרך"}
+{rm_summary_block}
 
 ━━━━━━━━━━  תוצאות תיק נזיל — נקודות מפתח  ━━━━━━━━━━
   מסלול 1  | גיל פרישה ({retire_age:.1f}): {b190_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b190_chk:>14,.0f} ₪  |  גיל 100: {b190_100:>14,.0f} ₪

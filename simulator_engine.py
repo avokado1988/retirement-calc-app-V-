@@ -57,6 +57,19 @@ def run_simulation(user_inputs):
     rent_paid_growth_monthly = (1 + float(rental.get("rent_paid_growth_rate", 0.03))) ** (1/12) - 1
     rental_tax_rate = float(rental.get("rental_tax_rate", 0.10))
 
+    # Reverse mortgage parameters (track 4)
+    rm_enabled         = bool(rental.get("rm_enabled", False))
+    rm_trigger         = rental.get("rm_trigger", "auto")
+    rm_manual_age      = float(rental.get("rm_manual_age", 80))
+    rm_rate_monthly    = (1 + float(rental.get("rm_annual_rate", 0.055))) ** (1/12) - 1
+    rm_max_ltv         = float(rental.get("rm_max_ltv", 0.55))
+    rm_orig_fee        = float(rental.get("rm_origination_fee", 0.02))
+    rm_draw_strategy   = rental.get("rm_draw_strategy", "monthly_deficit")
+
+    rm_active           = False
+    rm_loan_balance     = 0.0
+    rm_available_credit = 0.0
+
     history = []
     inflation_factor = 1.0
     retirement_inflation_factor = 1.0
@@ -160,6 +173,39 @@ def run_simulation(user_inputs):
             basis_hybrid *= (1 - (pull_h / balance_hybrid))
             balance_hybrid -= pull_h
 
+        # --- Reverse mortgage: activate when trigger condition met ---
+        rm_draw_this_month = 0.0
+        rm_interest_this_month = 0.0
+        if rm_enabled and current_age >= retirement_age:
+            trigger_auto   = (rm_trigger == "auto"   and balance_rental <= 0)
+            trigger_manual = (rm_trigger == "manual" and current_age >= rm_manual_age)
+            if not rm_active and (trigger_auto or trigger_manual):
+                rm_active = True
+                max_loan = property_rental_value * rm_max_ltv
+                rm_available_credit = max_loan * (1 - rm_orig_fee)
+                if rm_draw_strategy == "lump_sum" and rm_available_credit > 0:
+                    lump = rm_available_credit
+                    rm_loan_balance    += lump
+                    rm_available_credit = 0.0
+                    balance_rental     += lump
+                    rm_draw_this_month  = lump
+
+            # Monthly deficit draw (after activation)
+            if rm_active and rm_draw_strategy == "monthly_deficit" and net_needed_rental > 0 and rm_available_credit > 0:
+                draw = min(net_needed_rental, rm_available_credit)
+                rm_loan_balance     += draw
+                rm_available_credit -= draw
+                balance_rental      += draw
+                rm_draw_this_month   = draw
+
+            # Accrue interest on outstanding loan
+            if rm_active and rm_loan_balance > 0:
+                rm_interest_this_month = rm_loan_balance * rm_rate_monthly
+                rm_loan_balance       += rm_interest_this_month
+
+        rm_equity = max(0.0, property_rental_value - rm_loan_balance)
+        rm_ltv    = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
+
         # --- Track 4: Withdrawal (25% real, rental) ---
         if m > 0: basis_rental *= (1 + i_monthly)
         tax_rental = 0.0
@@ -208,6 +254,11 @@ def run_simulation(user_inputs):
             "הוצאת שכירות": rent_paid_indexed,
             "תזרים נטו שכירות": rental_cashflow_net,
             "משיכה מתיק שכירות": withdrawal_rental,
+            "משכנתה הפוכה — משיכה חודשית": rm_draw_this_month,
+            "משכנתה הפוכה — יתרת חוב": rm_loan_balance,
+            "משכנתה הפוכה — הון עצמי": rm_equity,
+            "משכנתה הפוכה — LTV": rm_ltv,
+            "משכנתה הפוכה — ריבית חודשית": rm_interest_this_month,
             "inflation_factor": inflation_factor
         })
 

@@ -224,6 +224,26 @@ def render_qa_section(results, user_inputs):
     rental_starts_negative = rental_cashflow_at_retire < 0
 
     # -------------------------------------------------------
+    # Reverse mortgage metrics (track 4, optional)
+    # -------------------------------------------------------
+    rm_enabled_flag = bool(user_inputs.get("rental", {}).get("rm_enabled", False))
+    rm_activation_age = None
+    rm_equity_at_check = None
+    rm_total_interest = None
+    rm_underwater_age = None
+
+    if rm_enabled_flag and "משכנתה הפוכה — יתרת חוב" in df_full.columns:
+        rm_active_rows = df_full[df_full["משכנתה הפוכה — יתרת חוב"] > 0]
+        if not rm_active_rows.empty:
+            rm_activation_age = float(rm_active_rows.iloc[0]["גיל"])
+        row_check_rm = df_full[df_full["גיל"] >= check_age].iloc[0] if not df_full[df_full["גיל"] >= check_age].empty else df_full.iloc[-1]
+        rm_equity_at_check = float(row_check_rm.get("משכנתה הפוכה — הון עצמי", 0.0))
+        rm_total_interest = float(df_full["משכנתה הפוכה — ריבית חודשית"].sum())
+        underwater_rows = df_full[(df_full["גיל"] >= retire_age) & (df_full["משכנתה הפוכה — הון עצמי"] <= 0)]
+        if not underwater_rows.empty:
+            rm_underwater_age = float(underwater_rows.iloc[0]["גיל"])
+
+    # -------------------------------------------------------
     # Cumulative deficit — how much external support needed
     # -------------------------------------------------------
     # Tracks 1-3: sum of monthly shortfalls AFTER portfolio hits zero, up to check_age
@@ -844,6 +864,23 @@ def render_qa_section(results, user_inputs):
                 else f"<span style='color:#b84c00;font-weight:700;'>גיל {rental_flip_age:.0f}</span>"
                 if rental_flip_age else "<span style='color:#c0392b;'>מתחיל שלילי מהרגע הראשון</span>"
             ),
+            "משכנתה הפוכה": (
+                (
+                    f"<span style='color:#856400;font-weight:700;'>מגיל {rm_activation_age:.0f}</span>"
+                    if rm_activation_age else
+                    "<span style='color:#1a7a3a;'>✅ לא הופעלה</span>"
+                ) if rm_enabled_flag else
+                "<span style='color:#aaa;'>—</span>"
+            ),
+            "הון עצמי RM בגיל נבדק": (
+                (format_shekel(int(rm_equity_at_check)) if rm_equity_at_check is not None and rm_equity_at_check > 0
+                 else "<span style='color:#c0392b;font-weight:700;'>⚠️ נכס מתחת למים</span>")
+                if rm_enabled_flag else "<span style='color:#aaa;'>—</span>"
+            ),
+            "סה\"כ ריבית RM": (
+                format_shekel(int(rm_total_interest)) if rm_enabled_flag and rm_total_interest
+                else "<span style='color:#aaa;'>—</span>"
+            ),
         },
     }
 
@@ -865,6 +902,9 @@ def render_qa_section(results, user_inputs):
         ("מה קצב המשיכה בגיל זה?",                  "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?",    "גיל התאוששות"),
         ("גיל גרעון שכירות / גיל היפוך תיק",         "גיל היפוך"),
+        ("משכנתה הפוכה — גיל הפעלה",                 "משכנתה הפוכה"),
+        (f"הון עצמי נטו בנכס בגיל {check_age:.0f}", "הון עצמי RM בגיל נבדק"),
+        ("סה\"כ ריבית שנצברה על RM",                  "סה\"כ ריבית RM"),
     ]
 
     TOOLTIPS_ASSETS_2 = {
