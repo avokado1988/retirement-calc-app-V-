@@ -180,7 +180,9 @@ def render_qa_section(results, user_inputs):
         """Age at which the portfolio reaches its maximum — after this it only declines."""
         peak_idx = df_full[col].idxmax()
         peak_age = float(df_full.loc[peak_idx, "גיל"])
-        peak_val = float(df_full.loc[peak_idx, col])
+        # If peak is within 1 year of end of simulation → portfolio never erodes
+        if peak_age >= 104.0:
+            return "<span style='color:#1a7a3a;font-weight:700;'>✅ לא נשחק (צומח לאורך כל החיים)</span>"
         if peak_age <= retire_age + 0.5:
             return f"<span style='color:#888;'>גיל {retire_age:.0f} (יורד מהרגע הראשון)</span>"
         color = "#1a7a3a" if peak_age >= 85 else ("#b84c00" if peak_age >= 75 else "#b71c1c")
