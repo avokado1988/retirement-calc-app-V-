@@ -171,10 +171,10 @@ with tab3:
         st.dataframe(df_display[[c for c in cols if c in df_display.columns]].style.format(fmt), use_container_width=True)
 
     with track_tabs[3]:
-        cols = COMMON_COLS + ["הכנסת שכירות נטו", "הוצאת שכירות", "צבירה מסלול שכירות", "משיכה מתיק שכירות", "מס ששולם שכירות", "שווי נדלן מסלול 4"]
+        cols = COMMON_COLS + ["הכנסת שכירות נטו", "הוצאת שכירות", "צבירה מסלול שכירות", "משיכה מתיק שכירות", "מס רווח הון — משיכה מתיק", "שווי נדלן מסלול 4"]
         fmt  = {**COMMON_FMT, "הכנסת שכירות נטו": "{:,.0f} ₪", "הוצאת שכירות": "{:,.0f} ₪",
                 "צבירה מסלול שכירות": "{:,.0f} ₪", "משיכה מתיק שכירות": "{:,.0f} ₪",
-                "מס ששולם שכירות": "{:,.0f} ₪", "שווי נדלן מסלול 4": "{:,.0f} ₪"}
+                "מס רווח הון — משיכה מתיק": "{:,.0f} ₪", "שווי נדלן מסלול 4": "{:,.0f} ₪"}
         st.dataframe(df_display[[c for c in cols if c in df_display.columns]].style.format(fmt), use_container_width=True)
 
 with tab4:

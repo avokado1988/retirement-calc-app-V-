@@ -196,7 +196,7 @@ def run_simulation(user_inputs):
             "מס ששולם 190": tax_190,
             "מס ששולם 25": tax_25,
             "מס ששולם היברידי": tax_hybrid,
-            "מס ששולם שכירות": tax_rental,
+            "מס רווח הון — משיכה מתיק": tax_rental,
             "שווי נדלן": property_value,
             "שווי נדלן מסלול 4": property_rental_value,
             "ערך קצבה נותר": pension_asset_value,
