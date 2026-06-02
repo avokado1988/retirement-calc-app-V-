@@ -193,10 +193,9 @@ def run_simulation(user_inputs):
                 rm_active = True
                 max_loan_net = rm_loan_amount_ils * (1 - rm_orig_fee)
                 n_months = max(1.0, (rm_life_expectancy_age - rm_start_age) * 12)
-                if rm_rate_monthly > 0:
-                    rm_annuity_monthly = max_loan_net * rm_rate_monthly / ((1 + rm_rate_monthly) ** n_months - 1)
-                else:
-                    rm_annuity_monthly = max_loan_net / n_months
+                # Monthly payment = net principal / months so total received == net principal.
+                # Debt grows via interest on drawn balance; estate owes FV at end of term.
+                rm_annuity_monthly = max_loan_net / n_months
 
             # Annuity always paid — bank absorbs when loan exceeds property value (non-recourse)
             rm_annuity_this_month = rm_annuity_monthly

@@ -194,9 +194,10 @@ def render_rental_inputs(wealth_data, check_age=90.0):
         st.caption(f"ברירת מחדל = גיל הבדיקה ({check_age:.0f}). ככל שגבוה יותר — קצבה נמוכה יותר, הבנק לוקח יותר סיכון.")
 
         rm_loan_amount_ils = compact_number_input(
-            "סכום ההלוואה הרצוי (₪)",
+            "סך תקבולים רצויים מהמשכנתה (₪)",
             value=0, min_value=0, step=50000, unit="₪", color=COLOR_BLUE
         )
+        st.caption("הסכום שתרצה לקבל בסה״כ לאורך כל התקופה (לפני עמלת פתיחה). החוב לעיזבון יהיה גבוה יותר בשל הריבית המצטברת.")
         if rm_loan_amount_ils > 0 and current_property_value > 0:
             ltv_pct = rm_loan_amount_ils / current_property_value * 100
             ltv_icon = "🟢" if ltv_pct <= 55 else ("🟡" if ltv_pct <= 65 else "🔴")
@@ -211,14 +212,16 @@ def render_rental_inputs(wealth_data, check_age=90.0):
         if rm_loan_amount_ils > 0 and rm_life_expectancy_age > rm_start_age:
             r_m = (1 + rm_annual_rate_pct / 100) ** (1 / 12) - 1
             n_m = (rm_life_expectancy_age - rm_start_age) * 12
-            net_loan = rm_loan_amount_ils * (1 - rm_origination_fee_pct / 100)
-            if r_m > 0 and n_m > 0:
-                annuity_preview = net_loan * r_m / ((1 + r_m) ** n_m - 1)
-            else:
-                annuity_preview = net_loan / max(1, n_m)
-            total_received = annuity_preview * n_m
-            interest_cost = rm_loan_amount_ils - total_received
             orig_fee_ils = rm_loan_amount_ils * rm_origination_fee_pct / 100
+            net_loan = rm_loan_amount_ils - orig_fee_ils
+            annuity_preview = net_loan / max(1, n_m)
+            total_received = net_loan  # by design: total cash-in-hand == net principal
+            # FV of drawn balance: debt = M*(1+r)*[(1+r)^n - 1]/r  (annuity-due accumulation)
+            if r_m > 0 and n_m > 0:
+                debt_at_end = annuity_preview * (1 + r_m) * ((1 + r_m) ** n_m - 1) / r_m
+            else:
+                debt_at_end = net_loan
+            interest_cost = debt_at_end - net_loan
             years_span = rm_life_expectancy_age - rm_start_age
 
             st.markdown(
@@ -227,14 +230,14 @@ def render_rental_inputs(wealth_data, check_age=90.0):
                 f"<b style='font-size:1.05em;'>📊 קצבה חודשית צפויה: ₪{annuity_preview:,.0f}</b>"
                 f"<hr style='margin:8px 0;border:none;border-top:1px solid #ccd;'/>"
                 f"<table style='width:100%;border-collapse:collapse;'>"
-                f"<tr><td>קרן — תביעת הבנק מהעיזבון</td>"
-                f"<td style='text-align:left;font-weight:700;'>₪{rm_loan_amount_ils:,.0f}</td></tr>"
+                f"<tr><td>סך תקבולים — כסף שנכנס לך ({years_span:.0f} שנים)</td>"
+                f"<td style='text-align:left;color:#1a7a3a;font-weight:700;'>₪{total_received:,.0f}</td></tr>"
                 f"<tr><td>עמלת פתיחת תיק ({rm_origination_fee_pct:.1f}%)</td>"
                 f"<td style='text-align:left;color:#c0392b;'>₪{orig_fee_ils:,.0f}</td></tr>"
-                f"<tr><td>סך תקבולים ({years_span:.0f} שנים)</td>"
-                f"<td style='text-align:left;color:#1a7a3a;font-weight:700;'>₪{total_received:,.0f}</td></tr>"
-                f"<tr style='border-top:1px solid #ccd;'><td><b>ריבית מצטברת</b></td>"
-                f"<td style='text-align:left;color:#c0392b;font-weight:700;'>₪{interest_cost:,.0f}</td></tr>"
+                f"<tr><td>ריבית מצטברת על החוב</td>"
+                f"<td style='text-align:left;color:#c0392b;'>₪{interest_cost:,.0f}</td></tr>"
+                f"<tr style='border-top:1px solid #ccd;'><td><b>חוב לעיזבון בגיל {rm_life_expectancy_age:.0f}</b></td>"
+                f"<td style='text-align:left;color:#c0392b;font-weight:700;'>₪{debt_at_end:,.0f}</td></tr>"
                 f"</table></div>",
                 unsafe_allow_html=True
             )
