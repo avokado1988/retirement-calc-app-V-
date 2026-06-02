@@ -670,7 +670,12 @@ def render_qa_section(results, user_inputs):
             f"<div style='text-align:center;font-size:0.92em;font-weight:700;color:#1a1a2e;margin-bottom:10px;line-height:1.35;'>{pc['name']}</div>"
             f"<div style='text-align:center;margin-bottom:10px;'>"
             f"<span style='display:inline-block;font-size:0.78em;font-weight:600;padding:2px 10px;border-radius:20px;"
-            f"background:{health_bg};color:{health_color};'>{health}</span></div>"
+            f"background:{health_bg};color:{health_color};'>{health}"
+            f" <span class='qa-tip'>ⓘ<span class='qa-tiptext'>"
+            f"🟢 חסין = התיק הנזיל מחזיק מעל גיל 105 ושומר על 90%+ מההון בגיל 95. "
+            f"🟡 מחזיק = מחזיק מעל 105 אך נשחק מתחת ל-90%. "
+            f"🔴 נשחק = התיק הנזיל עלול להיגמר לפני גיל 105."
+            f"</span></span></span></div>"
             f"<div style='text-align:center;font-size:0.74em;color:{res_color};font-weight:700;margin-bottom:4px;'>"
             f"⏳ מחזיק עד {res_label}</div>"
             f"</div>"
@@ -990,7 +995,7 @@ def render_qa_section(results, user_inputs):
         ("הכנסות (קצבאות / שכירות)",                        "הכנסות חודשיות"),
         ("הוצאות (קבועות / שכירות)",                        "הוצאות חודשיות"),
         ("כמה אצטרך להשלים מהתיק (תזרים)",                  "משיכה / תזרים"),
-        (f"סה\"כ גירעון מצטבר עד גיל {check_age:.0f} — תמיכה חיצונית נדרשת", "גירעון מצטבר"),
+        (f"גירעון לכיסוי חיצוני (עד גיל {check_age:.0f})", "גירעון מצטבר"),
     ]
     ACTUARIAL_ROWS_2 = [
         ("גיל מיצוי חסכונות — עד מתי הכסף מחזיק?", "עד איזה גיל הכסף מחזיק?"),

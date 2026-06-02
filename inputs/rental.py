@@ -1,7 +1,7 @@
 import streamlit as st
 from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_RED, COLOR_BLUE
 
-def render_rental_inputs(wealth_data, check_age=90.0):
+def render_rental_inputs(wealth_data, check_age=90.0, start_age=67.0):
     existing_savings = float(wealth_data.get("existing_savings", 440000))
     net_sale = float(wealth_data.get("net_sale", 10000000))
 
@@ -166,10 +166,10 @@ def render_rental_inputs(wealth_data, check_age=90.0):
             f"<thead><tr style='border-bottom:1px solid #e0c000;'>"
             f"<th style='text-align:right;padding:3px 10px;'>סף חיסכון</th>"
             f"<th style='text-align:center;padding:3px 10px;'>גיל הגעה</th>"
-            f"<th style='text-align:left;padding:3px 10px;'>גרעון מצטבר עד גיל {check_age:.0f}</th>"
+            f"<th style='text-align:left;padding:3px 10px;'>גרעון לכיסוי (עד {check_age:.0f})</th>"
             f"</tr></thead><tbody>{_table_rows}</tbody></table>"
             f"<div style='margin-top:6px;color:#888;font-size:0.9em;'>"
-            f"גרעון מצטבר = סכום כל חודשי הגרעון מאותו גיל ועד גיל {check_age:.0f}</div>"
+            f"= סך הגרעון החודשי המצטבר מגיל ההגעה ועד גיל {check_age:.0f}</div>"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -187,11 +187,28 @@ def render_rental_inputs(wealth_data, check_age=90.0):
             "גיל התחלת קצבה מהמשכנתה",
             value=72, min_value=60, max_value=90, step=1, unit="גיל", color=COLOR_BLUE
         )
-        rm_life_expectancy_age = compact_number_input(
-            "גיל תוחלת חיים (לחישוב הקצבה)",
-            value=int(check_age), min_value=70, max_value=105, step=1, unit="גיל", color=COLOR_BLUE
+
+        # Life expectancy: pick sex → auto-compute from CBS mortality tables.
+        # No need for the user to guess an age.
+        from mortality import life_expectancy_age
+        sex_label = st.radio(
+            "מין (לחישוב תוחלת חיים מלוחות הלמ\"ס)",
+            options=["זכר", "נקבה"], horizontal=True, key="rm_sex"
         )
-        st.caption(f"ברירת מחדל = גיל הבדיקה ({check_age:.0f}). ככל שגבוה יותר — קצבה נמוכה יותר, הבנק לוקח יותר סיכון.")
+        auto_le = life_expectancy_age(sex_label, start_age)
+        st.caption(
+            f"📊 תוחלת חיים אוטומטית בגיל {start_age:.0f}: **גיל {auto_le:.0f}** "
+            f"(לפי לוחות תמותה — {sex_label}). זהו אופק התשלום של הקצבה."
+        )
+        override_le = st.checkbox("התאמה ידנית של גיל תוחלת החיים", value=False, key="rm_le_override")
+        if override_le:
+            rm_life_expectancy_age = compact_number_input(
+                "גיל תוחלת חיים (ידני)",
+                value=int(round(auto_le)), min_value=70, max_value=105, step=1, unit="גיל", color=COLOR_BLUE
+            )
+        else:
+            rm_life_expectancy_age = float(round(auto_le))
+        st.caption("ככל שגבוה יותר — קצבה חודשית נמוכה יותר (פריסה על יותר שנים), אך תקבולים לאורך זמן רב יותר.")
 
         rm_loan_amount_ils = compact_number_input(
             "סך תקבולים רצויים מהמשכנתה (₪)",

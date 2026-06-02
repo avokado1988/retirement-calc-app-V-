@@ -65,7 +65,8 @@ def render_all_sidebar_inputs():
     with st.sidebar.expander("8. מסלול 4 — השכרת הנכס", expanded=False):
         _show_4 = st.checkbox("הצג מסלול זה בהשוואה", value=True, key="show_track_4")
         _check_age = float(inputs_dict["timeline"].get("check_age", 90.0))
-        inputs_dict["rental"] = render_rental_inputs(inputs_dict["wealth"], _check_age)
+        _start_age = float(inputs_dict["timeline"].get("start_age", 67.0))
+        inputs_dict["rental"] = render_rental_inputs(inputs_dict["wealth"], _check_age, _start_age)
 
     inputs_dict["visible_tracks"] = [
         t for t, show in [(1, _show_1), (2, _show_2), (3, _show_3), (4, _show_4)] if show
