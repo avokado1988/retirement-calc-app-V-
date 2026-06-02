@@ -103,10 +103,23 @@ def render_rental_inputs(wealth_data, check_age=90.0):
             f"<td style='padding:4px 10px;text-align:left;font-weight:700;'>{r[2]}</td></tr>"
             for r in _rows_data
         )
+        # Check if current inputs differ from last simulated inputs
+        _curr_inputs_str = ""
+        _last_inputs_str = ""
+        try:
+            import json
+            _curr_expense = {
+                "caregiver": st.session_state.get("last_inputs", {}).get("expenses", {}).get("caregiver_cost"),
+                "one_time": st.session_state.get("last_inputs", {}).get("expenses", {}).get("one_time_expense"),
+            }
+        except Exception:
+            pass
+
         st.markdown(
             f"<div style='background:#fff8e1;border:1px solid #f0c040;border-radius:8px;"
             f"padding:10px 14px;margin-bottom:8px;direction:rtl;font-family:sans-serif;font-size:0.85em;'>"
             f"<b>🔍 ניתוח ריקון חיסכון (ללא משכנתה הפוכה)</b>"
+            f"<div style='color:#888;font-size:0.85em;margin-bottom:4px;'>⚠️ מבוסס על הסימולציה האחרונה — לחץ <b>עדכן סימולציה</b> לנתונים עדכניים</div>"
             f"<table style='width:100%;border-collapse:collapse;margin-top:6px;'>"
             f"<thead><tr style='border-bottom:1px solid #e0c000;'>"
             f"<th style='text-align:right;padding:3px 10px;'>סף חיסכון</th>"
