@@ -70,47 +70,60 @@ def render_rental_inputs(wealth_data, check_age=90.0):
     st.divider()
     st.markdown("##### 🏦 משכנתה הפוכה — קצבה חודשית קבועה מהנכס")
     st.caption("הבנק מחשב קצבה חודשית קבועה לכל החיים. החיסכון נשאר נזיל כקרן חירום.")
+
+    # --- Danger table: always visible, uses no-RM simulation ---
+    _sim_no_rm = st.session_state.get("sim_results_no_rm")
+    if _sim_no_rm and "df_full" in _sim_no_rm:
+        _df_hint = _sim_no_rm["df_full"]
+        _last_inputs = st.session_state.get("last_inputs", {})
+        _retire_age = float(_last_inputs.get("timeline", {}).get("retirement_age", 67))
+        _df_post = _df_hint[_df_hint["גיל"] >= _retire_age]
+
+        def _find_threshold_age(df, threshold):
+            rows = df[df["צבירה מסלול שכירות"] <= threshold]
+            return float(rows.iloc[0]["גיל"]) if not rows.empty else None
+
+        def _cum_deficit_from(df, from_age):
+            df_neg = df[(df["תזרים נטו שכירות"] < 0) & (df["גיל"] >= from_age) & (df["גיל"] <= check_age)]
+            return float(df_neg["תזרים נטו שכירות"].abs().sum()) if not df_neg.empty else 0.0
+
+        _thresholds = [("₪80,000", 80_000), ("₪40,000", 40_000), ("₪20,000", 20_000)]
+        _rows_data = []
+        for _label, _thresh in _thresholds:
+            _age = _find_threshold_age(_df_post, _thresh)
+            if _age is not None:
+                _deficit = _cum_deficit_from(_df_hint, _age)
+                _rows_data.append((_label, f"גיל {_age:.0f}", f"₪{_deficit:,.0f}"))
+            else:
+                _rows_data.append((_label, f"לא מגיע עד גיל {check_age:.0f}", "—"))
+
+        _table_rows = "".join(
+            f"<tr><td style='padding:4px 10px;text-align:right;'>{r[0]}</td>"
+            f"<td style='padding:4px 10px;text-align:center;'>{r[1]}</td>"
+            f"<td style='padding:4px 10px;text-align:left;font-weight:700;'>{r[2]}</td></tr>"
+            for r in _rows_data
+        )
+        st.markdown(
+            f"<div style='background:#fff8e1;border:1px solid #f0c040;border-radius:8px;"
+            f"padding:10px 14px;margin-bottom:8px;direction:rtl;font-family:sans-serif;font-size:0.85em;'>"
+            f"<b>🔍 ניתוח ריקון חיסכון (ללא משכנתה הפוכה)</b>"
+            f"<table style='width:100%;border-collapse:collapse;margin-top:6px;'>"
+            f"<thead><tr style='border-bottom:1px solid #e0c000;'>"
+            f"<th style='text-align:right;padding:3px 10px;'>סף חיסכון</th>"
+            f"<th style='text-align:center;padding:3px 10px;'>גיל הגעה</th>"
+            f"<th style='text-align:left;padding:3px 10px;'>גרעון מצטבר עד גיל {check_age:.0f}</th>"
+            f"</tr></thead><tbody>{_table_rows}</tbody></table>"
+            f"<div style='margin-top:6px;color:#888;font-size:0.9em;'>"
+            f"גרעון מצטבר = סכום כל חודשי הגרעון מאותו גיל ועד גיל {check_age:.0f}</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.caption("⏳ הרץ סימולציה לקבלת ניתוח ריקון חיסכון.")
+
     enable_rm = st.checkbox("הפעל משכנתה הפוכה", value=False, key="enable_rm")
 
     if enable_rm:
-        # Deficit hint: find when savings near depletion (≤100K), then sum deficit from there to check_age
-        sim_res = st.session_state.get("sim_results")
-        if sim_res and "df_full" in sim_res:
-            df_hint = sim_res["df_full"]
-            last_inputs = st.session_state.get("last_inputs", {})
-            retire_age_hint = float(last_inputs.get("timeline", {}).get("retirement_age", 67))
-
-            # Find age when savings drop to ≤100K (after retirement)
-            DEPLETION_THRESHOLD = 100_000
-            df_after_retire = df_hint[df_hint["גיל"] >= retire_age_hint]
-            depleting_rows = df_after_retire[df_after_retire["צבירה מסלול שכירות"] <= DEPLETION_THRESHOLD]
-
-            if not depleting_rows.empty:
-                rm_trigger_age = float(depleting_rows.iloc[0]["גיל"])
-                # Cumulative deficit from that age to check_age — deflated to today's money
-                df_neg = df_hint[
-                    (df_hint["תזרים נטו שכירות"] < 0) &
-                    (df_hint["גיל"] >= rm_trigger_age) &
-                    (df_hint["גיל"] <= check_age)
-                ]
-                if not df_neg.empty:
-                    cum_def = float(df_neg["תזרים נטו שכירות"].abs().sum())
-                    min_def = float(df_neg["תזרים נטו שכירות"].abs().min())
-                    max_def = float(df_neg["תזרים נטו שכירות"].abs().max())
-                    st.info(
-                        f"💡 **החסכונות מגיעים ל-₪100K בגיל {rm_trigger_age:.0f}** — "
-                        f"זה הגיל הרלוונטי להפעיל משכנתה הפוכה.\n\n"
-                        f"גרעון מצטבר מגיל {rm_trigger_age:.0f} עד גיל {check_age:.0f}: "
-                        f"**₪{cum_def:,.0f}** | גרעון חודשי טיפוסי: **₪{min_def:,.0f} – ₪{max_def:,.0f}**"
-                    )
-                else:
-                    st.info(
-                        f"💡 **החסכונות מגיעים ל-₪100K בגיל {rm_trigger_age:.0f}** — "
-                        f"אין גרעון תזרים שלילי מגיל זה עד גיל {check_age:.0f}."
-                    )
-            else:
-                st.success(f"✅ החסכונות לא מתקרבים לאפס עד גיל {check_age:.0f} — משכנתה הפוכה אינה הכרחית.")
-
         rm_annual_rate_pct = compact_number_input(
             "ריבית שנתית ממוצעת (%)",
             value=5.5, min_value=1.0, max_value=12.0, step=0.1, unit="%", color=COLOR_RED

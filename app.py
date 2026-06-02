@@ -112,6 +112,9 @@ if st.sidebar.button("💾 שמור נתונים אלו כברירת מחדל", 
 if run_clicked or "sim_results" not in st.session_state:
     st.session_state["sim_results"] = run_simulation(user_inputs)
     st.session_state["last_inputs"] = user_inputs
+    # Always store a no-RM version for the danger table (unaffected by RM toggle)
+    _rental_no_rm = {**user_inputs.get("rental", {}), "rm_enabled": False, "rm_loan_amount_ils": 0}
+    st.session_state["sim_results_no_rm"] = run_simulation({**user_inputs, "rental": _rental_no_rm})
 
 sim_results = st.session_state["sim_results"]
 display_inputs = st.session_state["last_inputs"]
