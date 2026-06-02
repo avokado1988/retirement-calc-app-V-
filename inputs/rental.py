@@ -103,23 +103,65 @@ def render_rental_inputs(wealth_data, check_age=90.0):
             f"<td style='padding:4px 10px;text-align:left;font-weight:700;'>{r[2]}</td></tr>"
             for r in _rows_data
         )
-        # Check if current inputs differ from last simulated inputs
-        _curr_inputs_str = ""
-        _last_inputs_str = ""
+        import json as _json
+        _stale = True
         try:
-            import json
-            _curr_expense = {
-                "caregiver": st.session_state.get("last_inputs", {}).get("expenses", {}).get("caregiver_cost"),
-                "one_time": st.session_state.get("last_inputs", {}).get("expenses", {}).get("one_time_expense"),
-            }
+            _last = st.session_state.get("last_inputs", {})
+            _last_exp = _last.get("expenses", {})
+            _last_rental = _last.get("rental", {})
+            _last_timeline = _last.get("timeline", {})
+            # Build a fingerprint of the fields that affect the danger table
+            _last_fp = _json.dumps({
+                "base_expense":   _last_exp.get("base_monthly_expense"),
+                "caregiver":      _last_exp.get("caregiver_cost"),
+                "one_time":       _last_exp.get("one_time_expense"),
+                "one_time_freq":  _last_exp.get("one_time_frequency"),
+                "inflation":      _last_exp.get("expected_inflation"),
+                "rent_in":        _last_rental.get("rental_income_monthly"),
+                "rent_out":       _last_rental.get("rent_paid_monthly"),
+                "retire_age":     _last_timeline.get("retirement_age"),
+            }, sort_keys=True, default=str)
+            # Current widget values (saved by patched_number_input in app.py)
+            def _w(label):
+                return st.session_state.get(f"saved_num_{label}")
+            _curr_fp = _json.dumps({
+                "base_expense":   _w("הוצאות חודשיות נוכחיות (₪)"),
+                "caregiver":      _w("תוספת עלות מטפלת סיעודית מגיל 85 (₪)"),
+                "one_time":       _w("גובה הוצאה חד-פעמית ממוצעת (₪)"),
+                "one_time_freq":  _w("תדירות ההוצאה החד-פעמית (כל כמה שנים)"),
+                "inflation":      _w("אינפלציה שנתית צפויה (%)"),
+                "rent_in":        _w("שכר דירה חודשי — גביה (₪)"),
+                "rent_out":       _w("שכר דירה חודשי — תשלום (₪)"),
+                "retire_age":     _w("גיל פרישה (הפסקת עבודה)"),
+            }, sort_keys=True, default=str)
+            _stale = (_last_fp != _curr_fp)
         except Exception:
-            pass
+            _stale = True
+
+        _spinner_css = (
+            "<style>"
+            "@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}"
+            "@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}"
+            ".danger-spinner{display:inline-block;animation:spin 1.2s linear infinite;margin-left:4px;}"
+            ".danger-stale{display:inline-flex;align-items:center;gap:4px;color:#b07800;font-size:0.82em;"
+            "background:#fff0b3;border-radius:4px;padding:2px 7px;margin-bottom:5px;}"
+            "</style>"
+        )
+        _stale_badge = (
+            f"<div class='danger-stale'>"
+            f"<span class='danger-spinner'>⟳</span>"
+            f" ממתין לעדכון — לחץ <b style='margin:0 3px;'>▶️ עדכן סימולציה</b> לרענון"
+            f"</div>"
+        ) if _stale else (
+            "<div style='color:#1a7a3a;font-size:0.82em;margin-bottom:5px;'>✅ נתונים מעודכנים</div>"
+        )
 
         st.markdown(
+            f"{_spinner_css}"
             f"<div style='background:#fff8e1;border:1px solid #f0c040;border-radius:8px;"
             f"padding:10px 14px;margin-bottom:8px;direction:rtl;font-family:sans-serif;font-size:0.85em;'>"
             f"<b>🔍 ניתוח ריקון חיסכון (ללא משכנתה הפוכה)</b>"
-            f"<div style='color:#888;font-size:0.85em;margin-bottom:4px;'>⚠️ מבוסס על הסימולציה האחרונה — לחץ <b>עדכן סימולציה</b> לנתונים עדכניים</div>"
+            f"{_stale_badge}"
             f"<table style='width:100%;border-collapse:collapse;margin-top:6px;'>"
             f"<thead><tr style='border-bottom:1px solid #e0c000;'>"
             f"<th style='text-align:right;padding:3px 10px;'>סף חיסכון</th>"
