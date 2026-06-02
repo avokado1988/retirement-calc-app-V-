@@ -738,7 +738,7 @@ def render_qa_section(results, user_inputs):
         "שכירות": {
             "הכנסות חודשיות":  format_shekel(int(base_income_retire + net_rental_r)),
             "הוצאות חודשיות":  format_shekel(int(exp_retire + rent_paid_r)),
-            "הון כולל":        format_shekel(br_r),
+            "הון כולל":        fmt_with_delta(tw_rent_r, baseline_capital),
             "משיכה / תזרים":   fmt_cashflow(nn_rent_r, cashflow=rental_cashflow_at_retire, withdrawal_pct=pct_rent_r),
             "קצב משיכה":       (
                 "<span style='color:#1a7a3a;'>✅ לא נדרש</span>"
@@ -772,7 +772,7 @@ def render_qa_section(results, user_inputs):
 
     TOOLTIPS_ASSETS_1 = {
         "תיק נזיל":   f"סך הצבירה הנזילה בתיק ההשקעות ביום הפרישה (גיל {retire_age:.1f}). לא כולל נדל\"ן ולא כולל ערך הקצבה.",
-        "הון כולל":   f"תיק נזיל + ערך נוכחי של הקצבה המובטחת (מסלולים 1 ו-3) — כלומר כמה שווה בפועל הנכס הפנסיוני כולו. במסלול 4: רק חסכונות נזילים.",
+        "הון כולל":   f"תיק נזיל + ערך נוכחי של הקצבה (מסלולים 1 ו-3). במסלול 4: חיסכון נזיל + הון עצמי בנכס (שווי דירה פחות חוב משכנתה הפוכה).",
         "שווי נדלן":  f"שווי הדירה ביום הפרישה (גיל {retire_age:.1f}), לפי עליית ערך שנתית שהוגדרה בקלט. מסלולים 1-3: דירה למגורים. מסלול 4: דירה להשקעה.",
         "סך נכסים":   f"סכום כולל: תיק נזיל + ערך קצבה + שווי נדל\"ן + קרן חירום. מבטא את שווי הנכס נטו של הלקוח ביום הפרישה.",
     }
@@ -866,7 +866,7 @@ def render_qa_section(results, user_inputs):
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_r, months_deficit_r),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_r),
             "שימור הון":    fmt_preservation(br_95),
-            "הון כולל":     format_shekel(br_c),
+            "הון כולל":     fmt_with_delta(tw_rent_c, baseline_capital),
             "תיק נזיל":     format_shekel(br_c),
             "שווי נדלן":    format_shekel(rm_equity_check),  # net equity (property minus RM loan)
             "סך נכסים":     format_shekel(tw_rent_c),
