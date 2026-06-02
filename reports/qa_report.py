@@ -355,6 +355,19 @@ def render_qa_section(results, user_inputs):
     total_net_95_rental = br_95 + prop_95_rental - rm_debt_95
     ratio_r_95 = total_net_95_rental / max(1.0, baseline_capital)
 
+    # Tracks 1/2/3 also own a residential apartment — include for fair comparison
+    prop_95_own = float(row_95.get("שווי נדלן", property_value_start))
+    total_net_95_190 = b190_95 + prop_95_own
+    total_net_95_25  = b25_95  + prop_95_own
+    total_net_95_h   = bh_95   + prop_95_own
+
+    # Per-track breakdown dicts (used in card display)
+    _fin_port_95 = {1: b190_95, 2: b25_95,  3: bh_95,  4: br_95}
+    _prop_net_95 = {
+        1: prop_95_own, 2: prop_95_own, 3: prop_95_own,
+        4: max(0.0, prop_95_rental - rm_debt_95),
+    }
+
     score_190, husn_190 = compute_score(1, empty_190, ratio_190_95, pct_190_r, rule400_190_r)
     score_25, husn_25 = compute_score(2, empty_25, ratio_25_95, pct_25_r, rule400_25_r)
     score_h, husn_h = compute_score(3, empty_h, ratio_h_95, pct_h_r, rule400_h_r)
@@ -396,10 +409,10 @@ def render_qa_section(results, user_inputs):
         visible_tracks = {1, 2, 3, 4}
 
     tracks_exec = [
-        (1, score_190, empty_190, b190_95, husn_190),
-        (2, score_25, empty_25, b25_95, husn_25),
-        (3, score_h, empty_h, bh_95, husn_h),
-        (4, score_r, empty_r, br_95, husn_r),
+        (1, score_190, empty_190, total_net_95_190,   husn_190),
+        (2, score_25,  empty_25,  total_net_95_25,    husn_25),
+        (3, score_h,   empty_h,   total_net_95_h,     husn_h),
+        (4, score_r,   empty_r,   total_net_95_rental, husn_r),
     ]
 
     # -------------------------------------------------------
@@ -529,10 +542,9 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Rental card bottom — cash flow test
     # -------------------------------------------------------
-    def _build_rental_card_bottom(cf, flip_age, always_positive, starts_negative, total_assets_check, why_line, why_color):
+    def _build_rental_card_bottom(cf, flip_age, always_positive, starts_negative, why_line, why_color, wealth_breakdown_html):
         cf_color = "#1a7a3a" if cf >= 0 else "#c0392b"
         cf_sign  = "+" if cf >= 0 else ""
-        cf_label = "✅ תזרים חיובי" if cf >= 0 else "🔴 תזרים שלילי"
 
         if starts_negative:
             flip_html = "<div style='font-size:0.72em;color:#c0392b;font-weight:700;margin-top:4px;'>⚠️ מתחיל בגירעון מיום הפרישה</div>"
@@ -543,10 +555,11 @@ def render_qa_section(results, user_inputs):
 
         return (
             f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💸 תזרים חודשי נטו בפרישה</div>"
-            f"<div style='font-size:1.05em;font-weight:800;color:{cf_color};'>{cf_sign}{format_shekel(int(cf))}</div>"
+            f"<div style='font-size:1.0em;font-weight:800;color:{cf_color};margin-bottom:0;'>{cf_sign}{format_shekel(int(cf))}</div>"
             f"{flip_html}"
-            f"<div style='font-size:0.65em;color:#999;margin-top:8px;margin-bottom:2px;'>🏠 שווי כלל נכסים בגיל {check_age:.0f}</div>"
-            f"<div style='font-size:0.88em;font-weight:700;color:#1a1a2e;'>{format_shekel(int(total_assets_check))}</div>"
+            f"<div style='border-top:1px solid #e8e8e8;margin-top:8px;padding-top:8px;'>"
+            f"{wealth_breakdown_html}"
+            f"</div>"
             f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
             f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
         )
@@ -595,6 +608,19 @@ def render_qa_section(results, user_inputs):
             outline = ""
             winner_ribbon = "<div style='height:30px;'></div>"
 
+        fin_port = _fin_port_95[track_id]
+        prop_net = _prop_net_95[track_id]
+        prop_label = "🏠 הון עצמי בנדל\"ן בגיל 95" if track_id == 4 else "🏠 שווי נדלן בגיל 95"
+
+        wealth_breakdown_html = (
+            f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>💰 תיק פיננסי בגיל 95</div>"
+            f"<div style='font-size:0.85em;font-weight:600;color:#444;margin-bottom:4px;'>{format_shekel(int(fin_port))}</div>"
+            f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>{prop_label}</div>"
+            f"<div style='font-size:0.85em;font-weight:600;color:#444;margin-bottom:6px;'>{format_shekel(int(prop_net))}</div>"
+            f"<div style='font-size:0.62em;color:#555;margin-bottom:1px;font-weight:600;'>📊 סך נכסים בגיל 95</div>"
+            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
+        )
+
         inner_card = (
             f"<div style='background:{rc['bg']};border-top:{border_top};border-radius:12px;"
             f"padding:14px 14px 14px 14px;box-shadow:{shadow};{outline}font-family:sans-serif;"
@@ -612,16 +638,15 @@ def render_qa_section(results, user_inputs):
             f"</div>"
             f"<div style='border-top:1px solid #e8e8e8;padding-top:10px;'>"
             + (
-                # Track 4: show cash flow test instead of portfolio metrics
+                # Track 4: cashflow headline + shared wealth breakdown
                 _build_rental_card_bottom(rental_cashflow_at_retire, rental_flip_age,
                                           rental_always_positive, rental_starts_negative,
-                                          tw_rent_c, why_line, why_color)
+                                          why_line, why_color, wealth_breakdown_html)
                 if track_id == 4 else
-                f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💰 תיק בגיל 95</div>"
-                f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
-                f"{cmp_html}"
-                f"{base_html}"
-                f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
+                wealth_breakdown_html
+                + cmp_html
+                + base_html
+                + f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
                 f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
             )
             + f"</div></div>"
