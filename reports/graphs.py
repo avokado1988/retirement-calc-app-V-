@@ -99,50 +99,42 @@ def render_charts(df_history, user_inputs):
     st.divider()
 
     # =========================================================
-    # Chart B: Total including pension value + guarantee line
+    # Chart B: Total net worth — liquid portfolio + real estate (− RM debt)
     # =========================================================
-    st.subheader("ב) הון כולל ערך הקצבה — כולל ה'בור' בסיום תקופת ההבטחה")
+    st.subheader("ב) סך השווי הנקי — תיק נזיל + נדל\"ן (השורה התחתונה)")
     st.markdown(
-        "קו מלא = הון נזיל + ערך הקצבה הנותר. "
-        "קו מקווקו = הון נזיל בלבד. "
-        "השטח הצבוע = כסף הכלוא בקצבה שנעלם עם סיום ההבטחה."
+        "כמה אתה שווה בסך הכל בכל גיל: התיק הנזיל **בתוספת** שווי הנדל\"ן. "
+        "במסלול 4 מנוכה חוב המשכנתה ההפוכה (הון עצמי נטו). "
+        "זו ההשוואה ההוגנת — תפוחים מול תפוחים."
+    )
+    st.caption(
+        "💡 השוואת קצבה: מסלול 2 (ללא קצבה — הכל נזיל) מול מסלול 3 (חלק הומר לקצבה) "
+        "מראה כיצד המרת הון לקצבה משפיעה על סך השווי."
     )
     active_b = _track_selector("b")
 
+    # Per-track total net worth series
+    own_property = df["שווי נדלן"] if "שווי נדלן" in df.columns else pd.Series(0, index=df.index)
+    rental_property = df["שווי נדלן מסלול 4"] if "שווי נדלן מסלול 4" in df.columns else pd.Series(0, index=df.index)
+    rm_debt = df["משכנתה הפוכה — יתרת חוב"] if "משכנתה הפוכה — יתרת חוב" in df.columns else pd.Series(0, index=df.index)
+
+    def total_networth(tid):
+        liq = df[COL_MAP[tid]]
+        if tid == "rental":
+            return liq + (rental_property - rm_debt).clip(lower=0)
+        return liq + own_property
+
     fig_b = go.Figure()
     for tid in active_b:
-        liq_col = COL_MAP[tid]
-        has_pension = tid in ("190", "hybrid")
-        if has_pension:
-            total = df[liq_col] + pension_asset
-            r, g, b = int(COLORS[tid][1:3], 16), int(COLORS[tid][3:5], 16), int(COLORS[tid][5:7], 16)
-            fig_b.add_trace(go.Scatter(
-                x=df["גיל"], y=total,
-                mode='lines', name=f'{TRACK_NAMES[tid]} — סה"כ',
-                line=dict(color=COLORS[tid], width=2.5)
-            ))
-            fig_b.add_trace(go.Scatter(
-                x=df["גיל"], y=df[liq_col],
-                mode='lines', name=f'{TRACK_NAMES[tid]} — נזיל',
-                line=dict(color=COLORS[tid], width=1.5, dash='dash'),
-                fill='tonexty', fillcolor=f'rgba({r},{g},{b},0.18)'
-            ))
-        else:
-            fig_b.add_trace(go.Scatter(
-                x=df["גיל"], y=df[liq_col],
-                mode='lines', name=TRACK_NAMES[tid],
-                line=dict(color=COLORS[tid], width=2.5)
-            ))
-
-    if guarantee_end_age:
-        fig_b.add_vline(
-            x=guarantee_end_age, line_dash="dot", line_color="gray",
-            annotation_text=f"סיום הבטחה (גיל {guarantee_end_age:.0f})",
-            annotation_position="top right"
-        )
+        fig_b.add_trace(go.Scatter(
+            x=df["גיל"], y=total_networth(tid),
+            mode='lines', name=TRACK_NAMES[tid],
+            line=dict(color=COLORS[tid], width=2.5,
+                      dash='dash' if tid == "hybrid" else 'solid')
+        ))
 
     fig_b.update_layout(
-        xaxis_title="גיל", yaxis_title="הון (₪)",
+        xaxis_title="גיל", yaxis_title="סך שווי נקי (₪)",
         hovermode="x unified", template="plotly_white",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
@@ -230,3 +222,79 @@ def render_charts(df_history, user_inputs):
     )
     fig_d.update_traces(hovertemplate="%{y:,.0f} ₪")
     st.plotly_chart(fig_d, use_container_width=True)
+
+    # =========================================================
+    # Chart E: Track 4 dedicated — monthly cashflow renter/landlord,
+    # with an optional reverse-mortgage overlay (toggle on/off).
+    # =========================================================
+    if "תזרים נטו שכירות" in df.columns:
+        st.divider()
+        st.subheader("ה) מסלול 4 — תזרים חודשי: שוכר ומשכיר, עם/בלי משכנתה הפוכה")
+        st.markdown(
+            "התזרים החודשי נטו: הכנסות (שכ\"ד שאתה גובה + ביטוח לאומי) פחות הוצאות "
+            "(מחיה + שכ\"ד שאתה משלם + תחזוקה). מעל הקו = עודף, מתחת לקו = גירעון שנמשך מהחיסכון."
+        )
+
+        rental_cfg = user_inputs.get("rental", {})
+        add_rm = st.checkbox(
+            "➕ הצג גם תזרים עם משכנתה הפוכה",
+            value=bool(rental_cfg.get("rm_enabled", False)),
+            key="chart_e_add_rm"
+        )
+
+        base_cf = df["תזרים נטו שכירות"]
+
+        fig_e = go.Figure()
+        # Zero reference line
+        fig_e.add_hline(y=0, line_dash="dot", line_color="#aaa")
+        fig_e.add_trace(go.Scatter(
+            x=df["גיל"], y=base_cf,
+            mode='lines', name="ללא משכנתה",
+            line=dict(color="#9467bd", width=2.5)
+        ))
+
+        if add_rm:
+            # Compute the reverse-mortgage annuity inline (same formula as the
+            # input preview): M = net_loan / n_months, paid start_age → life_exp.
+            rm_loan = float(rental_cfg.get("rm_loan_amount_ils", 0) or 0)
+            rm_fee = float(rental_cfg.get("rm_origination_fee", 0.02))
+            rm_start = float(rental_cfg.get("rm_start_age", 72))
+            rm_life = float(rental_cfg.get("rm_life_expectancy_age", 92))
+            net_loan = rm_loan * (1 - rm_fee)
+            n_months = max(1.0, (rm_life - rm_start) * 12)
+            monthly_annuity = net_loan / n_months if rm_loan > 0 else 0.0
+
+            ages = df["גיל"]
+            annuity_series = ages.apply(
+                lambda a: monthly_annuity if (rm_start <= a < rm_life) else 0.0
+            )
+            cf_with_rm = base_cf + annuity_series
+
+            fig_e.add_trace(go.Scatter(
+                x=ages, y=cf_with_rm,
+                mode='lines', name="עם משכנתה הפוכה",
+                line=dict(color="#2ca02c", width=2.5)
+            ))
+            # Mark the payment window
+            fig_e.add_vline(x=rm_start, line_dash="dot", line_color="#2ca02c",
+                            annotation_text=f"תחילת קצבה (גיל {rm_start:.0f})",
+                            annotation_position="top left")
+            fig_e.add_vline(x=rm_life, line_dash="dot", line_color="#c0392b",
+                            annotation_text=f"תום תקופה (גיל {rm_life:.0f})",
+                            annotation_position="top right")
+            if rm_loan > 0:
+                st.caption(
+                    f"💰 קצבה חודשית מהמשכנתה: ₪{monthly_annuity:,.0f} "
+                    f"(מגיל {rm_start:.0f} עד {rm_life:.0f}). "
+                    f"שים לב לקפיצת התזרים כלפי מעלה בתקופה זו, ולחזרה לרמה הקודמת בתום התקופה."
+                )
+            else:
+                st.caption("⚠️ לא הוגדר סכום הלוואה — הזן סכום בקלט מסלול 4 כדי לראות את ההשפעה.")
+
+        fig_e.update_layout(
+            xaxis_title="גיל", yaxis_title="תזרים חודשי נטו (₪)",
+            hovermode="x unified", template="plotly_white",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        fig_e.update_traces(hovertemplate="%{y:,.0f} ₪")
+        st.plotly_chart(fig_e, use_container_width=True)
