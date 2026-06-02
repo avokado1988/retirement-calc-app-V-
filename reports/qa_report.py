@@ -346,20 +346,26 @@ def render_qa_section(results, user_inputs):
                     score += 0
         return score, husn_105
 
-    ratio_190_95 = b190_95 / max(1.0, baseline_capital)
-    ratio_25_95 = b25_95 / max(1.0, baseline_capital)
-    ratio_h_95 = bh_95 / max(1.0, baseline_capital)
-    # Track 4: score based on total net wealth (portfolio + net property equity)
+    # =======================================================================
+    # Wealth at 95 — two distinct concepts, kept separate on purpose:
+    #   (a) LIQUID portfolio  → drives health/resilience (can it fund life?)
+    #   (b) TOTAL net worth    → the bottom line shown on cards (what am I worth?)
+    #   (c) STRESS-adjusted    → risk-aware total used for scoring the winner
+    # -----------------------------------------------------------------------
     prop_95_rental = float(row_95.get("שווי נדלן מסלול 4", rental_property_start))
     rm_debt_95 = float(row_95.get("משכנתה הפוכה — יתרת חוב", 0.0))
-    total_net_95_rental = br_95 + prop_95_rental - rm_debt_95
-    ratio_r_95 = total_net_95_rental / max(1.0, baseline_capital)
-
-    # Tracks 1/2/3 also own a residential apartment — include for fair comparison
     prop_95_own = float(row_95.get("שווי נדלן", property_value_start))
+    pension_asset_95 = float(row_95.get("ערך קצבה נותר", 0.0))
+
+    # (b) Total net worth at 95 — liquid + real estate (− RM debt for track 4)
     total_net_95_190 = b190_95 + prop_95_own
     total_net_95_25  = b25_95  + prop_95_own
     total_net_95_h   = bh_95   + prop_95_own
+    total_net_95_rental = br_95 + prop_95_rental - rm_debt_95
+
+    liquid_95_by_track = {1: b190_95, 2: b25_95, 3: bh_95, 4: br_95}
+    total_95_by_track  = {1: total_net_95_190, 2: total_net_95_25,
+                          3: total_net_95_h, 4: total_net_95_rental}
 
     # Per-track breakdown dicts (used in card display)
     _fin_port_95 = {1: b190_95, 2: b25_95,  3: bh_95,  4: br_95}
@@ -368,10 +374,36 @@ def render_qa_section(results, user_inputs):
         4: max(0.0, prop_95_rental - rm_debt_95),
     }
 
+    # Starting total net worth per track — the apples-to-apples baseline for
+    # the "vs starting capital" comparison (each track vs where IT began).
+    net_for_rental_start = float(rental_inputs.get("net_for_rental", 0.0))
+    start_total_123 = baseline_capital + property_value_start + emergency_fund
+    start_total_4   = net_for_rental_start + rental_property_start
+    start_total_by_track = {1: start_total_123, 2: start_total_123,
+                            3: start_total_123, 4: start_total_4}
+
+    # (c) Stress-adjusted net worth at 95 — same philosophy as the stress-test
+    # panel, applied uniformly so the score is risk-aware AND apples-to-apples:
+    #   • liquid portfolio + emergency fund: full value (truly available)
+    #   • pension asset: full value (guaranteed, but illiquid)
+    #   • residence (tracks 1-3): full value (stable, you live in it)
+    #   • rental property (track 4): 15% haircut − 500K liquidity penalty − RM debt
+    sa_95 = {
+        1: b190_95 + pension_asset_95 + prop_95_own + emergency_fund,
+        2: b25_95  + prop_95_own + emergency_fund,
+        3: bh_95   + pension_asset_95 + prop_95_own + emergency_fund,
+        4: br_95   + max(0.0, prop_95_rental * 0.85 - 500_000 - rm_debt_95),
+    }
+    ratio_190_95 = sa_95[1] / max(1.0, start_total_by_track[1])
+    ratio_25_95  = sa_95[2] / max(1.0, start_total_by_track[2])
+    ratio_h_95   = sa_95[3] / max(1.0, start_total_by_track[3])
+    ratio_r_95   = sa_95[4] / max(1.0, start_total_by_track[4])
+
     score_190, husn_190 = compute_score(1, empty_190, ratio_190_95, pct_190_r, rule400_190_r)
     score_25, husn_25 = compute_score(2, empty_25, ratio_25_95, pct_25_r, rule400_25_r)
     score_h, husn_h = compute_score(3, empty_h, ratio_h_95, pct_h_r, rule400_h_r)
     score_r, husn_r = compute_score(4, empty_r, ratio_r_95, pct_rent_r, "N/A", is_track4=True)
+
 
     track_pros_cons = {
         1: {
@@ -408,11 +440,13 @@ def render_qa_section(results, user_inputs):
     if not visible_tracks:  # safety: show all if none selected
         visible_tracks = {1, 2, 3, 4}
 
+    # p95 carried here = LIQUID portfolio (drives health/preservation badge).
+    # Total net worth for display/comparison comes from total_95_by_track.
     tracks_exec = [
-        (1, score_190, empty_190, total_net_95_190,   husn_190),
-        (2, score_25,  empty_25,  total_net_95_25,    husn_25),
-        (3, score_h,   empty_h,   total_net_95_h,     husn_h),
-        (4, score_r,   empty_r,   total_net_95_rental, husn_r),
+        (1, score_190, empty_190, b190_95, husn_190),
+        (2, score_25,  empty_25,  b25_95,  husn_25),
+        (3, score_h,   empty_h,   bh_95,   husn_h),
+        (4, score_r,   empty_r,   br_95,   husn_r),
     ]
 
     # -------------------------------------------------------
@@ -501,10 +535,11 @@ def render_qa_section(results, user_inputs):
     if not has_winner:
         st.warning("⚠️ אין מסלול מומלץ — אף מסלול אינו שומר על עצמו עד גיל 105. בכל המסלולים התיק נשחק בצורה מסוכנת. מומלץ לבחון מחדש את ההכנסות וההוצאות.")
 
-    # Reference portfolios for relative comparison
-    winner_p95 = ranked_order[0][4]
+    # Reference TOTAL net worth for relative comparison (apples-to-apples:
+    # every card compares total wealth, not liquid portfolio).
+    winner_total = total_95_by_track[ranked_order[0][1]]
     winner_name = TRACK_NAMES[ranked_order[0][1]]
-    second_p95 = ranked_order[1][4] if len(ranked_order) > 1 else winner_p95
+    second_total = total_95_by_track[ranked_order[1][1]] if len(ranked_order) > 1 else winner_total
     second_name = TRACK_NAMES[ranked_order[1][1]] if len(ranked_order) > 1 else ""
 
     def delta_block(label, val, ref):
@@ -577,16 +612,19 @@ def render_qa_section(results, user_inputs):
         res_color = "#1a7a3a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#c0392b")
         res_label = "105+" if empty_age >= 105.0 else f"גיל {empty_age:.0f}"
 
-        # Comparison 1: vs the leading alternative
+        # Total net worth at 95 — the bottom-line figure shown & compared on cards.
+        total_95 = total_95_by_track[track_id]
+
+        # Comparison 1: vs the leading alternative (total wealth)
         if is_winner:
             cmp_label = f"מול הבא בתור ({second_name})"
-            cmp_html = delta_block(cmp_label, portfolio_95, second_p95)
+            cmp_html = delta_block(cmp_label, total_95, second_total)
         else:
             cmp_label = "מול המסלול המומלץ" if has_winner else "מול המסלול המוביל"
-            cmp_html = delta_block(cmp_label, portfolio_95, winner_p95)
+            cmp_html = delta_block(cmp_label, total_95, winner_total)
 
-        # Comparison 2: vs starting capital
-        base_html = delta_block("מול ההון ההתחלתי", portfolio_95, baseline_capital)
+        # Comparison 2: vs this track's own starting net worth
+        base_html = delta_block("מול ההון ההתחלתי", total_95, start_total_by_track[track_id])
 
         why_line = build_why_line(is_winner, is_resilient, is_preserving, empty_age, track_id in PENSION_TRACKS)
         why_color = "#1a7a3a" if (is_winner or is_healthy) else ("#856400" if is_resilient else "#b71c1c")
@@ -618,7 +656,7 @@ def render_qa_section(results, user_inputs):
             f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>{prop_label}</div>"
             f"<div style='font-size:0.85em;font-weight:600;color:#444;margin-bottom:6px;'>{format_shekel(int(prop_net))}</div>"
             f"<div style='font-size:0.62em;color:#555;margin-bottom:1px;font-weight:600;'>📊 סך נכסים בגיל 95</div>"
-            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(portfolio_95))}</div>"
+            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(total_95))}</div>"
         )
 
         inner_card = (

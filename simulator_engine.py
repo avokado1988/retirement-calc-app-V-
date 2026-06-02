@@ -197,8 +197,14 @@ def run_simulation(user_inputs):
                 # Debt grows via interest on drawn balance; estate owes FV at end of term.
                 rm_annuity_monthly = max_loan_net / n_months
 
-            # Annuity always paid — bank absorbs when loan exceeds property value (non-recourse)
-            rm_annuity_this_month = rm_annuity_monthly
+            # Payments span the agreed term only (start_age → life_expectancy_age).
+            # After the term, no new draws — but the debt keeps accruing interest
+            # until the estate settles (non-recourse). This keeps total received ==
+            # net principal instead of paying out indefinitely to age 105.
+            if current_age < rm_life_expectancy_age:
+                rm_annuity_this_month = rm_annuity_monthly
+            else:
+                rm_annuity_this_month = 0.0
             rm_loan_balance = (rm_loan_balance + rm_annuity_this_month) * (1 + rm_rate_monthly)
             rm_interest_this_month = rm_loan_balance - (rm_loan_balance / (1 + rm_rate_monthly))
 
