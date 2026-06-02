@@ -97,12 +97,15 @@ def run_simulation(user_inputs):
         if balance_25 > 0: balance_25 *= (1 + r_monthly_25)
         property_value *= (1 + prop_appreciation_monthly)
 
+        caregiver_nominal = caregiver_cost_base * inflation_factor if current_age >= 85.0 else 0.0
+
         history.append({
             "גיל": current_age, "חודש": m, "הוצאה נומינלית": nominal_expense,
             "הכנסה מעבודה": curr_work_inc, "קצבת ביטוח לאומי": ni_indexed,
             "קצבה מזערית 190": p_indexed, "צבירה תיקון 190": balance_190,
             "צבירה מסלול ריאלי": balance_25, "מס ששולם 190": tax_190, "מס ששולם 25": tax_25,
-            "שווי נדלן": property_value, "נטו למשיכה 190": net_needed_190, "נטו למשיכה 25": net_needed_25
+            "שווי נדלן": property_value, "נטו למשיכה 190": net_needed_190, "נטו למשיכה 25": net_needed_25,
+            "הוצאות מטפלת": caregiver_nominal
         })
 
     df_full = pd.DataFrame(history)
