@@ -196,10 +196,6 @@ def render_rental_inputs(wealth_data, check_age=90.0, start_age=67.0):
             options=["זכר", "נקבה"], horizontal=True, key="rm_sex"
         )
         auto_le = life_expectancy_age(sex_label, start_age)
-        st.caption(
-            f"📊 תוחלת חיים אוטומטית בגיל {start_age:.0f}: **גיל {auto_le:.0f}** "
-            f"(לפי לוחות תמותה — {sex_label}). זהו אופק התשלום של הקצבה."
-        )
         override_le = st.checkbox("התאמה ידנית של גיל תוחלת החיים", value=False, key="rm_le_override")
         if override_le:
             rm_life_expectancy_age = compact_number_input(
@@ -208,6 +204,16 @@ def render_rental_inputs(wealth_data, check_age=90.0, start_age=67.0):
             )
         else:
             rm_life_expectancy_age = float(round(auto_le))
+
+        _le_source = "ידני" if override_le else f"לוחות הלמ\"ס — {sex_label}"
+        st.markdown(
+            f"<div style='background:#e8f4fd;border-right:4px solid #2196F3;border-radius:6px;"
+            f"padding:8px 12px;margin:6px 0;direction:rtl;font-family:sans-serif;font-size:0.9em;'>"
+            f"📅 <b>גיל תוחלת חיים שנבחר: גיל {rm_life_expectancy_age:.0f}</b> &nbsp;·&nbsp; "
+            f"<span style='color:#555;'>מקור: {_le_source}</span>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
         st.caption("ככל שגבוה יותר — קצבה חודשית נמוכה יותר (פריסה על יותר שנים), אך תקבולים לאורך זמן רב יותר.")
 
         rm_loan_amount_ils = compact_number_input(
@@ -245,6 +251,8 @@ def render_rental_inputs(wealth_data, check_age=90.0, start_age=67.0):
                 f"<div style='background:#f0f4ff;border-radius:8px;padding:12px 14px;"
                 f"direction:rtl;font-family:sans-serif;font-size:0.88em;margin-top:8px;'>"
                 f"<b style='font-size:1.05em;'>📊 קצבה חודשית צפויה: ₪{annuity_preview:,.0f}</b>"
+                f"<div style='color:#555;font-size:0.92em;margin-top:3px;'>"
+                f"תקופת תשלום: גיל {rm_start_age:.0f} ← גיל {rm_life_expectancy_age:.0f} &nbsp;({years_span:.0f} שנים)</div>"
                 f"<hr style='margin:8px 0;border:none;border-top:1px solid #ccd;'/>"
                 f"<table style='width:100%;border-collapse:collapse;'>"
                 f"<tr><td>סך תקבולים — כסף שנכנס לך ({years_span:.0f} שנים)</td>"
