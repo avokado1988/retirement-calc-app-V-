@@ -296,6 +296,18 @@ def render_qa_section(results, user_inputs):
     ratio_r_pct, ratio_r_str = ratio_at_97("צבירה מסלול שכירות")
 
     # -------------------------------------------------------
+    # Balanced Stress-Test: Track 4 vs Track 1 at check_age
+    # S4   = portfolio_rental + (property_rental × 0.85 − 500K) − rm_debt
+    # S190 = portfolio_190 + pension_asset + property × 1.05 + emergency
+    # Δ > 0 → track 4 wins even under stress
+    # -------------------------------------------------------
+    rm_debt_check_st = float(row_check.get("משכנתה הפוכה — יתרת חוב", 0.0))
+    S4_stress   = br_c + (rental_prop_check * 0.85 - 500_000) - rm_debt_check_st
+    S190_stress = b190_c + pension_asset_check + property_value_check * 1.05 + emergency_fund
+    delta_stress = S4_stress - S190_stress
+    track4_wins_stress = delta_stress > 0
+
+    # -------------------------------------------------------
     # Compute scores per track
     # -------------------------------------------------------
     def compute_score(track_id, empty_age, ratio_at_95, withdrawal_rate, rule400_val_str, is_track4=False):
@@ -337,7 +349,11 @@ def render_qa_section(results, user_inputs):
     ratio_190_95 = b190_95 / max(1.0, baseline_capital)
     ratio_25_95 = b25_95 / max(1.0, baseline_capital)
     ratio_h_95 = bh_95 / max(1.0, baseline_capital)
-    ratio_r_95 = br_95 / max(1.0, baseline_capital)
+    # Track 4: score based on total net wealth (portfolio + net property equity)
+    prop_95_rental = float(row_95.get("שווי נדלן מסלול 4", rental_property_start))
+    rm_debt_95 = float(row_95.get("משכנתה הפוכה — יתרת חוב", 0.0))
+    total_net_95_rental = br_95 + prop_95_rental - rm_debt_95
+    ratio_r_95 = total_net_95_rental / max(1.0, baseline_capital)
 
     score_190, husn_190 = compute_score(1, empty_190, ratio_190_95, pct_190_r, rule400_190_r)
     score_25, husn_25 = compute_score(2, empty_25, ratio_25_95, pct_25_r, rule400_25_r)
@@ -951,3 +967,47 @@ def render_qa_section(results, user_inputs):
         render_metric_columns(CASHFLOW_ROWS_2, t2_cols, show_header=True, tooltips=TOOLTIPS_CASHFLOW_2)
     with st.expander("📊 ניתוח אקטוארי", expanded=False):
         render_metric_columns(ACTUARIAL_ROWS_2, t2_cols, show_header=True, tooltips=TOOLTIPS_ACTUARIAL_2)
+
+    # -------------------------------------------------------
+    # Balanced Stress-Test display (track 4 visible only)
+    # -------------------------------------------------------
+    if 4 in visible_tracks and 1 in visible_tracks:
+        st.markdown("<br/>", unsafe_allow_html=True)
+        with st.expander("⚖️ מבחן עמידות — מסלול 4 מול מסלול 190", expanded=True):
+            verdict_color  = "#1a7a3a" if track4_wins_stress else "#1a3a7a"
+            verdict_icon   = "✅" if track4_wins_stress else "🔵"
+            verdict_label  = "מסלול 4 מנצח גם תחת לחץ" if track4_wins_stress else "מסלול 190 שומר על עדיפות"
+            delta_fmt      = format_shekel(int(abs(delta_stress)))
+            direction_txt  = f"יתרון {delta_fmt} למסלול 4" if track4_wins_stress else f"יתרון {delta_fmt} למסלול 190"
+
+            st.markdown(
+                f"<div style='background:#f8f9fc;border:1px solid #d0d4e8;border-radius:8px;"
+                f"padding:16px 20px;direction:rtl;font-family:sans-serif;'>"
+                f"<div style='font-size:1.05em;font-weight:700;color:{verdict_color};margin-bottom:12px;'>"
+                f"{verdict_icon} {verdict_label} — {direction_txt}"
+                f"</div>"
+                f"<table style='width:100%;border-collapse:collapse;font-size:0.88em;'>"
+                f"<tr style='border-bottom:1px solid #dde;'>"
+                f"<td style='padding:5px 8px;color:#555;'>S₄ (מסלול 4 תחת לחץ)</td>"
+                f"<td style='padding:5px 8px;font-weight:700;'>{format_shekel(int(S4_stress))}</td>"
+                f"<td style='padding:5px 8px;color:#888;font-size:0.82em;'>תיק + נדל\"ן×0.85 − 500K − חוב</td>"
+                f"</tr>"
+                f"<tr style='border-bottom:1px solid #dde;'>"
+                f"<td style='padding:5px 8px;color:#555;'>S₁₉₀ (מסלול 190 עם בונוס)</td>"
+                f"<td style='padding:5px 8px;font-weight:700;'>{format_shekel(int(S190_stress))}</td>"
+                f"<td style='padding:5px 8px;color:#888;font-size:0.82em;'>תיק + קצבה + נדל\"ן×1.05 + חירום</td>"
+                f"</tr>"
+                f"<tr>"
+                f"<td style='padding:5px 8px;font-weight:700;'>Δ (הפרש)</td>"
+                f"<td style='padding:5px 8px;font-weight:700;color:{verdict_color};'>"
+                f"{'+ ' if delta_stress >= 0 else ''}{format_shekel(int(delta_stress))}</td>"
+                f"<td style='padding:5px 8px;color:#888;font-size:0.82em;'>"
+                f"{'מסלול 4 עדיף' if delta_stress >= 0 else 'מסלול 190 עדיף'}</td>"
+                f"</tr>"
+                f"</table>"
+                f"<div style='margin-top:10px;font-size:0.78em;color:#888;'>"
+                f"הלחץ: נדל\"ן מסלול 4 מוזל ב-15% + קנס 500K. מסלול 190 מוגבה ב-5% + קרן חירום."
+                f" אם Δ חיובי — מסלול 4 ניצח גם בתרחיש שמרני."
+                f"</div></div>",
+                unsafe_allow_html=True
+            )

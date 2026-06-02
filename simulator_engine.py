@@ -215,8 +215,9 @@ def run_simulation(user_inputs):
             balance_rental += rm_savings_surplus
             basis_rental   += rm_savings_surplus  # RM-derived surplus is debt, not taxable gain
 
-        rm_equity = max(0.0, property_rental_value - rm_loan_balance)
-        rm_ltv    = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
+        # rm_equity and rm_ltv computed after withdrawals but BEFORE property appreciation —
+        # will be updated to post-appreciation values after the returns block below.
+        rm_ltv = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
 
         # --- Track 4: Withdrawal (25% real, rental) ---
         if m > 0: basis_rental *= (1 + i_monthly)
@@ -238,6 +239,9 @@ def run_simulation(user_inputs):
         if balance_rental > 0: balance_rental *= (1 + r_monthly_rental)
         property_value *= (1 + prop_appreciation_monthly)
         property_rental_value *= (1 + rental_prop_appreciation_monthly)
+        # Compute equity after appreciation so it matches "שווי נדלן מסלול 4" in the same row
+        rm_equity = max(0.0, property_rental_value - rm_loan_balance)
+        rm_ltv    = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
 
         # --- Inheritance values (liquid + pension guarantee asset) ---
         inheritance_190 = balance_190 + pension_asset_value
@@ -272,6 +276,7 @@ def run_simulation(user_inputs):
             "משכנתה הפוכה — הון עצמי": rm_equity,
             "משכנתה הפוכה — LTV": rm_ltv,
             "משכנתה הפוכה — ריבית חודשית": rm_interest_this_month,
+            "הוצאות מטפלת": caregiver_cost_base * inflation_factor if current_age >= 85.0 else 0.0,
             "inflation_factor": inflation_factor
         })
 
