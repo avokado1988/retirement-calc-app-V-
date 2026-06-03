@@ -248,6 +248,11 @@ def render_qa_section(results, user_inputs):
     rental_always_positive = rental_flip_age is None
     rental_starts_negative = rental_cashflow_at_retire < 0
 
+    # -------------------------------------------------------
+    # Reverse mortgage metrics (track 4, optional)
+    # -------------------------------------------------------
+    rm_enabled_flag = bool(user_inputs.get("rental", {}).get("rm_enabled", False))
+
     # When RM is active and the first negative window is strictly before RM start,
     # check whether cashflow recovers once RM payments begin.
     _rm_start_age_val = float(rental_inputs.get("rm_start_age", 72))
@@ -257,17 +262,11 @@ def render_qa_section(results, user_inputs):
         and rental_flip_age < _rm_start_age_val
     )
     if _rental_flip_is_pre_rm:
-        # Verify cashflow is positive at RM start (recovery confirmed)
         _row_rm_start = df_full[df_full["גיל"] >= _rm_start_age_val]
         _cf_at_rm_start = float(_row_rm_start.iloc[0]["rental_cashflow"]) if not _row_rm_start.empty else -1
         _flip_recovers_with_rm = _cf_at_rm_start > 0
     else:
         _flip_recovers_with_rm = False
-
-    # -------------------------------------------------------
-    # Reverse mortgage metrics (track 4, optional)
-    # -------------------------------------------------------
-    rm_enabled_flag = bool(user_inputs.get("rental", {}).get("rm_enabled", False))
     rm_activation_age = None
     rm_equity_at_check = None
     rm_total_interest = None
