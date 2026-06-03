@@ -68,6 +68,7 @@ def render_qa_section(results, user_inputs):
 
     rent_paid_r = float(row_retire.get("הוצאת שכירות", 0.0))
     net_rental_r = float(row_retire.get("הכנסת שכירות נטו", 0.0))
+    maintenance_r = float(row_retire.get("הוצאת תחזוקה", 0.0))
     # Include RM annuity in cashflow — the engine uses cashflow_with_rm for actual decisions;
     # rental_cashflow_net alone understates income when RM is active.
     _cf_retire_raw = float(row_retire.get("תזרים נטו שכירות", 0.0)) + float(row_retire.get("משכנתה הפוכה — משיכה חודשית", 0.0))
@@ -142,6 +143,7 @@ def render_qa_section(results, user_inputs):
 
     rent_paid_c = float(row_check.get("הוצאת שכירות", 0.0))
     net_rental_c = float(row_check.get("הכנסת שכירות נטו", 0.0))
+    maintenance_c = float(row_check.get("הוצאת תחזוקה", 0.0))
 
     nn_190_c = max(0.0, exp_check - (base_income_check + pension_check))
     nn_25_c = max(0.0, exp_check - base_income_check)
@@ -245,6 +247,22 @@ def render_qa_section(results, user_inputs):
 
     rental_always_positive = rental_flip_age is None
     rental_starts_negative = rental_cashflow_at_retire < 0
+
+    # When RM is active and the first negative window is strictly before RM start,
+    # check whether cashflow recovers once RM payments begin.
+    _rm_start_age_val = float(rental_inputs.get("rm_start_age", 72))
+    _rental_flip_is_pre_rm = (
+        rm_enabled_flag
+        and rental_flip_age is not None
+        and rental_flip_age < _rm_start_age_val
+    )
+    if _rental_flip_is_pre_rm:
+        # Verify cashflow is positive at RM start (recovery confirmed)
+        _row_rm_start = df_full[df_full["גיל"] >= _rm_start_age_val]
+        _cf_at_rm_start = float(_row_rm_start.iloc[0]["rental_cashflow"]) if not _row_rm_start.empty else -1
+        _flip_recovers_with_rm = _cf_at_rm_start > 0
+    else:
+        _flip_recovers_with_rm = False
 
     # -------------------------------------------------------
     # Reverse mortgage metrics (track 4, optional)
@@ -574,7 +592,8 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Rental card bottom — cash flow test
     # -------------------------------------------------------
-    def _build_rental_card_bottom(cf, flip_age, always_positive, starts_negative, why_line, why_color, wealth_breakdown_html):
+    def _build_rental_card_bottom(cf, flip_age, always_positive, starts_negative, why_line, why_color, wealth_breakdown_html,
+                                   flip_is_pre_rm=False, rm_start_val=72.0, flip_recovers=False):
         cf_color = "#1a7a3a" if cf >= 0 else "#c0392b"
         cf_sign  = "+" if cf >= 0 else ""
 
@@ -582,6 +601,11 @@ def render_qa_section(results, user_inputs):
             flip_html = "<div style='font-size:0.72em;color:#c0392b;font-weight:700;margin-top:4px;'>⚠️ מתחיל בגירעון מיום הפרישה</div>"
         elif always_positive:
             flip_html = "<div style='font-size:0.72em;color:#1a7a3a;font-weight:700;margin-top:4px;'>✅ תזרים חיובי לכל האורך</div>"
+        elif flip_is_pre_rm and flip_recovers:
+            flip_html = (
+                f"<div style='font-size:0.72em;color:#b07800;font-weight:700;margin-top:4px;'>"
+                f"⏱️ גרעון זמני גיל {flip_age:.0f}–{rm_start_val:.0f} (מכוסה מחסכונות; RM מאזן מגיל {rm_start_val:.0f})</div>"
+            )
         else:
             flip_html = f"<div style='font-size:0.72em;color:#b84c00;font-weight:700;margin-top:4px;'>⚠️ הופך שלילי בגיל {flip_age:.0f}</div>"
 
@@ -698,7 +722,10 @@ def render_qa_section(results, user_inputs):
                 # Track 4: cashflow headline + shared wealth breakdown
                 _build_rental_card_bottom(rental_cashflow_at_retire, rental_flip_age,
                                           rental_always_positive, rental_starts_negative,
-                                          why_line, why_color, wealth_breakdown_html)
+                                          why_line, why_color, wealth_breakdown_html,
+                                          flip_is_pre_rm=_rental_flip_is_pre_rm,
+                                          rm_start_val=_rm_start_age_val,
+                                          flip_recovers=_flip_recovers_with_rm)
                 if track_id == 4 else
                 wealth_breakdown_html
                 + cmp_html
@@ -835,7 +862,7 @@ def render_qa_section(results, user_inputs):
         },
         "שכירות": {
             "הכנסות חודשיות":  format_shekel(int(base_income_retire + net_rental_r)),
-            "הוצאות חודשיות":  format_shekel(int(exp_retire + rent_paid_r)),
+            "הוצאות חודשיות":  format_shekel(int(exp_retire + rent_paid_r + maintenance_r)),
             "הון כולל":        format_shekel(br_r),
             "משיכה / תזרים":   fmt_cashflow(nn_rent_r, cashflow=rental_cashflow_at_retire, withdrawal_pct=pct_rent_r),
             "קצב משיכה":       (
@@ -876,7 +903,7 @@ def render_qa_section(results, user_inputs):
     }
     TOOLTIPS_CASHFLOW_1 = {
         "הכנסות חודשיות": f"סך ההכנסות החודשיות הצפויות בגיל {retire_age:.1f}: ביטוח לאומי + פנסיה (מסלולים 1/3) או שכ\"ד נטו אחרי מס (מסלול 4). לא כולל משיכות מהתיק.",
-        "הוצאות חודשיות": f"הוצאות חודשיות נומינליות (מוצמדות לאינפלציה) בגיל {retire_age:.1f}. מסלול 4: כולל גם שכ\"ד שמשולם על הדירה הנוכחית.",
+        "הוצאות חודשיות": f"הוצאות חודשיות נומינליות (מוצמדות לאינפלציה) בגיל {retire_age:.1f}. מסלול 4: כולל שכ\"ד שמשולם + תחזוקת הנכס המושכר (7–12% מהשכירות). הכנסות - הוצאות = תזרים.",
         "משיכה / תזרים":  f"הפרש בין הוצאות להכנסות — כמה יש להוציא מהתיק כל חודש. מסלול 4: מראה תזרים כולל (חיובי = עודף, שלילי = חסר).",
     }
     TOOLTIPS_ACTUARIAL_1 = {
@@ -959,7 +986,7 @@ def render_qa_section(results, user_inputs):
         },
         "שכירות": {
             "הכנסות חודשיות": format_shekel(int(base_income_check + net_rental_c)),
-            "הוצאות חודשיות": format_shekel(int(exp_check + rent_paid_c)),
+            "הוצאות חודשיות": format_shekel(int(exp_check + rent_paid_c + maintenance_c)),
             "משיכה / תזרים": fmt_cashflow(nn_rent_c, cashflow=rental_cashflow_at_check, withdrawal_pct=pct_rent_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_r, months_deficit_r),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_r),
@@ -1030,7 +1057,7 @@ def render_qa_section(results, user_inputs):
     }
     TOOLTIPS_CASHFLOW_2 = {
         "הכנסות חודשיות": f"הכנסות חודשיות צפויות בגיל {check_age:.1f}: ב\"ל מוצמד + פנסיה מוצמדת / שכ\"ד נטו. כל ההכנסות מוצמדות לאינפלציה.",
-        "הוצאות חודשיות": f"הוצאות חודשיות בגיל {check_age:.1f} לאחר הצמדה לאינפלציה. כולל תוספת מטפל מגיל 85 אם הוגדרה.",
+        "הוצאות חודשיות": f"הוצאות חודשיות בגיל {check_age:.1f} לאחר הצמדה לאינפלציה. כולל תוספת מטפל מגיל 85 אם הוגדרה. מסלול 4: כולל שכ\"ד + תחזוקת הנכס.",
         "משיכה / תזרים":  f"כמה יש להוציא מהתיק בגיל {check_age:.1f} = הוצאות פחות הכנסות. אם התיק אזל — הגירעון מופיע בשורת הגירעון המצטבר.",
         "גירעון מצטבר":   f"סכום כל החסרים החודשיים לאחר שהתיק הגיע לאפס, עד גיל {check_age:.0f}. מייצג כמה כסף חיצוני (ילדים, עזרה) נדרש לכיסוי. אפס = אין גירעון.",
     }
