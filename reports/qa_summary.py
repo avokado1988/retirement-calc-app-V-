@@ -117,31 +117,67 @@ def render_qa_summary_page(results, user_inputs):
     neg_rows = df_after_retire[df_after_retire["rental_cashflow"] < 0]
     flip_age = float(neg_rows.iloc[0]["גיל"]) if not neg_rows.empty else None
 
+    # ─── נומינלים מהמנוע — הוצאות/הכנסות/נדל"ן/קצבה ────────────────────────
+    exp_ret      = float(row_retire["הוצאה נומינלית"])
+    exp_chk_nom  = float(row_check["הוצאה נומינלית"])
+    inc_ret      = float(row_retire["הכנסה נומינלית"])
+    inc_chk_nom  = float(row_check["הכנסה נומינלית"])
+    pension_ret  = float(row_retire.get("הכנסה מקצבה מזערית", 0))
+    pension_chk  = float(row_check.get("הכנסה מקצבה מזערית", 0))
+    pension_asset_ret = float(row_retire.get("ערך קצבה נותר", 0))
+    pension_asset_chk = float(row_check.get("ערך קצבה נותר", 0))
+    prop_ret     = float(row_retire.get("שווי נדלן", 0))
+    prop_chk     = float(row_check.get("שווי נדלן", 0))
+    rental_prop_ret = float(row_retire.get("שווי נדלן מסלול 4", 0))
+    rental_prop_chk = float(row_check.get("שווי נדלן מסלול 4", 0))
+    tax_190_ret  = float(row_retire.get("מס ששולם 190", 0))
+    tax_25_ret   = float(row_retire.get("מס ששולם 25", 0))
+    tax_hyb_ret  = float(row_retire.get("מס ששולם היברידי", 0))
+    # Pension monthly computed by engine = capital / adjusted_coeff
+    pension_monthly_computed = (capital_for_pension / adj_coeff) if adj_coeff > 0 else 0
+
     # ─── משכנתה הפוכה ────────────────────────────────────────────────────────
-    rm_activation_age_s = None
-    rm_equity_check_s   = None
-    rm_interest_total_s = None
+    rm_activation_age_s  = None
+    rm_equity_check_s    = None
+    rm_interest_total_s  = None
+    rm_debt_check_s      = None
+    rm_annuity_monthly_s = None
     if rm_enabled_s and "משכנתה הפוכה — יתרת חוב" in df_full.columns:
         rm_rows = df_full[df_full["משכנתה הפוכה — יתרת חוב"] > 0]
         if not rm_rows.empty:
             rm_activation_age_s = float(rm_rows.iloc[0]["גיל"])
         rm_equity_check_s   = float(_row(df_full, check_age).get("משכנתה הפוכה — הון עצמי", 0.0))
+        rm_debt_check_s     = float(_row(df_full, check_age).get("משכנתה הפוכה — יתרת חוב", 0.0))
         rm_interest_total_s = float(df_full["משכנתה הפוכה — ריבית חודשית"].sum())
+        if "משכנתה הפוכה — משיכה חודשית" in df_full.columns:
+            _rm_active = df_full[df_full["משכנתה הפוכה — משיכה חודשית"] > 0]
+            if not _rm_active.empty:
+                rm_annuity_monthly_s = float(_rm_active.iloc[0]["משכנתה הפוכה — משיכה חודשית"])
 
     # ─── בלוק טקסט משכנתה הפוכה לסיכום ─────────────────────────────────────
     if rm_enabled_s:
-        _rm_act = f"גיל {rm_activation_age_s:.1f}" if rm_activation_age_s else "לא הופעלה"
-        _rm_eq  = f"{rm_equity_check_s:,.0f} ₪" if rm_equity_check_s is not None else "---"
-        _rm_int = f"{rm_interest_total_s:,.0f} ₪" if rm_interest_total_s else "---"
+        _rm_act    = f"גיל {rm_activation_age_s:.1f}" if rm_activation_age_s else "לא הופעלה"
+        _rm_eq     = f"{rm_equity_check_s:,.0f} ₪" if rm_equity_check_s is not None else "---"
+        _rm_debt   = f"{rm_debt_check_s:,.0f} ₪" if rm_debt_check_s is not None else "---"
+        _rm_int    = f"{rm_interest_total_s:,.0f} ₪" if rm_interest_total_s else "---"
+        _rm_ann    = f"{rm_annuity_monthly_s:,.0f} ₪/חודש" if rm_annuity_monthly_s else "---"
+        # Expected annuity from formula: (loan - fee) / n_months
+        _rm_net    = rm_loan_amount_ils_s * (1 - rm_origination_fee_s)
+        _rm_n      = max(1, (rm_life_age_s - rm_start_age_s) * 12)
+        _rm_exp    = _rm_net / _rm_n
         rm_summary_block = (
-            f"  ריבית שנתית RM     : {rm_annual_rate_s*100:.1f}%\n"
-            f"  גיל התחלת קצבה     : {rm_start_age_s:.0f}\n"
-            f"  גיל סיום קצבה      : {rm_life_age_s:.0f}\n"
-            f"  סך תקבולים (ברוטו) : {rm_loan_amount_ils_s:,.0f} ₪\n"
-            f"  עמלת פתיחה         : {rm_origination_fee_s*100:.1f}%\n"
-            f"  גיל הפעלה (סימול.) : {_rm_act}\n"
-            f"  הון עצמי בגיל {check_age:.0f}  : {_rm_eq}\n"
-            f"  סהכ ריבית RM       : {_rm_int}"
+            f"  ריבית שנתית RM       : {rm_annual_rate_s*100:.1f}%\n"
+            f"  גיל התחלת קצבה       : {rm_start_age_s:.0f}\n"
+            f"  גיל סיום קצבה        : {rm_life_age_s:.0f}  ({_rm_n:.0f} חודשים)\n"
+            f"  סך תקבולים (ברוטו)   : {rm_loan_amount_ils_s:,.0f} ₪\n"
+            f"  עמלת פתיחה           : {rm_origination_fee_s*100:.1f}%  (={rm_loan_amount_ils_s*rm_origination_fee_s:,.0f} ₪)\n"
+            f"  נטו לחלוקה           : {_rm_net:,.0f} ₪\n"
+            f"  קצבה חודשית צפויה    : {_rm_exp:,.0f} ₪/חודש  (נטו÷חודשים)\n"
+            f"  קצבה חודשית (מנוע)   : {_rm_ann}\n"
+            f"  גיל הפעלה (סימול.)   : {_rm_act}\n"
+            f"  יתרת חוב בגיל {check_age:.0f}    : {_rm_debt}\n"
+            f"  הון עצמי בגיל {check_age:.0f}    : {_rm_eq}\n"
+            f"  סהכ ריבית RM         : {_rm_int}"
         )
     else:
         rm_summary_block = "  (משכנתה הפוכה לא מופעלת)"
@@ -196,6 +232,7 @@ def render_qa_summary_page(results, user_inputs):
   מקדם בסיסי         : {base_coeff:.1f}
   מקדם משוקלל        : {adj_coeff:.1f}
   הון לרכישת קצבה    : {capital_for_pension:,.0f} ₪
+  קצבה חודשית מחושבת : {pension_monthly_computed:,.0f} ₪  (הון÷מקדם)
   הון נטו במסלול 190 : {net_for_190:,.0f} ₪
   תשואה / דמי ניהול  : {yield_190*100:.1f}% / {fee_190*100:.2f}%
 
@@ -206,7 +243,7 @@ def render_qa_summary_page(results, user_inputs):
 ━━━━━━━━━━  מסלול 3 — היברידי  ━━━━━━━━━━
   הון במסלול         : {net_for_hybrid:,.0f} ₪
   תשואה / דמי ניהול  : {yield_hybrid*100:.1f}% / {fee_hybrid*100:.2f}%
-  (קצבה — זהה למסלול 1)
+  קצבה חודשית מחושבת : {pension_monthly_computed:,.0f} ₪  (זהה למסלול 1)
 
 ━━━━━━━━━━  מסלול 4 — שכירות  ━━━━━━━━━━
   הון נזיל           : {net_for_rental:,.0f} ₪
@@ -227,6 +264,26 @@ def render_qa_summary_page(results, user_inputs):
   מסלול 2  | גיל פרישה ({retire_age:.1f}): {b25_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b25_chk:>14,.0f} ₪  |  גיל 102: {b25_102:>14,.0f} ₪
   מסלול 3  | גיל פרישה ({retire_age:.1f}): {bhyb_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {bhyb_chk:>14,.0f} ₪  |  גיל 102: {bhyb_102:>14,.0f} ₪
   מסלול 4  | גיל פרישה ({retire_age:.1f}): {brent_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {brent_chk:>14,.0f} ₪  |  גיל 102: {brent_102:>14,.0f} ₪
+
+━━━━━━━━━━  תוצאות מנוע — אימות חישובים  ━━━━━━━━━━
+  [גיל פרישה = {retire_age:.1f}]
+  הוצאה נומינלית        : {exp_ret:,.0f} ₪/חודש
+  הכנסה נומינלית (ב"ל)  : {inc_ret:,.0f} ₪/חודש
+  קצבה חודשית (מנוע)    : {pension_ret:,.0f} ₪/חודש
+  ערך קצבה נותר         : {pension_asset_ret:,.0f} ₪
+  שווי נדל"ן (מגורים)   : {prop_ret:,.0f} ₪
+  שווי נדל"ן (מושכרת)   : {rental_prop_ret:,.0f} ₪
+  מס ששולם — מסלול 190  : {tax_190_ret:,.0f} ₪
+  מס ששולם — מסלול 25   : {tax_25_ret:,.0f} ₪
+  מס ששולם — היברידי     : {tax_hyb_ret:,.0f} ₪
+
+  [גיל נבדק = {check_age:.0f}]
+  הוצאה נומינלית        : {exp_chk_nom:,.0f} ₪/חודש
+  הכנסה נומינלית (ב"ל)  : {inc_chk_nom:,.0f} ₪/חודש
+  קצבה חודשית (מנוע)    : {pension_chk:,.0f} ₪/חודש
+  ערך קצבה נותר         : {pension_asset_chk:,.0f} ₪
+  שווי נדל"ן (מגורים)   : {prop_chk:,.0f} ₪
+  שווי נדל"ן (מושכרת)   : {rental_prop_chk:,.0f} ₪
 
 ━━━━━━━━━━  משיכה חודשית נדרשת — גיל {check_age:.0f}  ━━━━━━━━━━
   מסלול 1 (190 + קצבה)  : {nn_190_chk:>10,.0f} ₪/חודש

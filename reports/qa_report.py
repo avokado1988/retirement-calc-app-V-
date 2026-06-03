@@ -492,21 +492,21 @@ def render_qa_section(results, user_inputs):
     has_winner = _top_healthy
 
     RANK_CFG = {
-        1: {"bg": "#FFFDF0" if has_winner else "#F8F8F8",
-            "border": "#E8A000" if has_winner else "#999",
-            "th_bg": "#FFF8D6" if has_winner else "#EFEFEF",
-            "col_bg": "#FFFDF0" if has_winner else "#F8F8F8",
-            "badge": "🏆" if has_winner else "1️⃣",
+        1: {"bg": "#FFFCE8",
+            "border": "#D4A800",
+            "th_bg": "#FFF3B0",
+            "col_bg": "#FFFCE8",
+            "badge": "🏆",
             "label": "המסלול המומלץ" if has_winner else "מקום ראשון",
-            "rank_color": "#c07800" if has_winner else "#555",
+            "rank_color": "#B8860B",
             "health_bg": "#e8f8ee", "health_color": "#1a7a3a"},
-        2: {"bg": "#F7F8FA", "border": "#607D8B", "th_bg": "#EEF1F5", "col_bg": "#F7F8FA",
-            "badge": "🥈", "label": "מקום שני", "rank_color": "#607D8B",
+        2: {"bg": "#F6F7F8", "border": "#8A9BA8", "th_bg": "#E8ECF0", "col_bg": "#F6F7F8",
+            "badge": "🥈", "label": "מקום שני", "rank_color": "#5A6E7A",
             "health_bg": "#e8f8ee", "health_color": "#1a7a3a"},
-        3: {"bg": "#FDF7F3", "border": "#A0522D", "th_bg": "#F5EDE6", "col_bg": "#FDF7F3",
-            "badge": "🥉", "label": "מקום שלישי", "rank_color": "#8b4513",
+        3: {"bg": "#FBF5EE", "border": "#A0693A", "th_bg": "#F2E4D4", "col_bg": "#FBF5EE",
+            "badge": "🥉", "label": "מקום שלישי", "rank_color": "#7D4E28",
             "health_bg": "#fffbe6", "health_color": "#856400"},
-        4: {"bg": "#FFF5F5", "border": "#E53935", "th_bg": "#FFE8E8", "col_bg": "#FFF5F5",
+        4: {"bg": "#FFF5F5", "border": "#E53935", "th_bg": "#FFE0E0", "col_bg": "#FFF5F5",
             "badge": "4️⃣", "label": "מקום רביעי", "rank_color": "#c0392b",
             "health_bg": "#fde8e8", "health_color": "#b71c1c"},
     }
@@ -645,24 +645,34 @@ def render_qa_section(results, user_inputs):
         why_line = build_why_line(is_winner, is_resilient, is_preserving, empty_age, track_id in PENSION_TRACKS)
         why_color = "#1a7a3a" if (is_winner or is_healthy) else ("#856400" if is_resilient else "#b71c1c")
 
-        if is_winner:
-            shadow = "0 12px 40px rgba(232,160,0,0.30), 0 4px 16px rgba(0,0,0,0.12)"
-            border_top = "5px solid #E8A000"
-            outline = "outline: 2px solid #E8A000; outline-offset: 2px;"
-            _why_tooltip = build_winner_tooltip(
-                track_id, is_resilient, total_102_by_track[track_id], track4_wins_stress
-            )
-            winner_ribbon = (
-                f"<div style='text-align:center;margin-bottom:10px;'>"
-                f"<span style='display:inline-block;background:linear-gradient(135deg,#E8A000,#f5c842);"
-                f"color:#fff;padding:4px 18px;border-radius:20px;font-size:0.72em;font-weight:800;"
-                f"white-space:nowrap;box-shadow:0 3px 10px rgba(232,160,0,0.4);letter-spacing:0.05em;'>"
-                f"⭐ המסלול המומלץ</span>"
-                f"<span class='qa-tip' style='color:#c07800;margin-right:6px;'>ⓘ"
-                f"<span class='qa-tiptext' style='width:280px;font-size:0.82em;line-height:1.5;'>"
-                f"<b>למה ניצח?</b><br/>{_why_tooltip}</span></span>"
-                f"</div>"
-            )
+        if rank == 1:
+            shadow = "0 16px 48px rgba(212,168,0,0.35), 0 4px 16px rgba(0,0,0,0.14)"
+            border_top = "5px solid #D4A800"
+            outline = "outline: 3px solid #D4A800; outline-offset: 3px;"
+            if is_winner:
+                _why_tooltip = build_winner_tooltip(
+                    track_id, is_resilient, total_102_by_track[track_id], track4_wins_stress
+                )
+                winner_ribbon = (
+                    f"<div style='text-align:center;margin-bottom:10px;'>"
+                    f"<span style='display:inline-block;"
+                    f"background:linear-gradient(135deg,#C8960C,#F0C93A,#C8960C);"
+                    f"color:#fff;padding:5px 20px;border-radius:20px;font-size:0.72em;font-weight:800;"
+                    f"white-space:nowrap;box-shadow:0 4px 12px rgba(200,150,12,0.5);letter-spacing:0.05em;'>"
+                    f"⭐ המסלול המומלץ</span>"
+                    f"<span class='qa-tip' style='color:#B8860B;margin-right:6px;'>ⓘ"
+                    f"<span class='qa-tiptext' style='width:280px;font-size:0.82em;line-height:1.5;'>"
+                    f"<b>למה ניצח?</b><br/>{_why_tooltip}</span></span>"
+                    f"</div>"
+                )
+            else:
+                winner_ribbon = (
+                    f"<div style='text-align:center;margin-bottom:10px;'>"
+                    f"<span style='display:inline-block;background:#B8860B;"
+                    f"color:#fff;padding:4px 18px;border-radius:20px;font-size:0.72em;font-weight:800;"
+                    f"white-space:nowrap;letter-spacing:0.04em;'>"
+                    f"🏆 מקום ראשון</span></div>"
+                )
         else:
             shadow = "0 2px 10px rgba(0,0,0,0.07)"
             border_top = f"4px solid {rc['border']}"
