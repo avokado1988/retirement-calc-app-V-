@@ -472,7 +472,7 @@ def render_qa_section(results, user_inputs):
 
     # -------------------------------------------------------
     # Health model: a track is "healthy" only if it lasts past 105
-    # AND preserves at least 90% of its starting capital at age 95.
+    # AND preserves at least 90% of its starting capital at age 102.
     # Preservation proves resilience — enough buffer if life or
     # markets change, not just leftover for inheritance.
     # -------------------------------------------------------
@@ -628,19 +628,19 @@ def render_qa_section(results, user_inputs):
         res_color = "#1a7a3a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#c0392b")
         res_label = "105+" if empty_age >= 105.0 else f"גיל {empty_age:.0f}"
 
-        # Total net worth at 95 — the bottom-line figure shown & compared on cards.
-        total_95 = total_95_by_track[track_id]
+        # Total net worth at 102 — the bottom-line figure shown & compared on cards.
+        total_102 = total_102_by_track[track_id]
 
         # Comparison 1: vs the leading alternative (total wealth)
         if is_winner:
             cmp_label = f"מול הבא בתור ({second_name})"
-            cmp_html = delta_block(cmp_label, total_95, second_total)
+            cmp_html = delta_block(cmp_label, total_102, second_total)
         else:
             cmp_label = "מול המסלול המומלץ" if has_winner else "מול המסלול המוביל"
-            cmp_html = delta_block(cmp_label, total_95, winner_total)
+            cmp_html = delta_block(cmp_label, total_102, winner_total)
 
         # Comparison 2: vs this track's own starting net worth
-        base_html = delta_block("מול ההון ההתחלתי", total_95, start_total_by_track[track_id])
+        base_html = delta_block("מול ההון ההתחלתי", total_102, start_total_by_track[track_id])
 
         why_line = build_why_line(is_winner, is_resilient, is_preserving, empty_age, track_id in PENSION_TRACKS)
         why_color = "#1a7a3a" if (is_winner or is_healthy) else ("#856400" if is_resilient else "#b71c1c")
@@ -649,12 +649,19 @@ def render_qa_section(results, user_inputs):
             shadow = "0 12px 40px rgba(232,160,0,0.30), 0 4px 16px rgba(0,0,0,0.12)"
             border_top = "5px solid #E8A000"
             outline = "outline: 2px solid #E8A000; outline-offset: 2px;"
+            _why_tooltip = build_winner_tooltip(
+                track_id, is_resilient, total_102_by_track[track_id], track4_wins_stress
+            )
             winner_ribbon = (
                 f"<div style='text-align:center;margin-bottom:10px;'>"
                 f"<span style='display:inline-block;background:linear-gradient(135deg,#E8A000,#f5c842);"
                 f"color:#fff;padding:4px 18px;border-radius:20px;font-size:0.72em;font-weight:800;"
                 f"white-space:nowrap;box-shadow:0 3px 10px rgba(232,160,0,0.4);letter-spacing:0.05em;'>"
-                f"⭐ המסלול המומלץ</span></div>"
+                f"⭐ המסלול המומלץ</span>"
+                f"<span class='qa-tip' style='color:#c07800;margin-right:6px;'>ⓘ"
+                f"<span class='qa-tiptext' style='width:280px;font-size:0.82em;line-height:1.5;'>"
+                f"<b>למה ניצח?</b><br/>{_why_tooltip}</span></span>"
+                f"</div>"
             )
         else:
             shadow = "0 2px 10px rgba(0,0,0,0.07)"
@@ -662,17 +669,17 @@ def render_qa_section(results, user_inputs):
             outline = ""
             winner_ribbon = "<div style='height:30px;'></div>"
 
-        fin_port = _fin_port_95[track_id]
-        prop_net = _prop_net_95[track_id]
-        prop_label = "🏠 הון עצמי בנדל\"ן בגיל 95" if track_id == 4 else "🏠 שווי נדלן בגיל 95"
+        fin_port = _fin_port_102[track_id]
+        prop_net = _prop_net_102[track_id]
+        prop_label = "🏠 הון עצמי בנדל\"ן בגיל 102" if track_id == 4 else "🏠 שווי נדלן בגיל 102"
 
         wealth_breakdown_html = (
-            f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>💰 תיק פיננסי בגיל 95</div>"
+            f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>💰 תיק פיננסי בגיל 102</div>"
             f"<div style='font-size:0.85em;font-weight:600;color:#444;margin-bottom:4px;'>{format_shekel(int(fin_port))}</div>"
             f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>{prop_label}</div>"
             f"<div style='font-size:0.85em;font-weight:600;color:#444;margin-bottom:6px;'>{format_shekel(int(prop_net))}</div>"
-            f"<div style='font-size:0.62em;color:#555;margin-bottom:1px;font-weight:600;'>📊 סך נכסים בגיל 95</div>"
-            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(total_95))}</div>"
+            f"<div style='font-size:0.62em;color:#555;margin-bottom:1px;font-weight:600;'>📊 סך נכסים בגיל 102</div>"
+            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(total_102))}</div>"
         )
 
         inner_card = (
@@ -688,7 +695,7 @@ def render_qa_section(results, user_inputs):
             f"<span style='display:inline-block;font-size:0.78em;font-weight:600;padding:2px 10px;border-radius:20px;"
             f"background:{health_bg};color:{health_color};'>{health}"
             f" <span class='qa-tip'>ⓘ<span class='qa-tiptext'>"
-            f"🟢 חסין = התיק הנזיל מחזיק מעל גיל 105 ושומר על 90%+ מההון בגיל 95. "
+            f"🟢 חסין = התיק הנזיל מחזיק מעל גיל 105 ושומר על 90%+ מההון בגיל 102. "
             f"🟡 מחזיק = מחזיק מעל 105 אך נשחק מתחת ל-90%. "
             f"🔴 נשחק = התיק הנזיל עלול להיגמר לפני גיל 105."
             f"</span></span></span></div>"
@@ -780,10 +787,10 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Table 1: At retirement
     # -------------------------------------------------------
-    bool_preserve_95_190 = "✅ כן" if b190_95 >= baseline_capital else "❌ לא"
-    bool_preserve_95_25  = "✅ כן" if b25_95  >= baseline_capital else "❌ לא"
-    bool_preserve_95_h   = "✅ כן" if bh_95   >= baseline_capital else "❌ לא"
-    bool_preserve_95_r   = "✅ כן" if br_95 > 0 else "❌ לא"
+    bool_preserve_95_190 = "✅ כן" if b190_102 >= baseline_capital else "❌ לא"
+    bool_preserve_95_25  = "✅ כן" if b25_102  >= baseline_capital else "❌ לא"
+    bool_preserve_95_h   = "✅ כן" if bh_102   >= baseline_capital else "❌ לא"
+    bool_preserve_95_r   = "✅ כן" if br_102 > 0 else "❌ לא"
 
     # Unified cashflow / withdrawal cell.
     #  Tracks 1-3: nn is the monthly deficit pulled from the portfolio.
@@ -905,9 +912,9 @@ def render_qa_section(results, user_inputs):
         color = "#b84c00" if empty_age >= 90 else "#b71c1c"
         return f"<span style='color:{color}; font-weight:bold;'>גיל {empty_age:.0f}</span>"
 
-    # Preservation % at age 95 (the core health metric, shown numerically)
-    def fmt_preservation(portfolio_95):
-        pct = (portfolio_95 / baseline_capital * 100) if baseline_capital > 0 else 0
+    # Preservation % at age 102 (the core health metric, shown numerically)
+    def fmt_preservation(portfolio_102):
+        pct = (portfolio_102 / baseline_capital * 100) if baseline_capital > 0 else 0
         if pct >= 90: color = "#1a7a3a"
         elif pct >= 75: color = "#b84c00"
         else: color = "#b71c1c"
@@ -920,7 +927,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_190_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_190, months_deficit_190),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_190),
-            "שימור הון":    fmt_preservation(b190_95),
+            "שימור הון":    fmt_preservation(b190_102),
             "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
             "תיק נזיל":     format_shekel(b190_c),
             "שווי נדלן":    format_shekel(property_value_check),
@@ -935,7 +942,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_25_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_25, months_deficit_25),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_25),
-            "שימור הון":    fmt_preservation(b25_95),
+            "שימור הון":    fmt_preservation(b25_102),
             "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
             "תיק נזיל":     format_shekel(b25_c),
             "שווי נדלן":    format_shekel(property_value_check),
@@ -950,7 +957,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_h_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_h, months_deficit_h),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_h),
-            "שימור הון":    fmt_preservation(bh_95),
+            "שימור הון":    fmt_preservation(bh_102),
             "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
             "תיק נזיל":     format_shekel(bh_c),
             "שווי נדלן":    format_shekel(property_value_check),
@@ -965,7 +972,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_rent_c, cashflow=rental_cashflow_at_check, withdrawal_pct=pct_rent_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_r, months_deficit_r),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_r),
-            "שימור הון":    fmt_preservation(br_95),
+            "שימור הון":    fmt_preservation(br_102),
             "הון כולל":     format_shekel(br_c),
             "תיק נזיל":     format_shekel(br_c),
             "שווי נדלן":    format_shekel(rm_equity_check),  # net equity (property minus RM loan)
@@ -1015,7 +1022,7 @@ def render_qa_section(results, user_inputs):
     ]
     ACTUARIAL_ROWS_2 = [
         ("גיל מיצוי חסכונות — עד מתי הכסף מחזיק?", "עד איזה גיל הכסף מחזיק?"),
-        ("כמה מההון ההתחלתי נשמר בגיל 95?",         "שימור הון"),
+        ("כמה מההון ההתחלתי נשמר בגיל 102?",         "שימור הון"),
         ("מה קצב המשיכה בגיל זה?",                  "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?",    "גיל התאוששות"),
         ("גיל גרעון שכירות / גיל היפוך תיק",         "גיל היפוך"),
@@ -1038,7 +1045,7 @@ def render_qa_section(results, user_inputs):
     }
     TOOLTIPS_ACTUARIAL_2 = {
         "עד איזה גיל הכסף מחזיק?": "גיל מיצוי חסכונות: הגיל שבו יתרת התיק הנזיל מגיעה לאפס לחלוטין. מסלול 4: החסכונות אזלו — הדירה ממשיכה לייצר הכנסה אבל אין יותר כרית נזילה. אם לא נגמר עד 105 — מסומן ✅ לא נשחק.",
-        "שימור הון":    f"אחוז מההון ההתחלתי ({format_shekel(int(baseline_capital))}) שנשאר בתיק בגיל 95. מעל 90% = מצוין. 75-90% = טוב. מתחת ל-75% = שחיקה משמעותית.",
+        "שימור הון":    f"אחוז מההון ההתחלתי ({format_shekel(int(baseline_capital))}) שנשאר בתיק בגיל 102. מעל 90% = מצוין. 75-90% = טוב. מתחת ל-75% = שחיקה משמעותית.",
         "קצב משיכה":    f"קצב המשיכה השנתי בגיל {check_age:.1f}. נמוך מ-3% = בטוח. 3-4% = מקובל. מעל 4% = לחץ על התיק.",
         "גיל התאוששות": f"הגיל שבו ערך התיק עולה מעל ההון ההתחלתי ({format_shekel(int(baseline_capital))}) בפעם הראשונה — מוכיח שהתיק גדל ולא רק נשמר.",
         "גיל היפוך":    "מסלולים 1-3: הגיל שבו התיק מגיע לשיאו ומתחיל להישחק (משיכות > תשואה חודשית). מסלול 4 — גיל גרעון שכירות: הגיל הראשון שבו ההכנסות (שכ\"ד + ב\"ל) לא מכסות את ההוצאות ומתחילים למשוך מהחסכונות.",
