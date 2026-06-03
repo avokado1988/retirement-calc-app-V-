@@ -188,31 +188,10 @@ def render_rental_inputs(wealth_data, check_age=90.0, start_age=67.0):
             value=72, min_value=60, max_value=90, step=1, unit="גיל", color=COLOR_BLUE
         )
 
-        # Life expectancy: pick sex → auto-compute from CBS mortality tables.
-        # No need for the user to guess an age.
-        from mortality import life_expectancy_age
-        sex_label = st.radio(
-            "מין (לחישוב תוחלת חיים מלוחות הלמ\"ס)",
-            options=["זכר", "נקבה"], horizontal=True, key="rm_sex"
-        )
-        auto_le = life_expectancy_age(sex_label, start_age)
-        override_le = st.checkbox("התאמה ידנית של גיל תוחלת החיים", value=False, key="rm_le_override")
-        if override_le:
-            rm_life_expectancy_age = compact_number_input(
-                "גיל תוחלת חיים (ידני)",
-                value=int(round(auto_le)), min_value=70, max_value=105, step=1, unit="גיל", color=COLOR_BLUE
-            )
-        else:
-            rm_life_expectancy_age = float(round(auto_le))
-
-        _le_source = "ידני" if override_le else f"לוחות הלמ\"ס — {sex_label}"
-        st.markdown(
-            f"<div style='background:#e8f4fd;border-right:4px solid #2196F3;border-radius:6px;"
-            f"padding:8px 12px;margin:6px 0;direction:rtl;font-family:sans-serif;font-size:0.9em;'>"
-            f"📅 <b>גיל תוחלת חיים שנבחר: גיל {rm_life_expectancy_age:.0f}</b> &nbsp;·&nbsp; "
-            f"<span style='color:#555;'>מקור: {_le_source}</span>"
-            f"</div>",
-            unsafe_allow_html=True
+        # Manual horizon: the age up to which the annuity is spread.
+        rm_life_expectancy_age = compact_number_input(
+            "עד איזה גיל לחלק את הקצבה",
+            value=90, min_value=70, max_value=105, step=1, unit="גיל", color=COLOR_BLUE
         )
         st.caption("ככל שגבוה יותר — קצבה חודשית נמוכה יותר (פריסה על יותר שנים), אך תקבולים לאורך זמן רב יותר.")
 
