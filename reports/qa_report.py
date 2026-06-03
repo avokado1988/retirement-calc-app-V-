@@ -170,6 +170,16 @@ def render_qa_section(results, user_inputs):
     br_102 = float(row_102["צבירה מסלול שכירות"])
 
     # -------------------------------------------------------
+    # Extract values at age 100 (ranking / contest reference age)
+    # -------------------------------------------------------
+    df_100 = df_full[df_full["גיל"] >= 100.0]
+    row_100 = df_100.iloc[0] if not df_100.empty else df_full.iloc[-1]
+    b190_100 = float(row_100["צבירה תיקון 190"])
+    b25_100  = float(row_100["צבירה מסלול ריאלי"])
+    bh_100   = float(row_100["צבירה מסלול היברידי"])
+    br_100   = float(row_100["צבירה מסלול שכירות"])
+
+    # -------------------------------------------------------
     # Scans: resiliency and recovery ages
     # -------------------------------------------------------
     def find_empty_age(col):
@@ -282,18 +292,24 @@ def render_qa_section(results, user_inputs):
                 f"<br/><span style='color:#888;font-size:0.75em;'>על פני {yrs:.1f} שנים</span>"
                 f"<br/><span style='color:#c0392b;font-size:0.78em;'>≈ {format_shekel(int(monthly_avg))}/חודש</span>")
 
-    # -------------------------------------------------------
-    # Balanced Stress-Test: Track 4 vs Track 1 at age 102
-    # S4   = portfolio_rental + (property_rental × 0.85 − 500K) − rm_debt
-    # S190 = portfolio_190 + pension_asset + property × 1.05 + emergency
-    # Δ > 0 → track 4 wins even under stress
-    # -------------------------------------------------------
+    # Age-102 values — used downstream for card display variables only
     _rm_debt_102_st   = float(row_102.get("משכנתה הפוכה — יתרת חוב", 0.0))
     _prop_102_r_st    = float(row_102.get("שווי נדלן מסלול 4", rental_property_start))
     _prop_102_own_st  = float(row_102.get("שווי נדלן", property_value_start))
     _pension_102_st   = float(row_102.get("ערך קצבה נותר", 0.0))
-    S4_stress   = br_102 + (_prop_102_r_st * 0.85 - 500_000) - _rm_debt_102_st
-    S190_stress = b190_102 + _pension_102_st + _prop_102_own_st * 1.05 + emergency_fund
+
+    # -------------------------------------------------------
+    # Balanced Stress-Test: Track 4 vs Track 1 at age 100 (ranking reference)
+    # S4   = portfolio_rental + (property_rental × 0.85 − 500K) − rm_debt
+    # S190 = portfolio_190 + pension_asset + property × 1.05 + emergency
+    # Δ > 0 → track 4 wins even under stress
+    # -------------------------------------------------------
+    _rm_debt_100_st   = float(row_100.get("משכנתה הפוכה — יתרת חוב", 0.0))
+    _prop_100_r_st    = float(row_100.get("שווי נדלן מסלול 4", rental_property_start))
+    _prop_100_own_st  = float(row_100.get("שווי נדלן", property_value_start))
+    _pension_100_st   = float(row_100.get("ערך קצבה נותר", 0.0))
+    S4_stress   = br_100 + (_prop_100_r_st * 0.85 - 500_000) - _rm_debt_100_st
+    S190_stress = b190_100 + _pension_100_st + _prop_100_own_st * 1.05 + emergency_fund
     delta_stress = S4_stress - S190_stress
     track4_wins_stress = delta_stress > 0
 
@@ -353,18 +369,26 @@ def render_qa_section(results, user_inputs):
     ratio_h_102   = sa_102[3] / max(1.0, start_total_by_track[3])
     ratio_r_102   = sa_102[4] / max(1.0, start_total_by_track[4])
 
+    # sa_100: stress-adjusted net worth at age 100 — primary ranking metric
+    sa_100 = {
+        1: b190_100 + _pension_100_st + _prop_100_own_st + emergency_fund,
+        2: b25_100  + _prop_100_own_st + emergency_fund,
+        3: bh_100   + _pension_100_st + _prop_100_own_st + emergency_fund,
+        4: br_100   + max(0.0, _prop_100_r_st * 0.85 - 500_000 - _rm_debt_100_st),
+    }
+
     husn_190 = empty_190 >= 105.0
     husn_25  = empty_25  >= 105.0
     husn_h   = empty_h   >= 105.0
     husn_r   = empty_r   >= 105.0
 
-    # Ranking metric: stress-adjusted net worth at age 102.
-    # Pension tracks (1, 3) get a +1 tie-break — guaranteed income continues past 102.
+    # Ranking metric: stress-adjusted net worth at age 100 (contest reference age).
+    # Pension tracks (1, 3) get a +1 tie-break — guaranteed income continues past 100.
     _sa_rank = {
-        1: sa_102[1] + 1,
-        2: sa_102[2],
-        3: sa_102[3] + 1,
-        4: sa_102[4],
+        1: sa_100[1] + 1,
+        2: sa_100[2],
+        3: sa_100[3] + 1,
+        4: sa_100[4],
     }
 
 
