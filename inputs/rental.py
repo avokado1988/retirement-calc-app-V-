@@ -195,15 +195,33 @@ def render_rental_inputs(wealth_data, check_age=90.0, start_age=67.0):
         )
         st.caption("ככל שגבוה יותר — קצבה חודשית נמוכה יותר (פריסה על יותר שנים), אך תקבולים לאורך זמן רב יותר.")
 
-        rm_loan_amount_ils = compact_number_input(
+        def _ltv_cap(age):
+            if age < 70: return 0.50
+            if age < 75: return 0.55
+            if age < 80: return 0.60
+            return 0.65
+
+        _max_rm_loan = max(50_000, int(current_property_value * _ltv_cap(rm_start_age)))
+        _ltv_max_pct = int(_ltv_cap(rm_start_age) * 100)
+        st.caption(f"תקרת LTV לגיל {rm_start_age:.0f}: {_ltv_max_pct}% מהנכס = ₪{_max_rm_loan:,}")
+        # Clamp stored slider value if max changed (e.g. user changed start age)
+        _rm_saved_key = "saved_slider_סך תקבולים רצויים מהמשכנתה (₪)"
+        if _rm_saved_key in st.session_state:
+            try:
+                st.session_state[_rm_saved_key] = min(int(st.session_state[_rm_saved_key]), _max_rm_loan)
+            except (ValueError, TypeError):
+                pass
+        rm_loan_amount_ils = st.slider(
             "סך תקבולים רצויים מהמשכנתה (₪)",
-            value=0, min_value=0, step=50000, unit="₪", color=COLOR_BLUE
+            min_value=0,
+            max_value=_max_rm_loan,
+            step=50_000,
         )
         st.caption("הסכום שתרצה לקבל בסה״כ לאורך כל התקופה (לפני עמלת פתיחה). החוב לעיזבון יהיה גבוה יותר בשל הריבית המצטברת.")
         if rm_loan_amount_ils > 0 and current_property_value > 0:
             ltv_pct = rm_loan_amount_ils / current_property_value * 100
             ltv_icon = "🟢" if ltv_pct <= 55 else ("🟡" if ltv_pct <= 65 else "🔴")
-            st.caption(f"{ltv_icon} LTV: {ltv_pct:.1f}% מהנכס | בישראל: ~45–55% לגיל 65–70, ~65% לגיל 75+")
+            st.caption(f"{ltv_icon} LTV: {ltv_pct:.1f}% | תקרה: {_ltv_max_pct}% לגיל {rm_start_age:.0f}")
 
         rm_origination_fee_pct = compact_number_input(
             "עמלת פתיחת תיק — חד פעמית (%)",
