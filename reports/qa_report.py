@@ -298,43 +298,8 @@ def render_qa_section(results, user_inputs):
     track4_wins_stress = delta_stress > 0
 
     # -------------------------------------------------------
-    # Compute scores per track
+    # Resilience flags — does each track's liquid portfolio last past 105?
     # -------------------------------------------------------
-    def compute_score(track_id, empty_age, ratio_at_95, withdrawal_rate, rule400_val_str, is_track4=False):
-        score = 0
-        husn_105 = empty_age >= 105.0
-        if husn_105:
-            score += 40
-        ratio_95_pct = ratio_at_95 * 100
-        if ratio_95_pct >= 100.0:
-            score += 30
-        elif ratio_95_pct >= 75.0:
-            score += 15
-        r = float(withdrawal_rate)
-        if r < 3.0:
-            score += 20
-        elif r <= 4.0:
-            score += 12
-        elif r <= 6.0:
-            score += 5
-        if is_track4:
-            if ratio_95_pct >= 100.0:
-                score += 10
-            elif ratio_95_pct >= 75.0:
-                score += 5
-        else:
-            if rule400_val_str == "∞":
-                score += 10
-            else:
-                try:
-                    r400 = float(rule400_val_str)
-                    if r400 > 1.3:
-                        score += 10
-                    elif r400 >= 1.0:
-                        score += 5
-                except:
-                    score += 0
-        return score, husn_105
 
     # =======================================================================
     # Wealth at 102 — two distinct concepts, kept separate on purpose:
@@ -388,10 +353,19 @@ def render_qa_section(results, user_inputs):
     ratio_h_102   = sa_102[3] / max(1.0, start_total_by_track[3])
     ratio_r_102   = sa_102[4] / max(1.0, start_total_by_track[4])
 
-    score_190, husn_190 = compute_score(1, empty_190, ratio_190_102, pct_190_r, rule400_190_r)
-    score_25, husn_25 = compute_score(2, empty_25, ratio_25_102, pct_25_r, rule400_25_r)
-    score_h, husn_h = compute_score(3, empty_h, ratio_h_102, pct_h_r, rule400_h_r)
-    score_r, husn_r = compute_score(4, empty_r, ratio_r_102, pct_rent_r, "N/A", is_track4=True)
+    husn_190 = empty_190 >= 105.0
+    husn_25  = empty_25  >= 105.0
+    husn_h   = empty_h   >= 105.0
+    husn_r   = empty_r   >= 105.0
+
+    # Ranking metric: stress-adjusted net worth at age 102.
+    # Pension tracks (1, 3) get a +1 tie-break — guaranteed income continues past 102.
+    _sa_rank = {
+        1: sa_102[1] + 1,
+        2: sa_102[2],
+        3: sa_102[3] + 1,
+        4: sa_102[4],
+    }
 
 
     track_pros_cons = {
@@ -432,10 +406,10 @@ def render_qa_section(results, user_inputs):
     # p102 carried here = LIQUID portfolio at 102 (drives health/preservation badge).
     # Total net worth for display/comparison comes from total_102_by_track.
     tracks_exec = [
-        (1, score_190, empty_190, b190_102, husn_190),
-        (2, score_25,  empty_25,  b25_102,  husn_25),
-        (3, score_h,   empty_h,   bh_102,   husn_h),
-        (4, score_r,   empty_r,   br_102,   husn_r),
+        (1, _sa_rank[1], empty_190, b190_102, husn_190),
+        (2, _sa_rank[2], empty_25,  b25_102,  husn_25),
+        (3, _sa_rank[3], empty_h,   bh_102,   husn_h),
+        (4, _sa_rank[4], empty_r,   br_102,   husn_r),
     ]
 
     # -------------------------------------------------------
