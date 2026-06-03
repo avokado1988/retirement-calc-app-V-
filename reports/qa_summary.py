@@ -75,9 +75,14 @@ def render_qa_summary_page(results, user_inputs):
     rental_tax_rate         = float(rental.get("rental_tax_rate", 0.10))
     rental_prop_value       = float(rental.get("current_property_value", wealth.get("net_sale", 0) or 0))
     rental_appreciation     = float(rental.get("rental_property_appreciation", 0.015))
+    maintenance_early_pct_s = float(rental.get("maintenance_early_pct", 0.07))
+    maintenance_late_pct_s  = float(rental.get("maintenance_late_pct", 0.12))
     rm_enabled_s            = bool(rental.get("rm_enabled", False))
     rm_annual_rate_s        = float(rental.get("rm_annual_rate", 0.055))
+    rm_start_age_s          = float(rental.get("rm_start_age", 72))
+    rm_life_age_s           = float(rental.get("rm_life_expectancy_age", 90))
     rm_loan_amount_ils_s    = float(rental.get("rm_loan_amount_ils", 0))
+    rm_origination_fee_s    = float(rental.get("rm_origination_fee", 0.02))
 
     # ─── שליפת תוצאות מהמנוע ─────────────────────────────────────────────────
     def _row(df, age):
@@ -86,7 +91,7 @@ def render_qa_summary_page(results, user_inputs):
 
     row_retire = _row(df_full, retire_age)
     row_check  = _row(df_full, check_age)
-    row_100    = _row(df_full, 100.0)
+    row_102    = _row(df_full, 102.0)
 
     b190_ret   = float(row_retire["צבירה תיקון 190"])
     b25_ret    = float(row_retire["צבירה מסלול ריאלי"])
@@ -98,10 +103,10 @@ def render_qa_summary_page(results, user_inputs):
     bhyb_chk   = float(row_check.get("צבירה מסלול היברידי", 0))
     brent_chk  = float(row_check.get("צבירה מסלול שכירות", 0))
 
-    b190_100   = float(row_100["צבירה תיקון 190"])
-    b25_100    = float(row_100["צבירה מסלול ריאלי"])
-    bhyb_100   = float(row_100.get("צבירה מסלול היברידי", 0))
-    brent_100  = float(row_100.get("צבירה מסלול שכירות", 0))
+    b190_102   = float(row_102["צבירה תיקון 190"])
+    b25_102    = float(row_102["צבירה מסלול ריאלי"])
+    bhyb_102   = float(row_102.get("צבירה מסלול היברידי", 0))
+    brent_102  = float(row_102.get("צבירה מסלול שכירות", 0))
 
     # ─── תזרים מסלול שכירות ──────────────────────────────────────────────────
     df_full["rental_cashflow"] = df_full["תזרים נטו שכירות"]
@@ -126,20 +131,22 @@ def render_qa_summary_page(results, user_inputs):
     # ─── בלוק טקסט משכנתה הפוכה לסיכום ─────────────────────────────────────
     if rm_enabled_s:
         _rm_act = f"גיל {rm_activation_age_s:.1f}" if rm_activation_age_s else "לא הופעלה"
-        _rm_eq  = f"{rm_equity_check_s:,.0f} ש\"ח" if rm_equity_check_s is not None else "---"
-        _rm_int = f"{rm_interest_total_s:,.0f} ש\"ח" if rm_interest_total_s else "---"
+        _rm_eq  = f"{rm_equity_check_s:,.0f} ₪" if rm_equity_check_s is not None else "---"
+        _rm_int = f"{rm_interest_total_s:,.0f} ₪" if rm_interest_total_s else "---"
         rm_summary_block = (
             f"  ריבית שנתית RM     : {rm_annual_rate_s*100:.1f}%\n"
-            f"  סכום הלוואה        : {rm_loan_amount_ils_s:,.0f} ₪\n"
-            f"  גיל הפעלה          : {_rm_act}\n"
+            f"  גיל התחלת קצבה     : {rm_start_age_s:.0f}\n"
+            f"  גיל סיום קצבה      : {rm_life_age_s:.0f}\n"
+            f"  סך תקבולים (ברוטו) : {rm_loan_amount_ils_s:,.0f} ₪\n"
+            f"  עמלת פתיחה         : {rm_origination_fee_s*100:.1f}%\n"
+            f"  גיל הפעלה (סימול.) : {_rm_act}\n"
             f"  הון עצמי בגיל {check_age:.0f}  : {_rm_eq}\n"
             f"  סהכ ריבית RM       : {_rm_int}"
         )
     else:
-        rm_summary_block = ""
+        rm_summary_block = "  (משכנתה הפוכה לא מופעלת)"
 
     # ─── משיכה חודשית נדרשת (כל מסלול, גיל בדיקה) ───────────────────────────
-    inf_chk    = float(row_check.get("inflation_factor", 1.0))
     exp_chk    = float(row_check["הוצאה נומינלית"])
     inc_chk    = float(row_check["הכנסה נומינלית"])
     pen_chk    = float(row_check.get("הכנסה מקצבה מזערית", 0))
@@ -207,16 +214,19 @@ def render_qa_summary_page(results, user_inputs):
   שכ"ד גביה          : {rental_inc_monthly:,.0f} ₪/חודש (צמיחה: {rental_inc_growth*100:.1f}%/שנה)
   שכ"ד תשלום         : {rent_paid_monthly:,.0f} ₪/חודש (צמיחה: {rent_paid_growth*100:.1f}%/שנה)
   מס שכירות          : {rental_tax_rate*100:.1f}%
+  תחזוקה — 10 שנים ראשונות: {maintenance_early_pct_s*100:.1f}% משכ"ד
+  תחזוקה — מ-10 שנים+     : {maintenance_late_pct_s*100:.1f}% משכ"ד
   תזרים בפרישה       : {"+" if cf_retire >= 0 else ""}{cf_retire:,.0f} ₪/חודש
   תזרים בגיל {check_age:.0f}      : {"+" if cf_check >= 0 else ""}{cf_check:,.0f} ₪/חודש
   גיל היפוך תזרים    : {f"גיל {flip_age:.1f}" if flip_age else "נשאר חיובי לאורך כל הדרך"}
+  ── משכנתה הפוכה ──
 {rm_summary_block}
 
 ━━━━━━━━━━  תוצאות תיק נזיל — נקודות מפתח  ━━━━━━━━━━
-  מסלול 1  | גיל פרישה ({retire_age:.1f}): {b190_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b190_chk:>14,.0f} ₪  |  גיל 100: {b190_100:>14,.0f} ₪
-  מסלול 2  | גיל פרישה ({retire_age:.1f}): {b25_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b25_chk:>14,.0f} ₪  |  גיל 100: {b25_100:>14,.0f} ₪
-  מסלול 3  | גיל פרישה ({retire_age:.1f}): {bhyb_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {bhyb_chk:>14,.0f} ₪  |  גיל 100: {bhyb_100:>14,.0f} ₪
-  מסלול 4  | גיל פרישה ({retire_age:.1f}): {brent_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {brent_chk:>14,.0f} ₪  |  גיל 100: {brent_100:>14,.0f} ₪
+  מסלול 1  | גיל פרישה ({retire_age:.1f}): {b190_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b190_chk:>14,.0f} ₪  |  גיל 102: {b190_102:>14,.0f} ₪
+  מסלול 2  | גיל פרישה ({retire_age:.1f}): {b25_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b25_chk:>14,.0f} ₪  |  גיל 102: {b25_102:>14,.0f} ₪
+  מסלול 3  | גיל פרישה ({retire_age:.1f}): {bhyb_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {bhyb_chk:>14,.0f} ₪  |  גיל 102: {bhyb_102:>14,.0f} ₪
+  מסלול 4  | גיל פרישה ({retire_age:.1f}): {brent_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {brent_chk:>14,.0f} ₪  |  גיל 102: {brent_102:>14,.0f} ₪
 
 ━━━━━━━━━━  משיכה חודשית נדרשת — גיל {check_age:.0f}  ━━━━━━━━━━
   מסלול 1 (190 + קצבה)  : {nn_190_chk:>10,.0f} ₪/חודש
@@ -234,12 +244,12 @@ def render_qa_summary_page(results, user_inputs):
         "נקודת זמן": [
             f"גיל פרישה ({retire_age:.1f})",
             f"גיל נבדק ({check_age:.1f})",
-            "גיל 100.0",
+            "גיל 102",
         ],
-        "מסלול 1 — 190":        [format_shekel(b190_ret),  format_shekel(b190_chk),  format_shekel(b190_100)],
-        "מסלול 2 — 25% ריאלי":  [format_shekel(b25_ret),   format_shekel(b25_chk),   format_shekel(b25_100)],
-        "מסלול 3 — היברידי":    [format_shekel(bhyb_ret),  format_shekel(bhyb_chk),  format_shekel(bhyb_100)],
-        "מסלול 4 — שכירות":     [format_shekel(brent_ret), format_shekel(brent_chk), format_shekel(brent_100)],
+        "מסלול 1 — 190":        [format_shekel(b190_ret),  format_shekel(b190_chk),  format_shekel(b190_102)],
+        "מסלול 2 — 25% ריאלי":  [format_shekel(b25_ret),   format_shekel(b25_chk),   format_shekel(b25_102)],
+        "מסלול 3 — היברידי":    [format_shekel(bhyb_ret),  format_shekel(bhyb_chk),  format_shekel(bhyb_102)],
+        "מסלול 4 — שכירות":     [format_shekel(brent_ret), format_shekel(brent_chk), format_shekel(brent_102)],
     })
     st.table(df_summary.set_index("נקודת זמן"))
 
