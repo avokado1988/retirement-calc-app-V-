@@ -68,8 +68,10 @@ def render_qa_section(results, user_inputs):
 
     rent_paid_r = float(row_retire.get("הוצאת שכירות", 0.0))
     net_rental_r = float(row_retire.get("הכנסת שכירות נטו", 0.0))
-    _cf_retire_raw = float(row_retire.get("תזרים נטו שכירות", 0.0))
-    _cf_check_raw  = float(row_check.get("תזרים נטו שכירות", 0.0))
+    # Include RM annuity in cashflow — the engine uses cashflow_with_rm for actual decisions;
+    # rental_cashflow_net alone understates income when RM is active.
+    _cf_retire_raw = float(row_retire.get("תזרים נטו שכירות", 0.0)) + float(row_retire.get("משכנתה הפוכה — משיכה חודשית", 0.0))
+    _cf_check_raw  = float(row_check.get("תזרים נטו שכירות", 0.0))  + float(row_check.get("משכנתה הפוכה — משיכה חודשית", 0.0))
 
     nn_190_r = max(0.0, exp_retire - (base_income_retire + pension_retire))
     nn_25_r = max(0.0, exp_retire - base_income_retire)
@@ -225,7 +227,9 @@ def render_qa_section(results, user_inputs):
     # Rental cash flow analysis
     # -------------------------------------------------------
     # Monthly surplus pre-computed by engine; alias for compatibility
-    df_full["rental_cashflow"] = df_full["תזרים נטו שכירות"]
+    # True cashflow = net rental + RM annuity (mirrors cashflow_with_rm in the engine)
+    _rm_annuity_col = df_full["משכנתה הפוכה — משיכה חודשית"] if "משכנתה הפוכה — משיכה חודשית" in df_full.columns else 0
+    df_full["rental_cashflow"] = df_full["תזרים נטו שכירות"] + _rm_annuity_col
 
     row_ret_r = df_full[df_full["גיל"] >= retire_age].iloc[0] if not df_full[df_full["גיל"] >= retire_age].empty else df_full.iloc[0]
     rental_cashflow_at_retire = float(row_ret_r["rental_cashflow"])
@@ -280,7 +284,7 @@ def render_qa_section(results, user_inputs):
 
     # Track 4: only count deficit after savings are depleted; cashflow column already includes maintenance
     df_r_neg = df_full[(df_full["צבירה מסלול שכירות"] <= 0) & (df_full["גיל"] >= retire_age) & (df_full["גיל"] <= check_age)]
-    cum_deficit_r = float(df_r_neg["תזרים נטו שכירות"].clip(upper=0).abs().sum())
+    cum_deficit_r = float(df_r_neg["rental_cashflow"].clip(upper=0).abs().sum())
     months_deficit_r = len(df_r_neg)
 
     def fmt_cum_deficit(total, months):
