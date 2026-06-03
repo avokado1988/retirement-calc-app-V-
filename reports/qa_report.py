@@ -453,6 +453,20 @@ def render_qa_section(results, user_inputs):
     # Rank: sort by score desc, lower track_id wins ties; filter hidden tracks
     # -------------------------------------------------------
     sorted_by_score = sorted(tracks_exec, key=lambda x: (-x[1], x[0]))
+
+    # When both track 1 (190) and track 4 (rental) are visible, the stress test
+    # decides their relative rank — not the score.  All other tracks stay sorted by score.
+    if 1 in visible_tracks and 4 in visible_tracks:
+        idx1 = next((i for i, t in enumerate(sorted_by_score) if t[0] == 1), None)
+        idx4 = next((i for i, t in enumerate(sorted_by_score) if t[0] == 4), None)
+        if idx1 is not None and idx4 is not None:
+            stress_says_4_first = track4_wins_stress
+            currently_4_first   = idx4 < idx1
+            if stress_says_4_first != currently_4_first:
+                lst = list(sorted_by_score)
+                lst[idx1], lst[idx4] = lst[idx4], lst[idx1]
+                sorted_by_score = lst
+
     ranked_order = [
         (i + 1, tid, sc, ea, p95, husn)
         for i, (tid, sc, ea, p95, husn) in enumerate(sorted_by_score)
@@ -1036,46 +1050,3 @@ def render_qa_section(results, user_inputs):
     with st.expander("📊 ניתוח אקטוארי", expanded=False):
         render_metric_columns(ACTUARIAL_ROWS_2, t2_cols, show_header=True, tooltips=TOOLTIPS_ACTUARIAL_2)
 
-    # -------------------------------------------------------
-    # Balanced Stress-Test display (track 4 visible only)
-    # -------------------------------------------------------
-    if 4 in visible_tracks and 1 in visible_tracks:
-        st.markdown("<br/>", unsafe_allow_html=True)
-        with st.expander("⚖️ מבחן עמידות — מסלול 4 מול מסלול 190", expanded=True):
-            verdict_color  = "#1a7a3a" if track4_wins_stress else "#1a3a7a"
-            verdict_icon   = "✅" if track4_wins_stress else "🔵"
-            verdict_label  = "מסלול 4 מנצח גם תחת לחץ" if track4_wins_stress else "מסלול 190 שומר על עדיפות"
-            delta_fmt      = format_shekel(int(abs(delta_stress)))
-            direction_txt  = f"יתרון {delta_fmt} למסלול 4" if track4_wins_stress else f"יתרון {delta_fmt} למסלול 190"
-
-            st.markdown(
-                f"<div style='background:#f8f9fc;border:1px solid #d0d4e8;border-radius:8px;"
-                f"padding:16px 20px;direction:rtl;font-family:sans-serif;'>"
-                f"<div style='font-size:1.05em;font-weight:700;color:{verdict_color};margin-bottom:12px;'>"
-                f"{verdict_icon} {verdict_label} — {direction_txt}"
-                f"</div>"
-                f"<table style='width:100%;border-collapse:collapse;font-size:0.88em;'>"
-                f"<tr style='border-bottom:1px solid #dde;'>"
-                f"<td style='padding:5px 8px;color:#555;'>S₄ (מסלול 4 תחת לחץ)</td>"
-                f"<td style='padding:5px 8px;font-weight:700;'>{format_shekel(int(S4_stress))}</td>"
-                f"<td style='padding:5px 8px;color:#888;font-size:0.82em;'>תיק + נדל\"ן×0.85 − 500K − חוב</td>"
-                f"</tr>"
-                f"<tr style='border-bottom:1px solid #dde;'>"
-                f"<td style='padding:5px 8px;color:#555;'>S₁₉₀ (מסלול 190 עם בונוס)</td>"
-                f"<td style='padding:5px 8px;font-weight:700;'>{format_shekel(int(S190_stress))}</td>"
-                f"<td style='padding:5px 8px;color:#888;font-size:0.82em;'>תיק + קצבה + נדל\"ן×1.05 + חירום</td>"
-                f"</tr>"
-                f"<tr>"
-                f"<td style='padding:5px 8px;font-weight:700;'>Δ (הפרש)</td>"
-                f"<td style='padding:5px 8px;font-weight:700;color:{verdict_color};'>"
-                f"{'+ ' if delta_stress >= 0 else ''}{format_shekel(int(delta_stress))}</td>"
-                f"<td style='padding:5px 8px;color:#888;font-size:0.82em;'>"
-                f"{'מסלול 4 עדיף' if delta_stress >= 0 else 'מסלול 190 עדיף'}</td>"
-                f"</tr>"
-                f"</table>"
-                f"<div style='margin-top:10px;font-size:0.78em;color:#888;'>"
-                f"הלחץ: נדל\"ן מסלול 4 מוזל ב-15% + קנס 500K. מסלול 190 מוגבה ב-5% + קרן חירום."
-                f" אם Δ חיובי — מסלול 4 ניצח גם בתרחיש שמרני."
-                f"</div></div>",
-                unsafe_allow_html=True
-            )
