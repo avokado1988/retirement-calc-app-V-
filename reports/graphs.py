@@ -144,6 +144,53 @@ def render_charts(df_history, user_inputs):
     st.divider()
 
     # =========================================================
+    # Chart B2: Total wealth including pension asset — tracks 1, 2, 3 only
+    # =========================================================
+    st.subheader("ב2) שווי הון כולל כולל קצבה — מסלולים 1, 2, 3")
+    st.markdown(
+        "תיק נזיל **+** שווי הנדל\"ן **+** ערך הקצבה המובטחת (מסלולים 1 ו-3). "
+        "ערך הקצבה = חודשים שנותרו בתקופת ההבטחה × קצבה חודשית. "
+        "זו ההשוואה המלאה ביותר — כולל נכס הפנסיה שלא מוצג בתיק הנזיל."
+    )
+    st.caption(
+        "💡 ההבדל מגרף ב: כאן מסלולים 1 ו-3 נראים גבוהים יותר בשנות ההבטחה "
+        "כי ערך הקצבה (שמתכלה עם הזמן) נספר כנכס."
+    )
+
+    PENSION_TRACKS_IDS = {"190", "hybrid"}
+    fig_b2 = go.Figure()
+    for tid in ["190", "25", "hybrid"]:
+        liq = df[COL_MAP[tid]]
+        if tid in PENSION_TRACKS_IDS:
+            y_vals = liq + own_property + pension_asset
+        else:
+            y_vals = liq + own_property
+        fig_b2.add_trace(go.Scatter(
+            x=df["גיל"], y=y_vals,
+            mode='lines', name=TRACK_NAMES[tid],
+            line=dict(color=COLORS[tid], width=2.5,
+                      dash='dash' if tid == "hybrid" else 'solid')
+        ))
+
+    # Vertical line at guarantee end age
+    if guarantee_end_age:
+        fig_b2.add_vline(
+            x=guarantee_end_age, line_dash="dot", line_color="#999",
+            annotation_text=f"סיום תקופת הבטחה (גיל {guarantee_end_age:.0f})",
+            annotation_position="top right", annotation_font_size=11
+        )
+
+    fig_b2.update_layout(
+        xaxis_title="גיל", yaxis_title="שווי הון כולל (₪)",
+        hovermode="x unified", template="plotly_white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    fig_b2.update_traces(hovertemplate="%{y:,.0f} ₪")
+    st.plotly_chart(fig_b2, use_container_width=True)
+
+    st.divider()
+
+    # =========================================================
     # Chart C: Annual tax paid
     # =========================================================
     st.subheader("ג) מס שנתי ששולם — השוואת מסלולים")
