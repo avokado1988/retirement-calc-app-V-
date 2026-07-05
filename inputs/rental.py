@@ -17,11 +17,11 @@ def render_rental_inputs(wealth_data, check_age=DEFAULTS["check_age"], start_age
     st.markdown("##### 🏡 שווי הנכס המושכר")
     current_property_value = compact_number_input(
         "שווי הדירה הנוכחית (₪)",
-        value=int(net_sale), min_value=0, step=100000, unit="₪", color=COLOR_GREEN
+        value=10800000, min_value=0, step=100000, unit="₪", color=COLOR_GREEN
     )
     rental_appreciation_pct = compact_number_input(
         "עליית ערך שנתית — דירה מושכרת (%)",
-        value=1.5, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
+        value=2.3, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
     )
     st.caption("דירות יקרות מתייקרות לאט יותר באחוזים — מומלץ 1–2% לדירה מעל ₪5M.")
 
@@ -29,22 +29,22 @@ def render_rental_inputs(wealth_data, check_age=DEFAULTS["check_age"], start_age
     st.markdown("##### 📥 הכנסה מהשכרת הנכס")
     rental_income_monthly = compact_number_input(
         "שכר דירה חודשי — גביה (₪)",
-        value=8000, min_value=0, step=500, unit="₪", color=COLOR_GREEN
+        value=25000, min_value=0, step=500, unit="₪", color=COLOR_GREEN
     )
     rental_income_growth_pct = compact_number_input(
         "עלייה שנתית בדמי שכירות גביה (%)",
-        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
+        value=3.5, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
     )
 
     st.divider()
     st.markdown("##### 📤 הוצאה על שכירות למגורים")
     rent_paid_monthly = compact_number_input(
         "שכר דירה חודשי — תשלום (₪)",
-        value=6000, min_value=0, step=500, unit="₪", color=COLOR_RED
+        value=12000, min_value=0, step=500, unit="₪", color=COLOR_RED
     )
     rent_paid_growth_pct = compact_number_input(
         "עלייה שנתית בדמי שכירות תשלום (%)",
-        value=3.0, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
+        value=3.5, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
     )
 
     st.divider()
@@ -58,12 +58,12 @@ def render_rental_inputs(wealth_data, check_age=DEFAULTS["check_age"], start_age
     st.markdown("**הוצאות תחזוקה — % מדמי השכירות (מגיל ההשכרה, גיל 66)**")
     maintenance_early_pct = compact_number_input(
         "תחזוקה — 10 שנים ראשונות (% מהשכירות)",
-        value=7.0, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
+        value=6.0, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
     )
     st.caption("דירה חדשה מקבלן — תיקונים שוטפים, ועד בית, ביטוח. נהוג 5–8% בשנים הראשונות.")
     maintenance_late_pct = compact_number_input(
         "תחזוקה — מ-10 שנים ואילך (% מהשכירות)",
-        value=12.0, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
+        value=10.0, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
     )
     st.caption("לאחר עשור — תיקונים גדולים, שיפוצים, בלאי. נהוג 10–15% מהשכירות.")
 

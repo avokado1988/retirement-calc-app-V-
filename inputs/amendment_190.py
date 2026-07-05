@@ -36,7 +36,7 @@ def render_190_inputs(remaining_for_gimel, capital_for_pension=0):
     ) / 100
     management_fee_190 = compact_number_input(
         "דמי ניהול שנתיים — מסלול 190 (%)",
-        value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
+        value=0.55, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
     ) / 100
 
     return {
