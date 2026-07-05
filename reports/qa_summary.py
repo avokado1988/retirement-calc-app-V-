@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from inputs.ui_components import format_shekel
+from inputs.ui_components import format_shekel, DEFAULTS
 
 def render_qa_summary_page(results, user_inputs):
     """
@@ -21,7 +21,7 @@ def render_qa_summary_page(results, user_inputs):
     # ─── זמנים ───────────────────────────────────────────────────────────────
     start_age  = float(timeline.get("start_age", 65.5))
     retire_age = float(timeline.get("retirement_age", start_age))
-    check_age  = float(timeline.get("check_age", 87.0))
+    check_age  = float(timeline.get("check_age", DEFAULTS["check_age"]))
 
     # ─── הוצאות ──────────────────────────────────────────────────────────────
     inflation          = float(expenses.get("expected_inflation", 0.023))

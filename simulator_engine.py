@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from inputs.ui_components import DEFAULTS
 
 def run_simulation(user_inputs):
     timeline = user_inputs.get("timeline", {})
@@ -11,7 +12,7 @@ def run_simulation(user_inputs):
 
     start_age = float(timeline.get("start_age", 65.5))
     retirement_age = float(timeline.get("retirement_age", 67.0))
-    check_age = float(timeline.get("check_age", 87.0))
+    check_age = float(timeline.get("check_age", DEFAULTS["check_age"]))
 
     annual_inflation_base = float(expenses.get("expected_inflation", 0.023))
 

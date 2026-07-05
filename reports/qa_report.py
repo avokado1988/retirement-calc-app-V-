@@ -4,7 +4,8 @@ from inputs.ui_components import (
     format_shekel, wrap_html_style,
     get_withdrawal_style, get_400_rule_style, get_emergency_style,
     get_larger_portfolio_style, get_resiliency_style,
-    get_preservation_pct_style, get_boolean_style
+    get_preservation_pct_style, get_boolean_style,
+    DEFAULTS
 )
 
 def render_qa_section(results, user_inputs):
@@ -28,7 +29,7 @@ def render_qa_section(results, user_inputs):
     real_tax_25 = user_inputs.get("real_tax_25", {})
 
     start_age = float(timeline.get("start_age", 65.5))
-    check_age = float(timeline.get("check_age", 87.0))
+    check_age = float(timeline.get("check_age", DEFAULTS["check_age"]))
     retire_age = float(timeline.get("retirement_age", start_age))
 
     rental_inputs = user_inputs.get("rental", {})

@@ -1,7 +1,7 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_RED, COLOR_BLUE
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_RED, COLOR_BLUE, DEFAULTS
 
-def render_rental_inputs(wealth_data, check_age=90.0, start_age=67.0):
+def render_rental_inputs(wealth_data, check_age=DEFAULTS["check_age"], start_age=67.0):
     existing_savings = float(wealth_data.get("existing_savings", 440000))
     net_sale = float(wealth_data.get("net_sale", 10000000))
 

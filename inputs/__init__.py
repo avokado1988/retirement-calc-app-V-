@@ -1,4 +1,5 @@
 import streamlit as st
+from .ui_components import DEFAULTS
 from .timeline import render_timeline_inputs
 from .wealth import render_wealth_inputs
 from .expenses import render_expenses_inputs
@@ -64,7 +65,7 @@ def render_all_sidebar_inputs():
 
     with st.sidebar.expander("8. מסלול 4 — השכרת הנכס", expanded=False):
         _show_4 = st.checkbox("הצג מסלול זה בהשוואה", value=True, key="show_track_4")
-        _check_age = float(inputs_dict["timeline"].get("check_age", 90.0))
+        _check_age = float(inputs_dict["timeline"].get("check_age", DEFAULTS["check_age"]))
         _start_age = float(inputs_dict["timeline"].get("start_age", 67.0))
         inputs_dict["rental"] = render_rental_inputs(inputs_dict["wealth"], _check_age, _start_age)
 
