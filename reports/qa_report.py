@@ -666,6 +666,23 @@ def render_qa_section(results, user_inputs):
     cf_retire = {t: _cf_at_retire(_cf_series[t]) for t in (1, 2, 3, 4)}
     cf_flip = {t: _cf_flip(_cf_series[t]) for t in (1, 2, 3, 4)}
 
+    # Sustainability per track: monthly draw at retirement, erosion-start age, life-of-portfolio
+    _bal_col = {1: "צבירה תיקון 190", 2: "צבירה מסלול ריאלי",
+                3: "צבירה מסלול היברידי", 4: "צבירה מסלול שכירות"}
+    _sim_end_age = float(df_full["גיל"].max())
+    def _erosion_age(t):
+        """Age the portfolio balance peaks and starts declining. None = grows for life."""
+        post = df_full[df_full["גיל"] >= retire_age]
+        if post.empty:
+            return None
+        pk_age = float(df_full.loc[post[_bal_col[t]].idxmax(), "גיל"])
+        return None if pk_age >= _sim_end_age - 0.5 else pk_age
+    draw_retire = {t: max(0.0, -cf_retire[t]) for t in (1, 2, 3, 4)}
+    erosion_age = {t: _erosion_age(t) for t in (1, 2, 3, 4)}
+    # Age the liquid portfolio stops sufficing: depletion for 1-3, RM activation for 4
+    portfolio_lasts = {1: empty_190, 2: empty_25, 3: empty_h,
+                       4: (rm_activation_age if rm_activation_age is not None else 120.0)}
+
     # Wealth at the checked age — liquid portfolio, property (gross), liabilities
     fin_check   = {1: b190_c, 2: b25_c, 3: bh_c, 4: br_c}
     prop_check  = {1: property_value_check, 2: property_value_check,
@@ -738,24 +755,42 @@ def render_qa_section(results, user_inputs):
             outline = ""
             winner_ribbon = "<div style='height:30px;'></div>"
 
-        # --- Unified card body: cashflow section + wealth section (same rows for every track) ---
-        cf0 = cf_retire[track_id]
-        cf0_color = "#1a7a3a" if cf0 >= 0 else "#c0392b"
-        cf0_txt = f"{'+' if cf0 >= 0 else ''}{format_shekel(int(cf0))}"
-        fa, fv = cf_flip[track_id]
-        flip_txt = _val("לא הופך שלילי", "#1a7a3a") if fa is None else _val(f"גיל {fa:.0f} ({format_shekel(int(fv))})", "#b84c00")
-        if track_id == 4:
-            rm_txt = _val(f"כן, מגיל {rm_activation_age:.0f}", "#b84c00") if rm_activated else _val("לא נדרשה", "#1a7a3a")
+        # --- Unified card body: sustainability section + wealth section (same rows for every track) ---
+        # Row 1: monthly supplement drawn from the portfolio at retirement
+        draw0 = draw_retire[track_id]
+        if draw0 <= 1:
+            draw_txt = _val("אין צורך", "#1a7a3a")
         else:
-            rm_txt = _val("לא רלוונטי", "#aaa")
+            draw_txt = _val(f"−{format_shekel(int(draw0))}", "#c0392b")
+
+        # Row 2: age the portfolio starts to erode (peak then decline); None = grows for life
+        er = erosion_age[track_id]
+        if er is None:
+            erode_txt = _val("צומח תמיד", "#1a7a3a")
+        else:
+            erode_txt = _val(f"גיל {er:.0f}", "#b84c00" if er >= 80 else "#c0392b")
+
+        # Row 3: until what age the liquid portfolio suffices, with a track-specific hint
+        pl = portfolio_lasts[track_id]
+        if pl >= 105:
+            lasts_txt = _val("מספיק לכל החיים", "#1a7a3a")
+        else:
+            if track_id == 4:
+                hint = "נכנסת משכנתה הפוכה"
+            elif track_id in (1, 3):
+                hint = "נשארת רק הקצבה"
+            else:
+                hint = "נגמר הכסף, אין קצבה"
+            lasts_txt = _val(f"גיל {pl:.0f} · {hint}", "#c0392b")
+
         liab = liab_check[track_id]
         liab_txt = _val(f"−{format_shekel(int(liab))}", "#c0392b") if liab > 0 else _val("—", "#aaa")
 
         body = (
-            _section_title("💸 תזרים")
-            + _card_row("תזרים חודשי בפרישה", _val(cf0_txt, cf0_color))
-            + _card_row("גיל שבו התזרים הופך שלילי", flip_txt)
-            + _card_row("הופעלה משכנתה הפוכה?", rm_txt)
+            _section_title("💸 קיימות התיק")
+            + _card_row("השלמה חודשית מהתיק בפרישה", draw_txt)
+            + _card_row("גיל תחילת שחיקת התיק", erode_txt)
+            + _card_row("עד איזה גיל התיק מספיק", lasts_txt)
             + _section_title(f"🏦 הון בגיל {check_age:.0f}")
             + _card_row("💰 תיק פיננסי", _val(format_shekel(int(fin_check[track_id]))))
             + _card_row("🏠 שווי נדל\"ן", _val(format_shekel(int(prop_check[track_id]))))
