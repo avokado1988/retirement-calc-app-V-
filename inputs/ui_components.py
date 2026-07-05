@@ -4,7 +4,7 @@ import streamlit as st
 # ⚙️ קבועים וערכי ברירת מחדל מרוכזים (System Defaults)
 # ==============================================================================
 DEFAULTS = {
-    "start_age": 65.5,
+    "start_age": 65.0,
     "retirement_age": 65.0,
     "check_age": 95.0,
     "expected_inflation": 0.023,
