@@ -33,6 +33,11 @@ def render_wealth_inputs():
         "עזרה לילדים (₪)",
         value=DEFAULTS["kids_help"], min_value=0, step=50000, unit="₪", color=COLOR_RED
     )
+    kids_help_growth_pct = compact_number_input(
+        "קצב צמיחת העזרה לילדים (%)",
+        value=DEFAULTS["kids_help_growth"] * 100, min_value=0.0, max_value=12.0, step=0.5, unit="%", color=COLOR_BLUE
+    )
+    st.caption("הכסף לא נעלם — הילדים משקיעים אותו (סגירת משכנתא, שוק ההון, נדל\"ן). מוצג כנכס משפחתי צומח בסך הנכסים, במסלולי המכירה בלבד.")
 
     emergency_fund = compact_number_input(
         "קרן חירום / מזומן (₪)",
@@ -49,6 +54,7 @@ def render_wealth_inputs():
         "new_apartment_cost": new_apartment_cost,
         "property_appreciation": property_appreciation_pct / 100,
         "kids_help": kids_help,
+        "kids_help_growth": kids_help_growth_pct / 100,
         "emergency_fund": emergency_fund,
         "remaining_for_gimel": remaining_for_gimel
     }

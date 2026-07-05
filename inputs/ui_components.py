@@ -26,6 +26,7 @@ DEFAULTS = {
     "existing_savings": 440000,
     "new_apartment_cost": 5600000,
     "kids_help": 1000000,
+    "kids_help_growth": 0.05,
     "emergency_fund": 250000,
     "property_appreciation": 0.03,
     "rental_property_value": 10800000,

@@ -688,7 +688,18 @@ def render_qa_section(results, user_inputs):
     prop_check  = {1: property_value_check, 2: property_value_check,
                    3: property_value_check, 4: rental_prop_check}
     liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check}
-    total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] for t in (1, 2, 3, 4)}
+
+    # Kids-help returns as a growing family asset — only in the sell-and-invest
+    # tracks (1-3), where the money was actually gifted and compounds in the
+    # children's hands. Track 4 keeps the property, so no gift is made there.
+    _kids_help = float(wealth.get("kids_help", 0.0))
+    _kids_growth = float(wealth.get("kids_help_growth", 0.05))
+    _kids_years = max(0.0, check_age - start_age)
+    _kids_grown = _kids_help * (1 + _kids_growth) ** _kids_years
+    kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0}
+
+    total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] + kids_asset_check[t]
+                   for t in (1, 2, 3, 4)}
 
     def _card_row(label, value_html, strong=False, top_border=False):
         bt = "border-top:1px solid #e0e0e0;" if top_border else ""
@@ -785,6 +796,8 @@ def render_qa_section(results, user_inputs):
 
         liab = liab_check[track_id]
         liab_txt = _val(f"−{format_shekel(int(liab))}", "#c0392b") if liab > 0 else _val("—", "#aaa")
+        kids_a = kids_asset_check[track_id]
+        kids_txt = _val(f"+{format_shekel(int(kids_a))}", "#1a7a3a") if kids_a > 0 else _val("—", "#aaa")
 
         body = (
             _section_title("💸 קיימות התיק")
@@ -795,6 +808,7 @@ def render_qa_section(results, user_inputs):
             + _card_row("💰 תיק פיננסי", _val(format_shekel(int(fin_check[track_id]))))
             + _card_row("🏠 שווי נדל\"ן", _val(format_shekel(int(prop_check[track_id]))))
             + _card_row("➖ הלוואות והתחייבויות", liab_txt)
+            + _card_row("🎁 עזרה לילדים (נכס משפחתי)", kids_txt)
             + _card_row("📊 סך נכסים", _val(format_shekel(int(total_check[track_id]))), strong=True, top_border=True)
         )
         if track_id == 4 and rm_track4_not_viable:

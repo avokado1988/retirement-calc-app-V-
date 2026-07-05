@@ -126,6 +126,7 @@ def _build_defaults_dict(ui):
         "existing_savings": int(w.get("existing_savings", 440000)),
         "new_apartment_cost": int(w.get("new_apartment_cost", 5600000)),
         "kids_help": int(w.get("kids_help", 1000000)),
+        "kids_help_growth": w.get("kids_help_growth", 0.05),
         "emergency_fund": int(w.get("emergency_fund", 250000)),
         "property_appreciation": w.get("property_appreciation", 0.03),
         "rental_property_value": int(rn.get("current_property_value", 10800000)),
