@@ -113,9 +113,6 @@ if run_clicked or "sim_results" not in st.session_state:
     with st.spinner("⏳ מחשב סימולציה אקטוארית — חודש בחודשו עד גיל 105..."):
         st.session_state["sim_results"] = run_simulation(user_inputs)
         st.session_state["last_inputs"] = user_inputs
-        # Always store a no-RM version for the danger table (unaffected by RM toggle)
-        _rental_no_rm = {**user_inputs.get("rental", {}), "rm_enabled": False, "rm_loan_amount_ils": 0}
-        st.session_state["sim_results_no_rm"] = run_simulation({**user_inputs, "rental": _rental_no_rm})
     if run_clicked:
         st.toast("✅ הסימולציה עודכנה בהצלחה!", icon="✅")
 
@@ -183,7 +180,7 @@ with tab3:
                 "תזרים נטו שכירות": "{:,.0f} ₪", "צבירה מסלול שכירות": "{:,.0f} ₪",
                 "משיכה מתיק שכירות": "{:,.0f} ₪",
                 "מס רווח הון — משיכה מתיק": "{:,.0f} ₪", "שווי נדלן מסלול 4": "{:,.0f} ₪"}
-        if user_inputs.get("rental", {}).get("rm_enabled", False):
+        if "משכנתה הפוכה — יתרת חוב" in df_display.columns and (df_display["משכנתה הפוכה — יתרת חוב"] > 0).any():
             cols += ["משכנתה הפוכה — משיכה חודשית", "משכנתה הפוכה — יתרת חוב", "משכנתה הפוכה — הון עצמי", "משכנתה הפוכה — LTV"]
             fmt.update({
                 "משכנתה הפוכה — משיכה חודשית": "{:,.0f} ₪",

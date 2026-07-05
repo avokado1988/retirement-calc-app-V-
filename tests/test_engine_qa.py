@@ -79,44 +79,35 @@ check("residence appreciates", p_end > p0)
 pr0 = df.iloc[0]["שווי נדלן מסלול 4"]; pr_end = df.iloc[-1]["שווי נדלן מסלול 4"]
 check("rental property appreciates", pr_end > pr0)
 
-print("=== 7. REVERSE MORTGAGE ===")
-r2 = run_simulation(base_inputs(rental={"rm_enabled":True,"rm_loan_amount_ils":1600000,
-                                         "rm_start_age":78,"rm_life_expectancy_age":92,"rm_origination_fee":0.005}))
-d2 = r2["df_full"]
-annuity = d2["משכנתה הפוכה — משיכה חודשית"]
-total_paid = annuity.sum()
-net_loan = 1600000*(1-0.005)
-check("total RM received == net principal", abs(total_paid-net_loan)<5, f"paid {total_paid:.0f} vs {net_loan:.0f}")
-# annuity zero before start and after life_exp
-before = d2[d2["גיל"]<78]["משכנתה הפוכה — משיכה חודשית"]
-after = d2[d2["גיל"]>=92]["משכנתה הפוכה — משיכה חודשית"]
-check("no annuity before start_age", (before==0).all())
-check("no annuity after life_exp", (after==0).all())
-# debt monotonic non-decreasing
-dbt = d2["משכנתה הפוכה — יתרת חוב"]
+FLOOR = 100000
+print("=== 7. AUTO REVERSE MORTGAGE ===")
+d2 = run_simulation(base_inputs())["df_full"]
+draw = d2["משכנתה הפוכה — משיכה חודשית"]
+dbt  = d2["משכנתה הפוכה — יתרת חוב"]
+port = d2["צבירה מסלול שכירות"]
+check("RM debt starts at 0", dbt.iloc[0]==0)
+check("RM engages automatically under deficit", (draw>0).any())
+active = d2[draw>0]
+check("RM draws only near the cash floor", (active["צבירה מסלול שכירות"] <= FLOOR*1.5).all())
 check("debt non-decreasing", (dbt.diff().dropna()>=-1e-6).all())
-# equity = max(0, prop - debt)
 eq = d2["משכנתה הפוכה — הון עצמי"]
 recomputed = (d2["שווי נדלן מסלול 4"]-dbt).clip(lower=0)
 check("equity = max(0, prop-debt)", ((eq-recomputed).abs()<1.0).all())
-# debt at life_exp ~ FV of annuity (sanity: > net_loan, < net_loan*3)
-dbt_92 = d2[d2["גיל"]>=92].iloc[0]["משכנתה הפוכה — יתרת חוב"]
-check("debt@92 between 1x-2.5x net_loan", net_loan < dbt_92 < net_loan*2.5, f"debt92 {dbt_92:.0f}")
+check("portfolio never depletes to zero (RM protects floor)", port.min() >= FLOOR*0.5, f"min {port.min():.0f}")
 
-print("=== 8. RM SURPLUS TO SAVINGS ===")
-# With RM, rental savings should be >= no-RM savings (annuity surplus added)
-r0 = run_simulation(base_inputs())
-sav_norm = r0["df_full"][r0["df_full"]["גיל"]>=92].iloc[0]["צבירה מסלול שכירות"]
-sav_rm = d2[d2["גיל"]>=92].iloc[0]["צבירה מסלול שכירות"]
-check("RM boosts rental savings", sav_rm >= sav_norm - 1, f"rm {sav_rm:.0f} vs norm {sav_norm:.0f}")
+print("=== 8. RM RESPECTS LTV / NON-RECOURSE ===")
+check("equity never negative", (eq>=-1e-6).all())
+ltv = d2["משכנתה הפוכה — LTV"]
+check("no NaN with RM active", not d2.isnull().any().any())
+check("LTV stays finite", all(math.isfinite(x) for x in ltv))
 
-print("=== 9. NO NaN / data integrity ===")
-check("no NaN in df", not d2.isnull().any().any())
+print("=== 9. DATA INTEGRITY ===")
 check("all balances finite", all(d2[c].apply(lambda x: math.isfinite(x)).all() for c in
       ["צבירה תיקון 190","צבירה מסלול ריאלי","צבירה מסלול היברידי","צבירה מסלול שכירות"]))
 
-print("=== 10. EDGE: RM disabled => zero RM columns ===")
-check("no RM debt when disabled", (r0["df_full"]["משכנתה הפוכה — יתרת חוב"]==0).all())
+print("=== 10. NO RM WHILE PORTFOLIO WELL ABOVE FLOOR ===")
+above = d2[d2["צבירה מסלול שכירות"] > FLOOR*2]
+check("no RM draw while portfolio well above floor", (above["משכנתה הפוכה — משיכה חודשית"]==0).all())
 
 print(f"\n=== RESULT: {passed} passed, {failed} failed ===")
 sys.exit(1 if failed else 0)

@@ -77,12 +77,9 @@ def render_qa_summary_page(results, user_inputs):
     rental_appreciation     = float(rental.get("rental_property_appreciation", 0.015))
     maintenance_early_pct_s = float(rental.get("maintenance_early_pct", 0.07))
     maintenance_late_pct_s  = float(rental.get("maintenance_late_pct", 0.12))
-    rm_enabled_s            = bool(rental.get("rm_enabled", False))
-    rm_annual_rate_s        = float(rental.get("rm_annual_rate", 0.055))
-    rm_start_age_s          = float(rental.get("rm_start_age", 72))
-    rm_life_age_s           = float(rental.get("rm_life_expectancy_age", 90))
-    rm_loan_amount_ils_s    = float(rental.get("rm_loan_amount_ils", 0))
-    rm_origination_fee_s    = float(rental.get("rm_origination_fee", 0.02))
+    # Reverse mortgage is automatic — detect activation from the simulation itself
+    rm_enabled_s            = ("משכנתה הפוכה — יתרת חוב" in df_full.columns) and bool((df_full["משכנתה הפוכה — יתרת חוב"] > 0).any())
+    rm_annual_rate_s        = float(DEFAULTS.get("rm_annual_rate", 0.06))
 
     # ─── שליפת תוצאות מהמנוע ─────────────────────────────────────────────────
     def _row(df, age):
@@ -161,26 +158,16 @@ def render_qa_summary_page(results, user_inputs):
         _rm_debt   = f"{rm_debt_check_s:,.0f} ₪" if rm_debt_check_s is not None else "---"
         _rm_int    = f"{rm_interest_total_s:,.0f} ₪" if rm_interest_total_s else "---"
         _rm_ann    = f"{rm_annuity_monthly_s:,.0f} ₪/חודש" if rm_annuity_monthly_s else "---"
-        # Expected annuity from formula: (loan - fee) / n_months
-        _rm_net    = rm_loan_amount_ils_s * (1 - rm_origination_fee_s)
-        _rm_n      = max(1, (rm_life_age_s - rm_start_age_s) * 12)
-        _rm_exp    = _rm_net / _rm_n
         rm_summary_block = (
-            f"  ריבית שנתית RM       : {rm_annual_rate_s*100:.1f}%\n"
-            f"  גיל התחלת קצבה       : {rm_start_age_s:.0f}\n"
-            f"  גיל סיום קצבה        : {rm_life_age_s:.0f}  ({_rm_n:.0f} חודשים)\n"
-            f"  סך תקבולים (ברוטו)   : {rm_loan_amount_ils_s:,.0f} ₪\n"
-            f"  עמלת פתיחה           : {rm_origination_fee_s*100:.1f}%  (={rm_loan_amount_ils_s*rm_origination_fee_s:,.0f} ₪)\n"
-            f"  נטו לחלוקה           : {_rm_net:,.0f} ₪\n"
-            f"  קצבה חודשית צפויה    : {_rm_exp:,.0f} ₪/חודש  (נטו÷חודשים)\n"
-            f"  קצבה חודשית (מנוע)   : {_rm_ann}\n"
+            f"  משכנתה הפוכה         : אוטומטית (ריבית {rm_annual_rate_s*100:.1f}%)\n"
             f"  גיל הפעלה (סימול.)   : {_rm_act}\n"
+            f"  משיכה ראשונה (מנוע)  : {_rm_ann}\n"
             f"  יתרת חוב בגיל {check_age:.0f}    : {_rm_debt}\n"
             f"  הון עצמי בגיל {check_age:.0f}    : {_rm_eq}\n"
             f"  סהכ ריבית RM         : {_rm_int}"
         )
     else:
-        rm_summary_block = "  (משכנתה הפוכה לא מופעלת)"
+        rm_summary_block = "  (לא נדרשה משכנתה הפוכה — התיק כיסה את הגרעון)"
 
     # ─── משיכה חודשית נדרשת (כל מסלול, גיל בדיקה) ───────────────────────────
     exp_chk    = float(row_check["הוצאה נומינלית"])

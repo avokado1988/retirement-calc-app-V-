@@ -250,39 +250,41 @@ def render_qa_section(results, user_inputs):
     rental_starts_negative = rental_cashflow_at_retire < 0
 
     # -------------------------------------------------------
-    # Reverse mortgage metrics (track 4, optional)
+    # Reverse mortgage metrics (track 4) — fully automatic.
+    # RM "activates" whenever the sim actually took on debt (portfolio hit the
+    # cash floor with a remaining deficit).
     # -------------------------------------------------------
-    rm_enabled_flag = bool(user_inputs.get("rental", {}).get("rm_enabled", False))
-
-    # When RM is active and the first negative window is strictly before RM start,
-    # check whether cashflow recovers once RM payments begin.
-    _rm_start_age_val = float(rental_inputs.get("rm_start_age", 72))
-    _rental_flip_is_pre_rm = (
-        rm_enabled_flag
-        and rental_flip_age is not None
-        and rental_flip_age < _rm_start_age_val
-    )
-    if _rental_flip_is_pre_rm:
-        _row_rm_start = df_full[df_full["גיל"] >= _rm_start_age_val]
-        _cf_at_rm_start = float(_row_rm_start.iloc[0]["rental_cashflow"]) if not _row_rm_start.empty else -1
-        _flip_recovers_with_rm = _cf_at_rm_start > 0
-    else:
-        _flip_recovers_with_rm = False
+    _rm_debt_col = "משכנתה הפוכה — יתרת חוב"
+    rm_activated = (_rm_debt_col in df_full.columns) and bool((df_full[_rm_debt_col] > 0).any())
     rm_activation_age = None
+    rm_debt_at_check = 0.0
     rm_equity_at_check = None
     rm_total_interest = None
     rm_underwater_age = None
+    rm_uncovered_total = 0.0
+    rm_track4_not_viable = False
 
-    if rm_enabled_flag and "משכנתה הפוכה — יתרת חוב" in df_full.columns:
-        rm_active_rows = df_full[df_full["משכנתה הפוכה — יתרת חוב"] > 0]
-        if not rm_active_rows.empty:
-            rm_activation_age = float(rm_active_rows.iloc[0]["גיל"])
+    if rm_activated:
+        rm_active_rows = df_full[df_full[_rm_debt_col] > 0]
+        rm_activation_age = float(rm_active_rows.iloc[0]["גיל"])
         row_check_rm = df_full[df_full["גיל"] >= check_age].iloc[0] if not df_full[df_full["גיל"] >= check_age].empty else df_full.iloc[-1]
+        rm_debt_at_check = float(row_check_rm.get(_rm_debt_col, 0.0))
         rm_equity_at_check = float(row_check_rm.get("משכנתה הפוכה — הון עצמי", 0.0))
         rm_total_interest = float(df_full["משכנתה הפוכה — ריבית חודשית"].sum())
         underwater_rows = df_full[(df_full["גיל"] >= retire_age) & (df_full["משכנתה הפוכה — הון עצמי"] <= 0)]
         if not underwater_rows.empty:
             rm_underwater_age = float(underwater_rows.iloc[0]["גיל"])
+
+    # Track 4 not viable if the RM couldn't cover the deficit up to check_age (LTV cap hit)
+    if "משכנתה הפוכה — גרעון לא מכוסה" in df_full.columns:
+        rm_uncovered_total = float(df_full[df_full["גיל"] <= check_age]["משכנתה הפוכה — גרעון לא מכוסה"].sum())
+        rm_track4_not_viable = rm_uncovered_total > 1.0
+
+    # Legacy aliases still referenced downstream
+    rm_enabled_flag = rm_activated
+    _rm_start_age_val = rm_activation_age if rm_activation_age is not None else retire_age
+    _rental_flip_is_pre_rm = False
+    _flip_recovers_with_rm = False
 
     # -------------------------------------------------------
     # Cumulative deficit — how much external support needed
@@ -636,6 +638,52 @@ def render_qa_section(results, user_inputs):
             f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
         )
 
+    # -------------------------------------------------------
+    # Per-track figures for the unified executive cards
+    # -------------------------------------------------------
+    _exp_col, _inc_col, _pen_col = "הוצאה נומינלית", "הכנסה נומינלית", "הכנסה מקצבה מזערית"
+    _cf_series = {
+        1: df_full[_inc_col] + df_full[_pen_col] - df_full[_exp_col],
+        2: df_full[_inc_col] - df_full[_exp_col],
+        3: df_full[_inc_col] + df_full[_pen_col] - df_full[_exp_col],
+        4: df_full["תזרים נטו שכירות"],
+    }
+    _post_ret = df_full[df_full["גיל"] >= retire_age]
+    def _cf_at_retire(s):
+        return float(s.loc[_post_ret.index[0]]) if not _post_ret.empty else float(s.iloc[0])
+    def _cf_flip(s):
+        neg = _post_ret.index[(s.loc[_post_ret.index] < 0).values]
+        if len(neg) == 0:
+            return None, 0.0
+        return float(df_full.loc[neg[0], "גיל"]), float(s.loc[neg[0]])
+    cf_retire = {t: _cf_at_retire(_cf_series[t]) for t in (1, 2, 3, 4)}
+    cf_flip = {t: _cf_flip(_cf_series[t]) for t in (1, 2, 3, 4)}
+
+    # Wealth at the checked age — liquid portfolio, property (gross), liabilities
+    fin_check   = {1: b190_c, 2: b25_c, 3: bh_c, 4: br_c}
+    prop_check  = {1: property_value_check, 2: property_value_check,
+                   3: property_value_check, 4: rental_prop_check}
+    liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check}
+    total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] for t in (1, 2, 3, 4)}
+
+    def _card_row(label, value_html, strong=False, top_border=False):
+        bt = "border-top:1px solid #e0e0e0;" if top_border else ""
+        val_size = "1.02em" if strong else "0.9em"
+        val_weight = "800" if strong else "700"
+        return (
+            f"<div style='display:flex;justify-content:space-between;align-items:center;"
+            f"min-height:32px;padding:3px 0;border-bottom:1px solid #f2f2f2;{bt}'>"
+            f"<span style='font-size:0.7em;color:#777;'>{label}</span>"
+            f"<span style='font-size:{val_size};font-weight:{val_weight};'>{value_html}</span></div>"
+        )
+
+    def _val(text, color="#1a1a2e"):
+        return f"<span style='color:{color};'>{text}</span>"
+
+    def _section_title(text):
+        return (f"<div style='font-size:0.66em;font-weight:800;color:#8a8a8a;"
+                f"letter-spacing:0.03em;margin:10px 0 2px;'>{text}</div>")
+
     # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
     n_visible = max(1, len(ranked_order))
     cols = st.columns(n_visible)
@@ -648,23 +696,6 @@ def render_qa_section(results, user_inputs):
         health_bg, health_color = get_health_style(is_resilient, is_preserving)
         res_color = "#1a7a3a" if empty_age >= check_age else ("#b84c00" if empty_age >= 90 else "#c0392b")
         res_label = f"גיל {check_age:.0f}+" if empty_age >= check_age else f"גיל {empty_age:.0f}"
-
-        # Total net worth at 100 — the bottom-line figure shown & compared on cards.
-        total_100 = total_100_by_track[track_id]
-
-        # Comparison 1: vs the leading alternative (total wealth)
-        if is_winner:
-            cmp_label = f"מול הבא בתור ({second_name})"
-            cmp_html = delta_block(cmp_label, total_100, second_total)
-        else:
-            cmp_label = "מול המסלול המומלץ" if has_winner else "מול המסלול המוביל"
-            cmp_html = delta_block(cmp_label, total_100, winner_total)
-
-        # Comparison 2: vs this track's own starting net worth
-        base_html = delta_block("מול ההון ההתחלתי", total_100, start_total_by_track[track_id])
-
-        why_line = build_why_line(is_winner, is_resilient, is_preserving, empty_age, track_id in PENSION_TRACKS)
-        why_color = "#1a7a3a" if (is_winner or is_healthy) else ("#856400" if is_resilient else "#b71c1c")
 
         if rank == 1:
             shadow = "0 16px 48px rgba(212,168,0,0.35), 0 4px 16px rgba(0,0,0,0.14)"
@@ -700,18 +731,36 @@ def render_qa_section(results, user_inputs):
             outline = ""
             winner_ribbon = "<div style='height:30px;'></div>"
 
-        fin_port = _fin_port_100[track_id]
-        prop_net = _prop_net_100[track_id]
-        prop_label = "🏠 הון עצמי בנדל\"ן בגיל 100" if track_id == 4 else "🏠 שווי נדלן בגיל 100"
+        # --- Unified card body: cashflow section + wealth section (same rows for every track) ---
+        cf0 = cf_retire[track_id]
+        cf0_color = "#1a7a3a" if cf0 >= 0 else "#c0392b"
+        cf0_txt = f"{'+' if cf0 >= 0 else ''}{format_shekel(int(cf0))}"
+        fa, fv = cf_flip[track_id]
+        flip_txt = _val("לא הופך שלילי", "#1a7a3a") if fa is None else _val(f"גיל {fa:.0f} ({format_shekel(int(fv))})", "#b84c00")
+        if track_id == 4:
+            rm_txt = _val(f"כן, מגיל {rm_activation_age:.0f}", "#b84c00") if rm_activated else _val("לא נדרשה", "#1a7a3a")
+        else:
+            rm_txt = _val("לא רלוונטי", "#aaa")
+        liab = liab_check[track_id]
+        liab_txt = _val(f"−{format_shekel(int(liab))}", "#c0392b") if liab > 0 else _val("—", "#aaa")
 
-        wealth_breakdown_html = (
-            f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>💰 תיק פיננסי בגיל 100</div>"
-            f"<div style='font-size:0.85em;font-weight:600;color:#444;margin-bottom:4px;'>{format_shekel(int(fin_port))}</div>"
-            f"<div style='font-size:0.62em;color:#999;margin-bottom:1px;'>{prop_label}</div>"
-            f"<div style='font-size:0.85em;font-weight:600;color:#444;margin-bottom:6px;'>{format_shekel(int(prop_net))}</div>"
-            f"<div style='font-size:0.62em;color:#555;margin-bottom:1px;font-weight:600;'>📊 סך נכסים בגיל 100</div>"
-            f"<div style='font-size:1.05em;font-weight:800;color:#1a1a2e;'>{format_shekel(int(total_100))}</div>"
+        body = (
+            _section_title("💸 תזרים")
+            + _card_row("תזרים חודשי בפרישה", _val(cf0_txt, cf0_color))
+            + _card_row("גיל שבו התזרים הופך שלילי", flip_txt)
+            + _card_row("הופעלה משכנתה הפוכה?", rm_txt)
+            + _section_title(f"🏦 הון בגיל {check_age:.0f}")
+            + _card_row("💰 תיק פיננסי", _val(format_shekel(int(fin_check[track_id]))))
+            + _card_row("🏠 שווי נדל\"ן", _val(format_shekel(int(prop_check[track_id]))))
+            + _card_row("➖ הלוואות והתחייבויות", liab_txt)
+            + _card_row("📊 סך נכסים", _val(format_shekel(int(total_check[track_id]))), strong=True, top_border=True)
         )
+        if track_id == 4 and rm_track4_not_viable:
+            body = (
+                "<div style='background:#fdecea;border:1px solid #e0a099;border-radius:6px;"
+                "padding:6px 8px;margin-bottom:6px;color:#a83232;font-weight:700;font-size:0.72em;text-align:center;'>"
+                "🚫 מסלול לא קביל — אין מספיק כסף לכסות את הגרעון</div>"
+            ) + body
 
         inner_card = (
             f"<div style='background:{rc['bg']};border-top:{border_top};border-radius:12px;"
@@ -733,22 +782,8 @@ def render_qa_section(results, user_inputs):
             f"<div style='text-align:center;font-size:0.74em;color:{res_color};font-weight:700;margin-bottom:4px;'>"
             f"⏳ מחזיק עד {res_label}</div>"
             f"</div>"
-            f"<div style='border-top:1px solid #e8e8e8;padding-top:10px;'>"
-            + (
-                # Track 4: cashflow headline + shared wealth breakdown
-                _build_rental_card_bottom(rental_cashflow_at_retire, rental_flip_age,
-                                          rental_always_positive, rental_starts_negative,
-                                          why_line, why_color, wealth_breakdown_html,
-                                          flip_is_pre_rm=_rental_flip_is_pre_rm,
-                                          rm_start_val=_rm_start_age_val,
-                                          flip_recovers=_flip_recovers_with_rm)
-                if track_id == 4 else
-                wealth_breakdown_html
-                + cmp_html
-                + base_html
-                + f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
-                f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
-            )
+            f"<div style='border-top:1px solid #e8e8e8;padding-top:6px;'>"
+            + body
             + f"</div></div>"
         )
 

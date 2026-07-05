@@ -61,17 +61,19 @@ def run_simulation(user_inputs):
     maintenance_late_pct  = float(rental.get("maintenance_late_pct", 0.12))
     rental_start_age  = 66.0  # maintenance and tax calculated from this age
 
-    # Reverse mortgage parameters (track 4)
-    rm_enabled              = bool(rental.get("rm_enabled", False))
-    rm_rate_monthly         = (1 + float(rental.get("rm_annual_rate", 0.055))) ** (1/12) - 1
-    rm_start_age            = float(rental.get("rm_start_age", 72))
-    rm_life_expectancy_age  = float(rental.get("rm_life_expectancy_age", check_age))
-    rm_loan_amount_ils      = float(rental.get("rm_loan_amount_ils", 0))
-    rm_orig_fee             = float(rental.get("rm_origination_fee", 0.02))
+    # Reverse mortgage (track 4) — fully automatic. It engages only after the
+    # rental portfolio has been drawn down to a liquid floor, then covers the
+    # monthly deficit, capped by an age-based LTV limit against the property.
+    rm_rate_monthly   = (1 + float(DEFAULTS.get("rm_annual_rate", 0.06))) ** (1/12) - 1
+    rm_savings_floor  = float(DEFAULTS.get("rm_savings_floor", 100000))
 
-    rm_active          = False
-    rm_loan_balance    = 0.0
-    rm_annuity_monthly = 0.0   # fixed monthly payment — calculated actuarially at activation
+    def _rm_ltv_cap(age):
+        if age < 70: return 0.50
+        if age < 75: return 0.55
+        if age < 80: return 0.60
+        return 0.65
+
+    rm_loan_balance = 0.0
 
     history = []
     inflation_factor = 1.0
@@ -182,61 +184,45 @@ def run_simulation(user_inputs):
             basis_hybrid *= (1 - (pull_h / balance_hybrid))
             balance_hybrid -= pull_h
 
-        # --- Reverse mortgage: Israeli actuarial annuity model ---
-        # At rm_start_age: bank calculates fixed monthly payment using annuity formula.
-        # M = loan_net × r / ((1+r)^n - 1)  where n = months from activation to life expectancy.
-        # Loan balance grows each month: balance = (balance + annuity) × (1 + r).
-        # Non-recourse: loan capped at property value. Savings stay as emergency reserve.
-        rm_annuity_this_month = 0.0
-        rm_interest_this_month = 0.0
-        if rm_enabled and rm_loan_amount_ils > 0 and current_age >= rm_start_age:
-            if not rm_active:
-                rm_active = True
-                max_loan_net = rm_loan_amount_ils * (1 - rm_orig_fee)
-                n_months = max(1.0, (rm_life_expectancy_age - rm_start_age) * 12)
-                # Monthly payment = net principal / months so total received == net principal.
-                # Debt grows via interest on drawn balance; estate owes FV at end of term.
-                rm_annuity_monthly = max_loan_net / n_months
-
-            # Payments span the agreed term only (start_age → life_expectancy_age).
-            # After the term, no new draws — but the debt keeps accruing interest
-            # until the estate settles (non-recourse). This keeps total received ==
-            # net principal instead of paying out indefinitely to age 105.
-            if current_age < rm_life_expectancy_age:
-                rm_annuity_this_month = rm_annuity_monthly
-            else:
-                rm_annuity_this_month = 0.0
-            rm_loan_balance = (rm_loan_balance + rm_annuity_this_month) * (1 + rm_rate_monthly)
-            rm_interest_this_month = rm_loan_balance - (rm_loan_balance / (1 + rm_rate_monthly))
-
-        # RM annuity reduces savings pressure; surplus (annuity > deficit) goes to savings
-        cashflow_with_rm = rental_cashflow_net + rm_annuity_this_month
-        if current_age >= retirement_age:
-            net_needed_rental = max(0.0, -cashflow_with_rm)
-            rm_savings_surplus = max(0.0, cashflow_with_rm)
-        else:
-            net_needed_rental = 0.0
-            rm_savings_surplus = 0.0
-        if rm_savings_surplus > 0:
-            balance_rental += rm_savings_surplus
-            basis_rental   += rm_savings_surplus  # RM-derived surplus is debt, not taxable gain
-
-        # rm_equity and rm_ltv computed after withdrawals but BEFORE property appreciation —
-        # will be updated to post-appreciation values after the returns block below.
-        rm_ltv = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
-
-        # --- Track 4: Withdrawal (25% real, rental) ---
+        # --- Track 4: Withdrawal + automatic reverse mortgage ---
+        # Live off the rental portfolio first (it is a liquid asset), but never
+        # below rm_savings_floor. Once the portfolio sits at the floor and a
+        # deficit remains, the reverse mortgage automatically draws exactly the
+        # shortfall — capped by the age-based LTV limit. Any shortfall the RM
+        # cannot cover is recorded as an uncovered deficit (track not viable).
+        # The debt compounds monthly: balance = (balance + draw) × (1 + r).
         if m > 0: basis_rental *= (1 + i_monthly)
         tax_rental = 0.0
         withdrawal_rental = 0.0
-        if net_needed_rental > 0 and balance_rental > 0:
-            rpr_r = max(0.0, (balance_rental - basis_rental) / balance_rental)
-            gross_r = net_needed_rental / (1 - (rpr_r * 0.25))
-            pull_r = min(gross_r, balance_rental)
-            tax_rental = pull_r * rpr_r * 0.25
-            basis_rental *= (1 - (pull_r / balance_rental))
-            balance_rental -= pull_r
-            withdrawal_rental = pull_r
+        rm_annuity_this_month = 0.0      # RM cash drawn this month (covers deficit)
+        rm_interest_this_month = 0.0
+        rm_uncovered_this_month = 0.0
+        if net_needed_rental > 0 and current_age >= retirement_age:
+            # 1) Draw from the portfolio down to the liquid floor
+            net_from_portfolio = 0.0
+            investable = balance_rental - rm_savings_floor
+            if investable > 0:
+                rpr_r = max(0.0, (balance_rental - basis_rental) / balance_rental)
+                needed_gross = net_needed_rental / (1 - (rpr_r * 0.25))
+                pull_r = min(needed_gross, investable)
+                tax_rental = pull_r * rpr_r * 0.25
+                net_from_portfolio = pull_r - tax_rental
+                basis_rental *= (1 - (pull_r / balance_rental))
+                balance_rental -= pull_r
+                withdrawal_rental = pull_r
+            # 2) Reverse mortgage covers the remaining shortfall, up to the LTV cap
+            remaining = net_needed_rental - net_from_portfolio
+            if remaining > 1e-6:
+                rm_cap = property_rental_value * _rm_ltv_cap(current_age)
+                room = max(0.0, rm_cap - rm_loan_balance)
+                rm_annuity_this_month = min(remaining, room)
+                rm_uncovered_this_month = remaining - rm_annuity_this_month
+
+        # Accrue the reverse-mortgage debt (new draw + compounding interest)
+        if rm_loan_balance > 0 or rm_annuity_this_month > 0:
+            rm_loan_balance = (rm_loan_balance + rm_annuity_this_month) * (1 + rm_rate_monthly)
+            rm_interest_this_month = rm_loan_balance - (rm_loan_balance / (1 + rm_rate_monthly))
+        rm_ltv = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
 
         # --- Apply returns (after withdrawals, before next month) ---
         if balance_190 > 0: balance_190 *= (1 + r_monthly_190)
@@ -282,6 +268,7 @@ def run_simulation(user_inputs):
             "משכנתה הפוכה — הון עצמי": rm_equity,
             "משכנתה הפוכה — LTV": rm_ltv,
             "משכנתה הפוכה — ריבית חודשית": rm_interest_this_month,
+            "משכנתה הפוכה — גרעון לא מכוסה": rm_uncovered_this_month,
             "הוצאות מטפלת": caregiver_cost_base * inflation_factor if current_age >= 85.0 else 0.0,
             "inflation_factor": inflation_factor
         })

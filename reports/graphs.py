@@ -282,61 +282,39 @@ def render_charts(df_history, user_inputs):
             "(מחיה + שכ\"ד שאתה משלם + תחזוקה). מעל הקו = עודף, מתחת לקו = גירעון שנמשך מהחיסכון."
         )
 
-        rental_cfg = user_inputs.get("rental", {})
-        add_rm = st.checkbox(
-            "➕ הצג גם תזרים עם משכנתה הפוכה",
-            value=bool(rental_cfg.get("rm_enabled", False)),
-            key="chart_e_add_rm"
-        )
-
         base_cf = df["תזרים נטו שכירות"]
+        rm_draw = df["משכנתה הפוכה — משיכה חודשית"] if "משכנתה הפוכה — משיכה חודשית" in df.columns else None
+        has_rm = rm_draw is not None and float(rm_draw.sum()) > 0
 
         fig_e = go.Figure()
         # Zero reference line
         fig_e.add_hline(y=0, line_dash="dot", line_color="#aaa")
         fig_e.add_trace(go.Scatter(
             x=df["גיל"], y=base_cf,
-            mode='lines', name="ללא משכנתה",
+            mode='lines', name="תזרים לפני משכנתה",
             line=dict(color="#9467bd", width=2.5)
         ))
 
-        if add_rm:
-            # Compute the reverse-mortgage annuity inline (same formula as the
-            # input preview): M = net_loan / n_months, paid start_age → life_exp.
-            rm_loan = float(rental_cfg.get("rm_loan_amount_ils", 0) or 0)
-            rm_fee = float(rental_cfg.get("rm_origination_fee", 0.02))
-            rm_start = float(rental_cfg.get("rm_start_age", 72))
-            rm_life = float(rental_cfg.get("rm_life_expectancy_age", 92))
-            net_loan = rm_loan * (1 - rm_fee)
-            n_months = max(1.0, (rm_life - rm_start) * 12)
-            monthly_annuity = net_loan / n_months if rm_loan > 0 else 0.0
-
-            ages = df["גיל"]
-            annuity_series = ages.apply(
-                lambda a: monthly_annuity if (rm_start <= a < rm_life) else 0.0
-            )
-            cf_with_rm = base_cf + annuity_series
-
+        if has_rm:
+            # RM is automatic — use the actual monthly draw the engine computed.
+            cf_with_rm = base_cf + rm_draw
             fig_e.add_trace(go.Scatter(
-                x=ages, y=cf_with_rm,
-                mode='lines', name="עם משכנתה הפוכה",
+                x=df["גיל"], y=cf_with_rm,
+                mode='lines', name="תזרים אחרי משכנתה הפוכה",
                 line=dict(color="#2ca02c", width=2.5)
             ))
-            # Mark the payment window
-            fig_e.add_vline(x=rm_start, line_dash="dot", line_color="#2ca02c",
-                            annotation_text=f"תחילת קצבה (גיל {rm_start:.0f})",
-                            annotation_position="top left")
-            fig_e.add_vline(x=rm_life, line_dash="dot", line_color="#c0392b",
-                            annotation_text=f"תום תקופה (גיל {rm_life:.0f})",
-                            annotation_position="top right")
-            if rm_loan > 0:
+            _act = df[rm_draw > 0]
+            if not _act.empty:
+                _astart = float(_act.iloc[0]["גיל"])
+                fig_e.add_vline(x=_astart, line_dash="dot", line_color="#2ca02c",
+                                annotation_text=f"הפעלת משכנתה (גיל {_astart:.0f})",
+                                annotation_position="top left")
                 st.caption(
-                    f"💰 קצבה חודשית מהמשכנתה: ₪{monthly_annuity:,.0f} "
-                    f"(מגיל {rm_start:.0f} עד {rm_life:.0f}). "
-                    f"שים לב לקפיצת התזרים כלפי מעלה בתקופה זו, ולחזרה לרמה הקודמת בתום התקופה."
+                    f"🏦 המשכנתה ההפוכה נכנסת אוטומטית בגיל {_astart:.0f}, כשהחיסכון מגיע לרצפה. "
+                    f"הקו הירוק הוא התזרים אחרי המשיכה ממנה."
                 )
-            else:
-                st.caption("⚠️ לא הוגדר סכום הלוואה — הזן סכום בקלט מסלול 4 כדי לראות את ההשפעה.")
+        else:
+            st.caption("✅ החיסכון כיסה את כל הגירעון — לא נדרשה משכנתה הפוכה.")
 
         fig_e.update_layout(
             xaxis_title="גיל", yaxis_title="תזרים חודשי נטו (₪)",
