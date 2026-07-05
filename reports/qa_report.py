@@ -214,7 +214,14 @@ def render_qa_section(results, user_inputs):
     empty_190 = find_empty_age("צבירה תיקון 190")
     empty_25 = find_empty_age("צבירה מסלול ריאלי")
     empty_h = find_empty_age("צבירה מסלול היברידי")
+    # Track 4: the automatic RM floors the liquid portfolio, so it "never empties"
+    # by balance alone. Its true failure point is the first month the RM could
+    # NOT cover the deficit (LTV cap hit) — that is when the plan actually breaks.
     empty_r = find_empty_age("צבירה מסלול שכירות")
+    if "משכנתה הפוכה — גרעון לא מכוסה" in df_full.columns:
+        _unc_rows = df_full[df_full["משכנתה הפוכה — גרעון לא מכוסה"] > 1.0]
+        if not _unc_rows.empty:
+            empty_r = float(_unc_rows.iloc[0]["גיל"])
 
     recovery_190 = find_recovery_age("צבירה תיקון 190")
     recovery_25 = find_recovery_age("צבירה מסלול ריאלי")
@@ -604,7 +611,7 @@ def render_qa_section(results, user_inputs):
             reasons.append("✓ עמד במבחן סטרס נדל\"ן — נדל\"ן בהנחה 15% + קנס ₪500K")
         elif track_id == 4 and not stress_passed:
             reasons.append("△ ניצח על בסיס שווי כולל — בתרחיש לחץ מסלול 190 קרוב")
-        reasons.append(f"✓ הכי הרבה נכסים בגיל 100 — {format_shekel(int(total_100_val))}")
+        reasons.append(f"✓ הכי הרבה נכסים בגיל {check_age:.0f} — {format_shekel(int(total_100_val))}")
         return "<br/>".join(reasons)
 
     # -------------------------------------------------------
@@ -703,7 +710,7 @@ def render_qa_section(results, user_inputs):
             outline = "outline: 3px solid #D4A800; outline-offset: 3px;"
             if is_winner:
                 _why_tooltip = build_winner_tooltip(
-                    track_id, is_resilient, total_100_by_track[track_id], track4_wins_stress
+                    track_id, is_resilient, total_check[track_id], track4_wins_stress
                 )
                 winner_ribbon = (
                     f"<div style='text-align:center;margin-bottom:10px;'>"
