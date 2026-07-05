@@ -24,11 +24,11 @@ def render_incomes_inputs(remaining_for_gimel=0):
 
     securing_years = compact_number_input(
         "תקופת אבטחה לירושה (שנים)",
-        value=20, min_value=0, max_value=35, step=1, unit="שנים", color=COLOR_BLUE
+        value=DEFAULTS["securing_years"], min_value=0, max_value=35, step=1, unit="שנים", color=COLOR_BLUE
     )
     base_coefficient = compact_number_input(
         "מקדם המרה בסיסי (ללא אבטחה)",
-        value=200.0, min_value=150.0, max_value=300.0, step=1.0, unit=None, color=COLOR_BLUE
+        value=DEFAULTS["base_coefficient"], min_value=150.0, max_value=300.0, step=1.0, unit=None, color=COLOR_BLUE
     )
 
     adjusted_coefficient = base_coefficient + (securing_years * 1.0)
