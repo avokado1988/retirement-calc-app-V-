@@ -331,7 +331,7 @@ def render_qa_section(results, user_inputs):
     track4_wins_stress = delta_stress > 0
 
     # -------------------------------------------------------
-    # Resilience flags — does each track's liquid portfolio last past 105?
+    # Resilience flags — does each track's liquid portfolio last through check_age?
     # -------------------------------------------------------
 
     # =======================================================================
@@ -378,10 +378,10 @@ def render_qa_section(results, user_inputs):
         4: br_100   + max(0.0, _prop_100_r_st * 0.85 - 500_000 - _rm_debt_100_st),
     }
 
-    husn_190 = empty_190 >= 105.0
-    husn_25  = empty_25  >= 105.0
-    husn_h   = empty_h   >= 105.0
-    husn_r   = empty_r   >= 105.0
+    husn_190 = empty_190 >= check_age
+    husn_25  = empty_25  >= check_age
+    husn_h   = empty_h   >= check_age
+    husn_r   = empty_r   >= check_age
 
     # Ranking metric: stress-adjusted net worth at age 100 (contest reference age).
     # Pension tracks (1, 3) get a +1 tie-break — guaranteed income continues past 100.
@@ -428,13 +428,26 @@ def render_qa_section(results, user_inputs):
     if not visible_tracks:  # safety: show all if none selected
         visible_tracks = {1, 2, 3, 4}
 
-    # p100 carried here = LIQUID portfolio at 100 (drives health/preservation badge).
+    # Preservation measured at the checked age and fair to pension tracks:
+    # each track keeps its remaining annuity value (pension tracks) and is
+    # compared to its OWN starting capital — not track 2's full liquid pot.
+    _start_cap = {
+        1: baseline_capital, 2: baseline_capital, 3: baseline_capital,
+        4: (net_for_rental_start if net_for_rental_start > 0 else baseline_capital),
+    }
+    _econ_check = {1: inherit_190_c, 2: b25_c, 3: inherit_h_c, 4: br_c}
+    preservation_ratio = {
+        t: (_econ_check[t] / _start_cap[t]) if _start_cap[t] > 0 else 0.0
+        for t in (1, 2, 3, 4)
+    }
+
+    # 4th field = preservation ratio at check_age (drives the health badge).
     # Total net worth for display/comparison comes from total_100_by_track.
     tracks_exec = [
-        (1, _sa_rank[1], empty_190, b190_100, husn_190),
-        (2, _sa_rank[2], empty_25,  b25_100,  husn_25),
-        (3, _sa_rank[3], empty_h,   bh_100,   husn_h),
-        (4, _sa_rank[4], empty_r,   br_100,   husn_r),
+        (1, _sa_rank[1], empty_190, preservation_ratio[1], husn_190),
+        (2, _sa_rank[2], empty_25,  preservation_ratio[2], husn_25),
+        (3, _sa_rank[3], empty_h,   preservation_ratio[3], husn_h),
+        (4, _sa_rank[4], empty_r,   preservation_ratio[4], husn_r),
     ]
 
     # -------------------------------------------------------
@@ -470,25 +483,25 @@ def render_qa_section(results, user_inputs):
     }
 
     # -------------------------------------------------------
-    # Health model: a track is "healthy" only if it lasts past 105
-    # AND preserves at least 90% of its starting capital at age 102.
-    # Preservation proves resilience — enough buffer if life or
-    # markets change, not just leftover for inheritance.
+    # Health model, judged against the user's checked age (check_age):
+    #   • resilient  = the liquid portfolio funds life through check_age
+    #   • preserving = keeps >=90% of its OWN starting capital (pension
+    #     tracks count their remaining annuity value) at check_age
+    # A track is "recommended" if it is resilient — funding life through
+    # the horizon you chose. Preservation only upgrades the badge to 🟢.
     # -------------------------------------------------------
-    def track_health(empty_age, portfolio_95):
-        is_resilient = empty_age >= 105.0
-        preservation = (portfolio_95 / baseline_capital) if baseline_capital > 0 else 0.0
+    def track_health(empty_age, preservation):
+        is_resilient = empty_age >= check_age
         is_preserving = preservation >= 0.90
         is_healthy = is_resilient and is_preserving
         return is_resilient, is_preserving, is_healthy
 
-    # Winner declared only if the top track is genuinely healthy —
-    # lasts past 105 AND preserves >=90% of starting capital at age 102.
-    # A real depletion risk means no track wins.
+    # A recommended track exists if the top track is resilient — i.e. its
+    # money lasts through check_age. Depleting before then = no winner.
     _top_empty = sorted_by_score[0][2]
-    _top_p102 = sorted_by_score[0][3]
-    _top_resilient, _top_preserving, _top_healthy = track_health(_top_empty, _top_p102)
-    has_winner = _top_healthy
+    _top_pres = sorted_by_score[0][3]
+    _top_resilient, _top_preserving, _top_healthy = track_health(_top_empty, _top_pres)
+    has_winner = _top_resilient
 
     RANK_CFG = {
         1: {"bg": "#FFFCE8",
@@ -535,7 +548,7 @@ def render_qa_section(results, user_inputs):
     st.markdown("<h3 style='text-align: center; color: #1a1a2e;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
 
     if not has_winner:
-        st.warning("⚠️ אין מסלול מומלץ — אף מסלול אינו שומר על עצמו עד גיל 105. בכל המסלולים התיק נשחק בצורה מסוכנת. מומלץ לבחון מחדש את ההכנסות וההוצאות.")
+        st.warning(f"⚠️ אין מסלול מומלץ — אף מסלול אינו מחזיק את התיק עד גיל {check_age:.0f}. בכל המסלולים החיסכון עלול להיגמר לפני כן. מומלץ לבחון מחדש את ההכנסות וההוצאות, או להוריד את גיל הבדיקה אם הוא גבוה מהמתוכנן.")
 
     # Reference TOTAL net worth for relative comparison (apples-to-apples:
     # every card compares total wealth, not liquid portfolio).
@@ -562,15 +575,18 @@ def render_qa_section(results, user_inputs):
     def build_why_line(is_winner, is_resilient, is_preserving, empty_age, has_pension):
         """Short plain-language reason, tailored to the scenario."""
         if is_winner:
-            base = "נשאר איתן עד גיל 105 ומעבר, שומר על ההון שלך גם אם החיים יתארכו או השוק ישתנה"
+            if is_preserving:
+                base = f"נשאר איתן עד גיל {check_age:.0f} ומעבר, שומר על ההון שלך גם אם החיים יתארכו או השוק ישתנה"
+            else:
+                base = f"מחזיק את התיק עד גיל {check_age:.0f}, אך ההון נשחק לאורך הדרך — פחות טווח ביטחון אם החיים יתארכו"
             if has_pension:
                 base += ", ומבטיח לך קצבה חודשית לכל החיים"
             return "✓ " + base
         if not is_resilient:
             reason = "בלי קצבה מובטחת התיק " if not has_pension else "התיק "
-            return f"✗ {reason}מתחיל להישחק ועלול להיגמר סביב גיל {empty_age:.0f} — חסר רשת ביטחון לאריכות ימים"
+            return f"✗ {reason}מתחיל להישחק ועלול להיגמר סביב גיל {empty_age:.0f} — חסר רשת ביטחון עד גיל {check_age:.0f}"
         if not is_preserving:
-            return "△ מחזיק עד 105, אך ההון נשחק משמעותית — פחות טווח ביטחון אם דברים ישתנו"
+            return f"△ מחזיק עד גיל {check_age:.0f}, אך ההון נשחק משמעותית — פחות טווח ביטחון אם דברים ישתנו"
         return "△ מסלול בריא, אך משאיר פחות הון מהמסלול המומלץ"
 
     # Tracks that include a guaranteed pension (190 and hybrid)
@@ -579,7 +595,7 @@ def render_qa_section(results, user_inputs):
     def build_winner_tooltip(track_id, is_resilient, total_100_val, stress_passed):
         reasons = []
         if is_resilient:
-            reasons.append("✓ מחזיק מעל גיל 105 — כיסוי מלא לסיכון אריכות ימים")
+            reasons.append(f"✓ מחזיק עד גיל {check_age:.0f} — כיסוי לאופק התכנון שהגדרת")
         if track_id in PENSION_TRACKS:
             reasons.append("✓ קצבה מובטחת לכל החיים — הכנסה שלא תלויה בשוק")
         if track_id == 4 and stress_passed:
@@ -623,15 +639,15 @@ def render_qa_section(results, user_inputs):
     # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
     n_visible = max(1, len(ranked_order))
     cols = st.columns(n_visible)
-    for col_idx, (rank, track_id, score, empty_age, portfolio_95, husn) in enumerate(reversed(ranked_order)):
+    for col_idx, (rank, track_id, score, empty_age, preservation, husn) in enumerate(reversed(ranked_order)):
         pc = track_pros_cons[track_id]
         rc = RANK_CFG[rank]
         is_winner = rank == 1 and has_winner
-        is_resilient, is_preserving, is_healthy = track_health(empty_age, portfolio_95)
+        is_resilient, is_preserving, is_healthy = track_health(empty_age, preservation)
         health = get_health_label(is_resilient, is_preserving)
         health_bg, health_color = get_health_style(is_resilient, is_preserving)
-        res_color = "#1a7a3a" if empty_age >= 105.0 else ("#b84c00" if empty_age >= 90 else "#c0392b")
-        res_label = "105+" if empty_age >= 105.0 else f"גיל {empty_age:.0f}"
+        res_color = "#1a7a3a" if empty_age >= check_age else ("#b84c00" if empty_age >= 90 else "#c0392b")
+        res_label = f"גיל {check_age:.0f}+" if empty_age >= check_age else f"גיל {empty_age:.0f}"
 
         # Total net worth at 100 — the bottom-line figure shown & compared on cards.
         total_100 = total_100_by_track[track_id]
@@ -710,9 +726,9 @@ def render_qa_section(results, user_inputs):
             f"<span style='display:inline-block;font-size:0.78em;font-weight:600;padding:2px 10px;border-radius:20px;"
             f"background:{health_bg};color:{health_color};'>{health}"
             f" <span class='qa-tip'>ⓘ<span class='qa-tiptext'>"
-            f"🟢 חסין = התיק הנזיל מחזיק מעל גיל 105 ושומר על 90%+ מההון בגיל 100. "
-            f"🟡 מחזיק = מחזיק מעל 105 אך נשחק מתחת ל-90%. "
-            f"🔴 נשחק = התיק הנזיל עלול להיגמר לפני גיל 105."
+            f"🟢 חסין = התיק מחזיק עד גיל {check_age:.0f} ושומר על 90%+ מההון (כולל ערך קצבה). "
+            f"🟡 מחזיק = מחזיק עד גיל {check_age:.0f} אך נשחק מתחת ל-90%. "
+            f"🔴 נשחק = התיק הנזיל עלול להיגמר לפני גיל {check_age:.0f}."
             f"</span></span></span></div>"
             f"<div style='text-align:center;font-size:0.74em;color:{res_color};font-weight:700;margin-bottom:4px;'>"
             f"⏳ מחזיק עד {res_label}</div>"
@@ -930,9 +946,10 @@ def render_qa_section(results, user_inputs):
         color = "#b84c00" if empty_age >= 90 else "#b71c1c"
         return f"<span style='color:{color}; font-weight:bold;'>גיל {empty_age:.0f}</span>"
 
-    # Preservation % at age 102 (the core health metric, shown numerically)
-    def fmt_preservation(portfolio_100):
-        pct = (portfolio_100 / baseline_capital * 100) if baseline_capital > 0 else 0
+    # Preservation % at check_age (the core health metric, shown numerically) —
+    # fair to pension tracks: counts remaining annuity value, vs own starting capital.
+    def fmt_preservation(ratio):
+        pct = ratio * 100
         if pct >= 90: color = "#1a7a3a"
         elif pct >= 75: color = "#b84c00"
         else: color = "#b71c1c"
@@ -945,7 +962,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_190_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_190, months_deficit_190),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_190),
-            "שימור הון":    fmt_preservation(b190_100),
+            "שימור הון":    fmt_preservation(preservation_ratio[1]),
             "הון כולל":     fmt_with_delta(inherit_190_c, baseline_capital, pension_component=int(pension_asset_check)),
             "תיק נזיל":     format_shekel(b190_c),
             "שווי נדלן":    format_shekel(property_value_check),
@@ -960,7 +977,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_25_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_25, months_deficit_25),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_25),
-            "שימור הון":    fmt_preservation(b25_100),
+            "שימור הון":    fmt_preservation(preservation_ratio[2]),
             "הון כולל":     fmt_with_delta(b25_c, baseline_capital),
             "תיק נזיל":     format_shekel(b25_c),
             "שווי נדלן":    format_shekel(property_value_check),
@@ -975,7 +992,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_h_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_h, months_deficit_h),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_h),
-            "שימור הון":    fmt_preservation(bh_100),
+            "שימור הון":    fmt_preservation(preservation_ratio[3]),
             "הון כולל":     fmt_with_delta(inherit_h_c, baseline_capital, pension_component=int(pension_asset_check)),
             "תיק נזיל":     format_shekel(bh_c),
             "שווי נדלן":    format_shekel(property_value_check),
@@ -990,7 +1007,7 @@ def render_qa_section(results, user_inputs):
             "משיכה / תזרים": fmt_cashflow(nn_rent_c, cashflow=rental_cashflow_at_check, withdrawal_pct=pct_rent_c),
             "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_r, months_deficit_r),
             "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_r),
-            "שימור הון":    fmt_preservation(br_100),
+            "שימור הון":    fmt_preservation(preservation_ratio[4]),
             "הון כולל":     format_shekel(br_c),
             "תיק נזיל":     format_shekel(br_c),
             "שווי נדלן":    format_shekel(rm_equity_check),  # net equity (property minus RM loan)
@@ -1063,7 +1080,7 @@ def render_qa_section(results, user_inputs):
     }
     TOOLTIPS_ACTUARIAL_2 = {
         "עד איזה גיל הכסף מחזיק?": "גיל מיצוי חסכונות: הגיל שבו יתרת התיק הנזיל מגיעה לאפס לחלוטין. מסלול 4: החסכונות אזלו — הדירה ממשיכה לייצר הכנסה אבל אין יותר כרית נזילה. אם לא נגמר עד 105 — מסומן ✅ לא נשחק.",
-        "שימור הון":    f"אחוז מההון ההתחלתי ({format_shekel(int(baseline_capital))}) שנשאר בתיק בגיל 100. מעל 90% = מצוין. 75-90% = טוב. מתחת ל-75% = שחיקה משמעותית.",
+        "שימור הון":    f"אחוז מההון ההתחלתי של המסלול עצמו שנשמר בגיל {check_age:.0f} (במסלולי קצבה נספר גם ערך הקצבה שנותר, לא רק הנזיל). מעל 90% = מצוין. 75-90% = טוב. מתחת ל-75% = שחיקה משמעותית.",
         "קצב משיכה":    f"קצב המשיכה השנתי בגיל {check_age:.1f}. נמוך מ-3% = בטוח. 3-4% = מקובל. מעל 4% = לחץ על התיק.",
         "גיל התאוששות": f"הגיל שבו ערך התיק עולה מעל ההון ההתחלתי ({format_shekel(int(baseline_capital))}) בפעם הראשונה — מוכיח שהתיק גדל ולא רק נשמר.",
         "גיל היפוך":    "מסלולים 1-3: הגיל שבו התיק מגיע לשיאו ומתחיל להישחק (משיכות > תשואה חודשית). מסלול 4 — גיל גרעון שכירות: הגיל הראשון שבו ההכנסות (שכ\"ד + ב\"ל) לא מכסות את ההוצאות ומתחילים למשוך מהחסכונות.",
