@@ -700,188 +700,132 @@ def render_qa_section(results, user_inputs):
             lev_mc_prob = None
 
     def _card_row(label, value_html, strong=False, top_border=False):
+        # FIXED height (not min-height) so a value that wraps to two lines still
+        # occupies the same vertical space as a one-line value → rows stay aligned
+        # line-to-line across all cards.
         bt = "border-top:1px solid #e0e0e0;" if top_border else ""
-        val_size = "1.02em" if strong else "0.9em"
+        val_size = "1.0em" if strong else "0.9em"
         val_weight = "800" if strong else "700"
         return (
-            f"<div style='display:flex;justify-content:space-between;align-items:center;"
-            f"min-height:32px;padding:3px 0;border-bottom:1px solid #f2f2f2;{bt}'>"
-            f"<span style='font-size:0.7em;color:#777;'>{label}</span>"
-            f"<span style='font-size:{val_size};font-weight:{val_weight};'>{value_html}</span></div>"
+            f"<div style='display:flex;justify-content:space-between;align-items:center;gap:6px;"
+            f"height:44px;overflow:hidden;padding:0 0;border-bottom:1px solid #f2f2f2;{bt}'>"
+            f"<span style='font-size:0.68em;color:#777;line-height:1.2;flex-shrink:0;'>{label}</span>"
+            f"<span style='font-size:{val_size};font-weight:{val_weight};line-height:1.15;text-align:left;'>{value_html}</span></div>"
         )
 
     def _val(text, color="#1a1a2e"):
         return f"<span style='color:{color};'>{text}</span>"
 
     def _section_title(text):
-        return (f"<div style='font-size:0.66em;font-weight:800;color:#8a8a8a;"
-                f"letter-spacing:0.03em;margin:10px 0 2px;'>{text}</div>")
+        # Fixed height so section headers line up across cards too
+        return (f"<div style='height:26px;display:flex;align-items:center;font-size:0.66em;"
+                f"font-weight:800;color:#8a8a8a;letter-spacing:0.03em;margin-top:6px;'>{text}</div>")
 
-    # Cards: render in reverse rank order so rank1 is rightmost (Streamlit LTR columns)
-    n_visible = max(1, len(ranked_order))
-    cols = st.columns(n_visible)
-    for col_idx, (rank, track_id, score, empty_age, preservation, husn) in enumerate(reversed(ranked_order)):
-        pc = track_pros_cons[track_id]
-        rc = RANK_CFG[rank]
-        is_winner = rank == 1 and has_winner
-        is_resilient, is_preserving, is_healthy = track_health(empty_age, preservation)
-        health = get_health_label(is_resilient, is_preserving)
-        health_bg, health_color = get_health_style(is_resilient, is_preserving)
-        res_color = "#1a7a3a" if empty_age >= check_age else ("#b84c00" if empty_age >= 90 else "#c0392b")
-        res_label = f"גיל {check_age:.0f}+" if empty_age >= check_age else f"גיל {empty_age:.0f}"
+    # -------------------------------------------------------
+    # Executive comparison as ONE aligned table: each metric label appears once
+    # on the right, and every track is a column. Far clearer than repeating the
+    # same labels inside separate cards.
+    # -------------------------------------------------------
+    order = [t for (_rk, t, *_rest) in ranked_order]  # rank order, 1 first
 
-        if rank == 1:
-            shadow = "0 16px 48px rgba(212,168,0,0.35), 0 4px 16px rgba(0,0,0,0.14)"
-            border_top = "5px solid #D4A800"
-            outline = "outline: 3px solid #D4A800; outline-offset: 3px;"
-            if is_winner:
-                _why_tooltip = build_winner_tooltip(
-                    track_id, is_resilient, total_check[track_id], track4_wins_stress
-                )
-                winner_ribbon = (
-                    f"<div style='text-align:center;margin-bottom:10px;'>"
-                    f"<span style='display:inline-block;"
-                    f"background:linear-gradient(135deg,#C8960C,#F0C93A,#C8960C);"
-                    f"color:#fff;padding:5px 20px;border-radius:20px;font-size:0.72em;font-weight:800;"
-                    f"white-space:nowrap;box-shadow:0 4px 12px rgba(200,150,12,0.5);letter-spacing:0.05em;'>"
-                    f"⭐ המסלול המומלץ</span>"
-                    f"<span class='qa-tip' style='color:#B8860B;margin-right:6px;'>ⓘ"
-                    f"<span class='qa-tiptext' style='width:280px;font-size:0.82em;line-height:1.5;'>"
-                    f"<b>למה ניצח?</b><br/>{_why_tooltip}</span></span>"
-                    f"</div>"
-                )
-            else:
-                winner_ribbon = (
-                    f"<div style='text-align:center;margin-bottom:10px;'>"
-                    f"<span style='display:inline-block;background:#B8860B;"
-                    f"color:#fff;padding:4px 18px;border-radius:20px;font-size:0.72em;font-weight:800;"
-                    f"white-space:nowrap;letter-spacing:0.04em;'>"
-                    f"🏆 מקום ראשון</span></div>"
-                )
-        else:
-            shadow = "0 2px 10px rgba(0,0,0,0.07)"
-            border_top = f"4px solid {rc['border']}"
-            outline = ""
-            winner_ribbon = "<div style='height:30px;'></div>"
-
-        # --- Unified card body: sustainability section + wealth section (same rows for every track) ---
-        # Row 1: monthly supplement drawn from the portfolio at retirement
-        draw0 = draw_retire[track_id]
-        if draw0 <= 1:
-            draw_txt = _val("אין צורך", "#1a7a3a")
-        else:
-            draw_txt = _val(f"−{format_shekel(int(draw0))}", "#c0392b")
-
-        # Row 2: age the portfolio starts to erode (peak then decline); None = grows for life
-        er = erosion_age[track_id]
-        if er is None:
-            erode_txt = _val("צומח תמיד", "#1a7a3a")
-        else:
-            erode_txt = _val(f"גיל {er:.0f}", "#b84c00" if er >= 80 else "#c0392b")
-
-        # Row 3: until what age the liquid portfolio suffices, with a track-specific hint
-        pl = portfolio_lasts[track_id]
+    tv = {}
+    for rank, tid, score, empty_age, preservation, husn in ranked_order:
+        is_winner = (rank == 1 and has_winner)
+        is_res, is_pres, _ = track_health(empty_age, preservation)
+        draw0 = draw_retire[tid]
+        draw_txt = _val("אין צורך", "#1a7a3a") if draw0 <= 1 else _val(f"−{format_shekel(int(draw0))}", "#c0392b")
+        er = erosion_age[tid]
+        erode_txt = _val("צומח תמיד", "#1a7a3a") if er is None else _val(f"גיל {er:.0f}", "#b84c00" if er >= 80 else "#c0392b")
+        pl = portfolio_lasts[tid]
         if pl >= 105:
-            lasts_txt = _val("מספיק לכל החיים", "#1a7a3a")
+            lasts_txt = _val("לכל החיים", "#1a7a3a")
         else:
-            if track_id == 4:
-                hint = "נכנסת משכנתה הפוכה"
-            elif track_id in (1, 3, 5):
-                hint = "נשארת רק הקצבה"
-            else:
-                hint = "נגמר הכסף, אין קצבה"
-            lasts_txt = _val(f"גיל {pl:.0f} · {hint}", "#c0392b")
+            hint = "משכנתה הפוכה" if tid == 4 else ("הקצבה נשארת" if tid in (1, 3, 5) else "אין קצבה")
+            lasts_txt = _val(f"גיל {pl:.0f}<br/><span style='font-size:0.8em;'>{hint}</span>", "#c0392b")
+        liab = liab_check[tid]; tax_c = tax_check[tid]; kids_a = kids_asset_check[tid]
+        hbg, hcolor = get_health_style(is_res, is_pres)
+        tv[tid] = {
+            "draw": draw_txt, "erode": erode_txt, "lasts": lasts_txt,
+            "fin": _val(format_shekel(int(fin_check[tid]))),
+            "prop": _val(format_shekel(int(prop_check[tid]))),
+            "liab": _val(f"−{format_shekel(int(liab))}", "#c0392b") if liab > 0 else _val("—", "#aaa"),
+            "tax": _val(f"−{format_shekel(int(tax_c))}", "#c0392b") if tax_c > 0 else _val("—", "#aaa"),
+            "kids": _val(f"+{format_shekel(int(kids_a))}", "#1a7a3a") if kids_a > 0 else _val("—", "#aaa"),
+            "total": _val(format_shekel(int(total_check[tid])), "#1a1a2e"),
+            "health": get_health_label(is_res, is_pres), "hbg": hbg, "hcolor": hcolor,
+            "res": (f"גיל {check_age:.0f}+" if empty_age >= check_age else f"גיל {empty_age:.0f}"),
+            "res_color": "#1a7a3a" if empty_age >= check_age else ("#b84c00" if empty_age >= 90 else "#c0392b"),
+            "is_winner": is_winner, "risk": _val("—", "#aaa"),
+        }
+    if 5 in order and lev_ltv_max > 0:
+        _c, _lbl = (("#1a7a3a", "סביר") if lev_drop_tol >= 0.40 else
+                    ("#b07800", "זהירות") if lev_drop_tol >= 0.25 else ("#a83232", "משחק באש"))
+        _mc = f" · מכירה כפויה {lev_mc_prob*100:.0f}%" if lev_mc_prob is not None else ""
+        tv[5]["risk"] = (f"<span style='color:{_c};font-weight:800;'>{_lbl}</span>"
+                         f"<br/><span style='font-size:0.8em;color:{_c};'>מינוף {lev_ltv_max*100:.0f}% · סופג נפילה {lev_drop_tol*100:.0f}%{_mc}</span>")
 
-        liab = liab_check[track_id]
-        liab_txt = _val(f"−{format_shekel(int(liab))}", "#c0392b") if liab > 0 else _val("—", "#aaa")
-        tax_c = tax_check[track_id]
-        tax_txt = _val(f"−{format_shekel(int(tax_c))}", "#c0392b") if tax_c > 0 else _val("—", "#aaa")
-        kids_a = kids_asset_check[track_id]
-        kids_txt = _val(f"+{format_shekel(int(kids_a))}", "#1a7a3a") if kids_a > 0 else _val("—", "#aaa")
+    def _hdr(tid):
+        rc = RANK_CFG[rank_for_track[tid]]; d = tv[tid]
+        top = "⭐ המסלול המומלץ" if d["is_winner"] else f"{rc['badge']} {rc['label']}"
+        return (f"<div style='flex:1;background:{rc['th_bg']};border-top:4px solid {rc['border']};"
+                f"border-radius:10px 10px 0 0;padding:8px 6px;text-align:center;'>"
+                f"<div style='font-size:0.66em;font-weight:800;color:{rc['rank_color']};'>{top}</div>"
+                f"<div style='font-size:0.8em;font-weight:800;color:#1a1a2e;margin:4px 0;line-height:1.25;'>{TRACK_NAMES[tid]}</div>"
+                f"<div><span style='font-size:0.68em;font-weight:700;padding:1px 8px;border-radius:12px;background:{d['hbg']};color:{d['hcolor']};'>{d['health']}</span></div>"
+                f"<div style='font-size:0.66em;color:{d['res_color']};font-weight:700;margin-top:3px;'>⏳ מחזיק עד {d['res']}</div>"
+                f"</div>")
 
-        body = (
-            _section_title("💸 קיימות התיק")
-            + _card_row("השלמה חודשית מהתיק בפרישה", draw_txt)
-            + _card_row("גיל תחילת שחיקת התיק", erode_txt)
-            + _card_row("עד איזה גיל התיק מספיק", lasts_txt)
-            + _section_title(f"🏦 הון בגיל {check_age:.0f}")
-            + _card_row("💰 תיק פיננסי", _val(format_shekel(int(fin_check[track_id]))))
-            + _card_row("🏠 שווי נדל\"ן", _val(format_shekel(int(prop_check[track_id]))))
-            + _card_row("➖ הלוואות והתחייבויות", liab_txt)
-            + _card_row("🧾 מס שבח עתידי", tax_txt)
-            + _card_row("🎁 עזרה לילדים (נכס משפחתי)", kids_txt)
-            + _card_row("📊 סך נכסים", _val(format_shekel(int(total_check[track_id]))), strong=True, top_border=True)
-        )
-        # Track-specific extras go BELOW the shared rows, so every card's rows
-        # stay aligned line-to-line across the columns.
-        if track_id == 4 and rm_track4_not_viable:
-            body = body + (
-                "<div style='background:#fdecea;border:1px solid #e0a099;border-radius:6px;"
-                "padding:6px 8px;margin-top:8px;color:#a83232;font-weight:700;font-size:0.72em;text-align:center;'>"
-                "🚫 מסלול לא קביל — אין מספיק כסף לכסות את הגרעון</div>"
-            )
+    def _row(label, key, strong=False):
+        cells = "".join(
+            f"<div style='flex:1;background:{RANK_CFG[rank_for_track[t]]['col_bg']};border:1px solid #eee;"
+            f"padding:7px 6px;text-align:center;font-size:0.86em;font-weight:{'800' if strong else '600'};"
+            f"line-height:1.2;display:flex;align-items:center;justify-content:center;'>{tv[t].get(key, '—')}</div>"
+            for t in order)
+        return (f"<div style='display:flex;direction:rtl;gap:3px;margin-bottom:3px;'>"
+                f"<div style='flex:1.35;padding:7px 10px;background:#f8f9fc;border:1px solid #eee;"
+                f"border-right:3px solid #d0d4e8;text-align:right;font-size:0.76em;font-weight:600;color:#333;"
+                f"display:flex;align-items:center;{'font-weight:800;background:#eef0f7;' if strong else ''}'>{label}</div>{cells}</div>")
 
-        # Leverage risk gauge — appended below the shared rows on the leverage card
-        if track_id == 5 and lev_ltv_max > 0:
-            if lev_drop_tol >= 0.40:
-                _rk_bg, _rk_fg, _rk_label = "#e8f8ee", "#1a7a3a", "סביר"
-            elif lev_drop_tol >= 0.25:
-                _rk_bg, _rk_fg, _rk_label = "#fff8e1", "#b07800", "זהירות"
-            else:
-                _rk_bg, _rk_fg, _rk_label = "#fdecea", "#a83232", "משחק באש"
-            _buf = f"{lev_buffer_years:.0f} שנים" if lev_buffer_years else "—"
-            _mc = ""
-            if lev_mc_prob is not None:
-                _mc = f"<br/>🎲 סיכון מכירה כפויה (מונטה קרלו): <b>{lev_mc_prob*100:.0f}%</b>"
-            gauge = (
-                f"<div style='background:{_rk_bg};border-radius:6px;padding:6px 8px;margin-top:8px;"
-                f"color:{_rk_fg};font-size:0.68em;text-align:center;line-height:1.5;'>"
-                f"<b>⚖️ מד סיכון מינוף · {_rk_label}</b><br/>"
-                f"מינוף {lev_ltv_max*100:.0f}% מהתיק · השוק יכול ליפול {lev_drop_tol*100:.0f}% "
-                f"לפני דרישת ביטחונות · כרית מזומן {_buf}{_mc}</div>"
-            )
-            body = body + gauge
+    def _sec(text):
+        return (f"<div style='direction:rtl;text-align:right;font-size:0.72em;font-weight:800;"
+                f"color:#8a8a8a;margin:10px 0 3px;padding-right:4px;'>{text}</div>")
 
-        inner_card = (
-            f"<div style='background:{rc['bg']};border-top:{border_top};border-radius:12px;"
-            f"padding:14px 14px 14px 14px;box-shadow:{shadow};{outline}font-family:sans-serif;"
-            f"direction:rtl;text-align:right;height:100%;display:flex;flex-direction:column;justify-content:space-between;'>"
-            f"<div>"
-            f"{winner_ribbon}"
-            f"<div style='text-align:center;margin-bottom:6px;font-size:1.7em;line-height:1;'>{rc['badge']}</div>"
-            f"<div style='text-align:center;font-size:0.72em;font-weight:700;color:{rc['rank_color']};margin-bottom:8px;letter-spacing:0.04em;'>{rc['label']}</div>"
-            f"<div style='text-align:center;font-size:0.92em;font-weight:700;color:#1a1a2e;margin-bottom:10px;line-height:1.35;'>{pc['name']}</div>"
-            f"<div style='text-align:center;margin-bottom:10px;'>"
-            f"<span style='display:inline-block;font-size:0.78em;font-weight:600;padding:2px 10px;border-radius:20px;"
-            f"background:{health_bg};color:{health_color};'>{health}"
-            f" <span class='qa-tip'>ⓘ<span class='qa-tiptext'>"
-            f"🟢 חסין = התיק מחזיק עד גיל {check_age:.0f} ושומר על 90%+ מההון (כולל ערך קצבה). "
-            f"🟡 מחזיק = מחזיק עד גיל {check_age:.0f} אך נשחק מתחת ל-90%. "
-            f"🔴 נשחק = התיק הנזיל עלול להיגמר לפני גיל {check_age:.0f}."
-            f"</span></span></span></div>"
-            f"<div style='text-align:center;font-size:0.74em;color:{res_color};font-weight:700;margin-bottom:4px;'>"
-            f"⏳ מחזיק עד {res_label}</div>"
-            f"</div>"
-            f"<div style='border-top:1px solid #e8e8e8;padding-top:6px;'>"
-            + body
-            + f"</div></div>"
-        )
+    html = ["<div style='direction:rtl;font-family:sans-serif;'>"]
+    html.append("<div style='display:flex;direction:rtl;gap:3px;margin-bottom:4px;'>")
+    html.append("<div style='flex:1.35;'></div>")
+    html += [_hdr(t) for t in order]
+    html.append("</div>")
+    html.append(_sec("💸 קיימות התיק"))
+    html.append(_row("השלמה חודשית מהתיק בפרישה", "draw"))
+    html.append(_row("גיל תחילת שחיקת התיק", "erode"))
+    html.append(_row("עד איזה גיל התיק מספיק", "lasts"))
+    html.append(_sec(f"🏦 הון בגיל {check_age:.0f}"))
+    html.append(_row("💰 תיק פיננסי", "fin"))
+    html.append(_row('🏠 שווי נדל"ן', "prop"))
+    html.append(_row("➖ הלוואות והתחייבויות", "liab"))
+    html.append(_row("🧾 מס שבח עתידי", "tax"))
+    html.append(_row("🎁 עזרה לילדים (נכס משפחתי)", "kids"))
+    html.append(_row("📊 סך נכסים", "total", strong=True))
+    if 5 in order and lev_ltv_max > 0:
+        html.append(_sec("⚖️ סיכון מינוף (מונטה קרלו)"))
+        html.append(_row("רמת סיכון", "risk"))
+    html.append("</div>")
+    st.markdown("".join(html), unsafe_allow_html=True)
 
-        card_html = (
-            f"<div style='height:100%;'>"
-            f"{inner_card}"
-            f"</div>"
-        )
+    if track4_wins_stress is not None and 4 in order and rm_track4_not_viable:
+        st.warning("🚫 מסלול השכירות אינו קביל — אין מספיק כסף לכסות את הגרעון עד הגיל הנבדק.")
 
-        with cols[col_idx]:
-            st.markdown(card_html, unsafe_allow_html=True)
-            with st.expander("יתרונות וסיכונים"):
-                st.markdown(f"<span style='color:#1a7a3a;'>✅ {pc['pro1']}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#1a7a3a;'>✅ {pc['pro2']}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#b84c00;'>⚠️ {pc['con1']}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#b84c00;'>⚠️ {pc['con2']}</span>", unsafe_allow_html=True)
-
+    # Pros & cons per track, collapsed below the table
     st.markdown("<br/>", unsafe_allow_html=True)
+    _pc_cols = st.columns(len(order))
+    for _i, _t in enumerate(order):
+        _pc = track_pros_cons[_t]
+        with _pc_cols[_i]:
+            with st.expander(f"{_pc['name']} — יתרונות וסיכונים"):
+                st.markdown(f"<span style='color:#1a7a3a;'>✅ {_pc['pro1']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#1a7a3a;'>✅ {_pc['pro2']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#b84c00;'>⚠️ {_pc['con1']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#b84c00;'>⚠️ {_pc['con2']}</span>", unsafe_allow_html=True)
 
     # -------------------------------------------------------
     # Table helper — st.columns(4) aligned under cards
