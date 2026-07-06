@@ -380,11 +380,19 @@ def render_qa_section(results, user_inputs):
                             3: start_total_123, 4: start_total_4}
 
     # sa_100: stress-adjusted net worth at age 100 — primary ranking metric
+    # Kids-help returns as a growing family asset in the sell-and-invest tracks
+    # (1-3), where the gift is actually made and compounds in the children's
+    # hands. It is counted both in the ranking metric below and in the cards.
+    _kids_help = float(wealth.get("kids_help", 0.0))
+    _kids_growth = float(wealth.get("kids_help_growth", 0.05))
+    _kids_grown = _kids_help * (1 + _kids_growth) ** max(0.0, check_age - start_age)
+    kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0}
+
     sa_100 = {
-        1: b190_100 + _pension_100_st + _prop_100_own_st + emergency_fund,
-        2: b25_100  + _prop_100_own_st + emergency_fund,
-        3: bh_100   + _pension_100_st + _prop_100_own_st + emergency_fund,
-        4: br_100   + max(0.0, _prop_100_r_st * 0.85 - 500_000 - _rm_debt_100_st),
+        1: b190_100 + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[1],
+        2: b25_100  + _prop_100_own_st + emergency_fund + kids_asset_check[2],
+        3: bh_100   + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[3],
+        4: br_100   + max(0.0, _prop_100_r_st * 0.85 - 500_000 - _rm_debt_100_st) + kids_asset_check[4],
     }
 
     husn_190 = empty_190 >= check_age
@@ -619,15 +627,7 @@ def render_qa_section(results, user_inputs):
                    3: property_value_check, 4: rental_prop_check}
     liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check}
 
-    # Kids-help returns as a growing family asset — only in the sell-and-invest
-    # tracks (1-3), where the money was actually gifted and compounds in the
-    # children's hands. Track 4 keeps the property, so no gift is made there.
-    _kids_help = float(wealth.get("kids_help", 0.0))
-    _kids_growth = float(wealth.get("kids_help_growth", 0.05))
-    _kids_years = max(0.0, check_age - start_age)
-    _kids_grown = _kids_help * (1 + _kids_growth) ** _kids_years
-    kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0}
-
+    # kids_asset_check was computed above (also feeds the ranking metric sa_100)
     total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] + kids_asset_check[t]
                    for t in (1, 2, 3, 4)}
 
