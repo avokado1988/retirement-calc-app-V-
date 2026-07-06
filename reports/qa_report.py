@@ -941,6 +941,22 @@ def render_qa_section(results, user_inputs):
                 f"<br/><span style='color:#c0392b;font-size:0.72em;'>גירעון תזרימי משכירות<br/>"
                 f"({withdrawal_pct:.1f}% שיעור משיכה מהתיק)</span>")
 
+    # Track 5 (leverage) figures for the detail tables
+    blev_r = float(row_retire.get("צבירה מסלול מינוף", 0.0))
+    loan_debt_r = float(row_retire.get("הלוואת בלון — יתרת חוב", 0.0))
+    nn_lev_r, nn_lev_c = nn_190_r, nn_190_c
+    pct_lev_r = wpct(nn_lev_r, blev_r)
+    pct_lev_c = wpct(nn_lev_c, blev_c)
+    tw_lev_r = blev_r + pension_asset_retire + property_value_retire + emergency_fund - loan_debt_r
+    tw_lev_c = blev_c + pension_asset_check + property_value_check + emergency_fund - loan_debt_c
+    inherit_lev_r = blev_r + pension_asset_retire - loan_debt_r
+    inherit_lev_c = blev_c + pension_asset_check - loan_debt_c
+    recovery_lev = find_recovery_age("צבירה מסלול מינוף") if "צבירה מסלול מינוף" in df_full.columns else "—"
+    peak_lev = find_peak_age("צבירה מסלול מינוף") if "צבירה מסלול מינוף" in df_full.columns else "—"
+    _df_lev_empty = df_full[(df_full.get("צבירה מסלול מינוף", 1) <= 0) & (df_full["גיל"] <= check_age)] if "צבירה מסלול מינוף" in df_full.columns else df_full.iloc[0:0]
+    cum_deficit_lev = float((_df_lev_empty["הוצאה נומינלית"] - _df_lev_empty["הכנסה נומינלית"] - _df_lev_empty["הכנסה מקצבה מזערית"]).clip(lower=0).sum())
+    months_deficit_lev = len(_df_lev_empty)
+
     t1_cols = {
         "190 + קצבה מזערית": {
             "הכנסות חודשיות":  format_shekel(int(base_income_retire + pension_retire)),
@@ -993,6 +1009,18 @@ def render_qa_section(results, user_inputs):
             "שווי נדלן":       format_shekel(rm_equity_retire),  # net equity (property minus RM loan)
             "חוק 400":         "<span style='color:#888;'>לא רלוונטי<br/>(מבחן תזרים)</span>",
             "קרן חירום":       wrap_html_style(emer(nn_rent_r), get_emergency_style(emer(nn_rent_r))) if nn_rent_r > 0 else "<span style='color:#1a7a3a;'>לא נדרש</span>",
+        },
+        "מינוף (הלוואת בלון)": {
+            "הכנסות חודשיות":  format_shekel(int(base_income_retire + pension_retire)),
+            "הוצאות חודשיות":  format_shekel(int(exp_retire)),
+            "הון כולל":        fmt_with_pension_note(inherit_lev_r, pension_asset_retire),
+            "משיכה / תזרים":   fmt_cashflow(nn_lev_r),
+            "קצב משיכה":       wrap_html_style(f"{pct_lev_r:.2f}%", get_withdrawal_style(pct_lev_r)),
+            "סך נכסים":        format_shekel(tw_lev_r),
+            "תיק נזיל":        format_shekel(blev_r),
+            "שווי נדלן":       format_shekel(property_value_retire),
+            "חוק 400":         wrap_html_style(rule400(blev_r, nn_lev_r), get_400_rule_style(rule400(blev_r, nn_lev_r))),
+            "קרן חירום":       wrap_html_style(emer(nn_lev_r), get_emergency_style(emer(nn_lev_r))),
         },
     }
 
@@ -1142,6 +1170,24 @@ def render_qa_section(results, user_inputs):
                 format_shekel(int(rm_total_interest)) if rm_enabled_flag and rm_total_interest
                 else "<span style='color:#aaa;'>—</span>"
             ),
+        },
+        "מינוף (הלוואת בלון)": {
+            "הכנסות חודשיות": format_shekel(int(base_income_check + pension_check)),
+            "הוצאות חודשיות": format_shekel(int(exp_check)),
+            "משיכה / תזרים": fmt_cashflow(nn_lev_c),
+            "גירעון מצטבר":  fmt_cum_deficit(cum_deficit_lev, months_deficit_lev),
+            "עד איזה גיל הכסף מחזיק?": fmt_lifespan(empty_lev),
+            "שימור הון":    fmt_preservation(preservation_ratio[5]),
+            "הון כולל":     fmt_with_delta(inherit_lev_c, baseline_capital, pension_component=int(pension_asset_check)),
+            "תיק נזיל":     format_shekel(blev_c),
+            "שווי נדלן":    format_shekel(property_value_check),
+            "סך נכסים":     format_shekel(tw_lev_c),
+            "קצב משיכה":    wrap_html_style(f"{pct_lev_c:.2f}%", get_withdrawal_style(pct_lev_c)),
+            "גיל התאוששות": recovery_lev,
+            "גיל היפוך":    peak_lev,
+            "משכנתה הפוכה": "<span style='color:#aaa;'>—</span>",
+            "הון עצמי RM בגיל נבדק": "<span style='color:#aaa;'>—</span>",
+            "סה\"כ ריבית RM": "<span style='color:#aaa;'>—</span>",
         },
     }
 
