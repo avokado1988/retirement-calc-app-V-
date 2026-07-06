@@ -36,7 +36,7 @@ DEFAULTS = {
     "rent_paid_monthly": 12500,
     "rent_paid_growth_rate": 0.035,
     "rental_tax_rate": 0.1,
-    "maintenance_early_pct": 0.06,
+    "maintenance_early_pct": 0.05,
     "maintenance_late_pct": 0.1,
     "rm_annual_rate": 0.06,
     "rm_savings_floor": 100000,
