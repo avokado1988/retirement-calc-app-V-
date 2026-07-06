@@ -141,6 +141,8 @@ def render_qa_section(results, user_inputs):
     b25_c = float(row_check["צבירה מסלול ריאלי"])
     bh_c = float(row_check["צבירה מסלול היברידי"])
     br_c = float(row_check["צבירה מסלול שכירות"])
+    blev_c = float(row_check.get("צבירה מסלול מינוף", 0.0))
+    loan_debt_c = float(row_check.get("הלוואת בלון — יתרת חוב", 0.0))
 
     rent_paid_c = float(row_check.get("הוצאת שכירות", 0.0))
     net_rental_c = float(row_check.get("הכנסת שכירות נטו", 0.0))
@@ -183,6 +185,8 @@ def render_qa_section(results, user_inputs):
     b25_100  = float(row_100["צבירה מסלול ריאלי"])
     bh_100   = float(row_100["צבירה מסלול היברידי"])
     br_100   = float(row_100["צבירה מסלול שכירות"])
+    blev_100 = float(row_100.get("צבירה מסלול מינוף", 0.0))
+    loan_debt_100 = float(row_100.get("הלוואת בלון — יתרת חוב", 0.0))
 
     # -------------------------------------------------------
     # Scans: resiliency and recovery ages
@@ -214,6 +218,7 @@ def render_qa_section(results, user_inputs):
     empty_190 = find_empty_age("צבירה תיקון 190")
     empty_25 = find_empty_age("צבירה מסלול ריאלי")
     empty_h = find_empty_age("צבירה מסלול היברידי")
+    empty_lev = find_empty_age("צבירה מסלול מינוף") if "צבירה מסלול מינוף" in df_full.columns else 120.0
     # Track 4: the automatic RM floors the liquid portfolio, so it "never empties"
     # by balance alone. Its true failure point is the first month the RM could
     # NOT cover the deficit (LTV cap hit) — that is when the plan actually breaks.
@@ -409,19 +414,21 @@ def render_qa_section(results, user_inputs):
     _kids_help = float(wealth.get("kids_help", 0.0))
     _kids_growth = float(wealth.get("kids_help_growth", 0.05))
     _kids_grown = _kids_help * (1 + _kids_growth) ** max(0.0, check_age - start_age)
-    kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0}
+    kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0, 5: _kids_grown}
 
     sa_100 = {
         1: b190_100 + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[1],
         2: b25_100  + _prop_100_own_st + emergency_fund + kids_asset_check[2],
         3: bh_100   + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[3],
         4: br_100   + max(0.0, _prop_100_r_st - _rm_debt_100_st - property_tax_100) + kids_asset_check[4],
+        5: blev_100 + _pension_100_st + _prop_100_own_st + emergency_fund - loan_debt_100 + kids_asset_check[5],
     }
 
     husn_190 = empty_190 >= check_age
     husn_25  = empty_25  >= check_age
     husn_h   = empty_h   >= check_age
     husn_r   = empty_r   >= check_age
+    husn_lev = empty_lev >= check_age
 
     # Ranking metric: stress-adjusted net worth at age 100 (contest reference age).
     # Pension tracks (1, 3) get a +1 tie-break — guaranteed income continues past 100.
@@ -430,6 +437,7 @@ def render_qa_section(results, user_inputs):
         2: sa_100[2],
         3: sa_100[3] + 1,
         4: sa_100[4],
+        5: sa_100[5] + 1,
     }
 
 
@@ -462,11 +470,18 @@ def render_qa_section(results, user_inputs):
             "con1": 'הון נזיל קטן מאוד — כמעט כל הכסף כלוא בנדל"ן',
             "con2": "שוכר לא תמיד מגיע — תיקונים, ריקנות, ועד בית בגיל מבוגר",
         },
+        5: {
+            "name": "מינוף (הלוואת בלון)",
+            "pro1": "התיק מתחיל גדול — כל כסף הדירה נשאר מושקע ועובד בשוק",
+            "pro2": "ארביטראז׳ — התיק צומח מהר יותר מריבית ההלוואה",
+            "con1": "מסוכן — מפולת עלולה להפעיל דרישת ביטחונות ומכירה בהפסד",
+            "con2": "החוב תופח בריבית דריבית ונפרע מהעיזבון",
+        },
     }
 
-    visible_tracks = set(user_inputs.get("visible_tracks", [1, 2, 3, 4]))
+    visible_tracks = set(user_inputs.get("visible_tracks", [1, 2, 3, 4, 5]))
     if not visible_tracks:  # safety: show all if none selected
-        visible_tracks = {1, 2, 3, 4}
+        visible_tracks = {1, 2, 3, 4, 5}
 
     # Preservation measured at the checked age and fair to pension tracks:
     # each track keeps its remaining annuity value (pension tracks) and is
@@ -474,20 +489,23 @@ def render_qa_section(results, user_inputs):
     _start_cap = {
         1: baseline_capital, 2: baseline_capital, 3: baseline_capital,
         4: (net_for_rental_start if net_for_rental_start > 0 else baseline_capital),
+        5: baseline_capital,
     }
-    _econ_check = {1: inherit_190_c, 2: b25_c, 3: inherit_h_c, 4: br_c}
+    # Track 5 economic value is net of the loan debt (leverage nets to zero at start)
+    _econ_check = {1: inherit_190_c, 2: b25_c, 3: inherit_h_c, 4: br_c,
+                   5: blev_c + pension_asset_check - loan_debt_c}
     preservation_ratio = {
         t: (_econ_check[t] / _start_cap[t]) if _start_cap[t] > 0 else 0.0
-        for t in (1, 2, 3, 4)
+        for t in (1, 2, 3, 4, 5)
     }
 
     # 4th field = preservation ratio at check_age (drives the health badge).
-    # Total net worth for display/comparison comes from total_100_by_track.
     tracks_exec = [
         (1, _sa_rank[1], empty_190, preservation_ratio[1], husn_190),
         (2, _sa_rank[2], empty_25,  preservation_ratio[2], husn_25),
         (3, _sa_rank[3], empty_h,   preservation_ratio[3], husn_h),
         (4, _sa_rank[4], empty_r,   preservation_ratio[4], husn_r),
+        (5, _sa_rank[5], empty_lev, preservation_ratio[5], husn_lev),
     ]
 
     # -------------------------------------------------------
@@ -520,6 +538,7 @@ def render_qa_section(results, user_inputs):
         2: "25% ריאלי (ללא קצבה)",
         3: "25% ריאלי + קצבה מזערית",
         4: "שכירות",
+        5: "מינוף (הלוואת בלון)",
     }
 
     # -------------------------------------------------------
@@ -561,6 +580,9 @@ def render_qa_section(results, user_inputs):
         4: {"bg": "#FFF5F5", "border": "#E53935", "th_bg": "#FFE0E0", "col_bg": "#FFF5F5",
             "badge": "4️⃣", "label": "מקום רביעי", "rank_color": "#c0392b",
             "health_bg": "#fde8e8", "health_color": "#b71c1c"},
+        5: {"bg": "#F5F3FA", "border": "#7E57C2", "th_bg": "#E9E3F5", "col_bg": "#F5F3FA",
+            "badge": "5️⃣", "label": "מקום חמישי", "rank_color": "#5E35B1",
+            "health_bg": "#eee8f7", "health_color": "#5E35B1"},
     }
 
     def get_health_label(is_resilient, is_preserving):
@@ -591,7 +613,7 @@ def render_qa_section(results, user_inputs):
         st.warning(f"⚠️ אין מסלול מומלץ — אף מסלול אינו מחזיק את התיק עד גיל {check_age:.0f}. בכל המסלולים החיסכון עלול להיגמר לפני כן. מומלץ לבחון מחדש את ההכנסות וההוצאות, או להוריד את גיל הבדיקה אם הוא גבוה מהמתוכנן.")
 
     # Tracks that include a guaranteed pension (190 and hybrid)
-    PENSION_TRACKS = {1, 3}
+    PENSION_TRACKS = {1, 3, 5}
 
     def build_winner_tooltip(track_id, is_resilient, total_100_val, stress_passed):
         reasons = []
@@ -615,6 +637,7 @@ def render_qa_section(results, user_inputs):
         2: df_full[_inc_col] - df_full[_exp_col],
         3: df_full[_inc_col] + df_full[_pen_col] - df_full[_exp_col],
         4: df_full["תזרים נטו שכירות"],
+        5: df_full[_inc_col] + df_full[_pen_col] - df_full[_exp_col],
     }
     _post_ret = df_full[df_full["גיל"] >= retire_age]
     def _cf_at_retire(s):
@@ -624,12 +647,13 @@ def render_qa_section(results, user_inputs):
         if len(neg) == 0:
             return None, 0.0
         return float(df_full.loc[neg[0], "גיל"]), float(s.loc[neg[0]])
-    cf_retire = {t: _cf_at_retire(_cf_series[t]) for t in (1, 2, 3, 4)}
-    cf_flip = {t: _cf_flip(_cf_series[t]) for t in (1, 2, 3, 4)}
+    cf_retire = {t: _cf_at_retire(_cf_series[t]) for t in (1, 2, 3, 4, 5)}
+    cf_flip = {t: _cf_flip(_cf_series[t]) for t in (1, 2, 3, 4, 5)}
 
     # Sustainability per track: monthly draw at retirement, erosion-start age, life-of-portfolio
     _bal_col = {1: "צבירה תיקון 190", 2: "צבירה מסלול ריאלי",
-                3: "צבירה מסלול היברידי", 4: "צבירה מסלול שכירות"}
+                3: "צבירה מסלול היברידי", 4: "צבירה מסלול שכירות",
+                5: "צבירה מסלול מינוף"}
     _sim_end_age = float(df_full["גיל"].max())
     def _erosion_age(t):
         """Age the portfolio balance peaks and starts declining. None = grows for life."""
@@ -638,24 +662,34 @@ def render_qa_section(results, user_inputs):
             return None
         pk_age = float(df_full.loc[post[_bal_col[t]].idxmax(), "גיל"])
         return None if pk_age >= _sim_end_age - 0.5 else pk_age
-    draw_retire = {t: max(0.0, -cf_retire[t]) for t in (1, 2, 3, 4)}
-    erosion_age = {t: _erosion_age(t) for t in (1, 2, 3, 4)}
-    # Age the liquid portfolio stops sufficing: depletion for 1-3, RM activation for 4
+    draw_retire = {t: max(0.0, -cf_retire[t]) for t in (1, 2, 3, 4, 5)}
+    erosion_age = {t: _erosion_age(t) for t in (1, 2, 3, 4, 5)}
+    # Age the liquid portfolio stops sufficing: depletion for 1-3/5, RM activation for 4
     portfolio_lasts = {1: empty_190, 2: empty_25, 3: empty_h,
-                       4: (rm_activation_age if rm_activation_age is not None else 120.0)}
+                       4: (rm_activation_age if rm_activation_age is not None else 120.0),
+                       5: empty_lev}
 
     # Wealth at the checked age — liquid portfolio, property (gross), liabilities
-    fin_check   = {1: b190_c, 2: b25_c, 3: bh_c, 4: br_c}
+    fin_check   = {1: b190_c, 2: b25_c, 3: bh_c, 4: br_c, 5: blev_c}
     prop_check  = {1: property_value_check, 2: property_value_check,
-                   3: property_value_check, 4: rental_prop_check}
-    liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check}
+                   3: property_value_check, 4: rental_prop_check, 5: property_value_check}
+    liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check, 5: loan_debt_c}
 
     # Future betterment tax on the kept property — a real liability, track 4 only
-    tax_check = {1: 0.0, 2: 0.0, 3: 0.0, 4: property_tax_check}
+    # (track 5 sold the old property, tax already paid via net_sale)
+    tax_check = {1: 0.0, 2: 0.0, 3: 0.0, 4: property_tax_check, 5: 0.0}
 
     # kids_asset_check was computed above (also feeds the ranking metric sa_100)
     total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
-                   for t in (1, 2, 3, 4)}
+                   for t in (1, 2, 3, 4, 5)}
+
+    # --- Track 5 leverage risk gauge: LTV, margin-call cushion, cash buffer ---
+    _CALL_LTV = 0.85  # lender liquidates when loan/portfolio crosses this
+    _ltv_col = df_full[df_full["גיל"] >= retire_age]["מינוף — LTV"] if "מינוף — LTV" in df_full.columns else None
+    lev_ltv_max = float(_ltv_col.max()) if _ltv_col is not None and not _ltv_col.empty else 0.0
+    lev_drop_tol = max(0.0, 1 - lev_ltv_max / _CALL_LTV) if lev_ltv_max > 0 else 1.0
+    _lev_draw_year = draw_retire.get(5, 0.0) * 12
+    lev_buffer_years = (emergency_fund / _lev_draw_year) if _lev_draw_year > 100 else None
 
     def _card_row(label, value_html, strong=False, top_border=False):
         bt = "border-top:1px solid #e0e0e0;" if top_border else ""
@@ -744,7 +778,7 @@ def render_qa_section(results, user_inputs):
         else:
             if track_id == 4:
                 hint = "נכנסת משכנתה הפוכה"
-            elif track_id in (1, 3):
+            elif track_id in (1, 3, 5):
                 hint = "נשארת רק הקצבה"
             else:
                 hint = "נגמר הכסף, אין קצבה"
@@ -776,6 +810,24 @@ def render_qa_section(results, user_inputs):
                 "padding:6px 8px;margin-bottom:6px;color:#a83232;font-weight:700;font-size:0.72em;text-align:center;'>"
                 "🚫 מסלול לא קביל — אין מספיק כסף לכסות את הגרעון</div>"
             ) + body
+
+        # Leverage risk gauge — only on the leverage card
+        if track_id == 5 and lev_ltv_max > 0:
+            if lev_drop_tol >= 0.40:
+                _rk_bg, _rk_fg, _rk_label = "#e8f8ee", "#1a7a3a", "סביר"
+            elif lev_drop_tol >= 0.25:
+                _rk_bg, _rk_fg, _rk_label = "#fff8e1", "#b07800", "זהירות"
+            else:
+                _rk_bg, _rk_fg, _rk_label = "#fdecea", "#a83232", "משחק באש"
+            _buf = f"{lev_buffer_years:.0f} שנים" if lev_buffer_years else "—"
+            gauge = (
+                f"<div style='background:{_rk_bg};border-radius:6px;padding:6px 8px;margin-bottom:6px;"
+                f"color:{_rk_fg};font-size:0.68em;text-align:center;line-height:1.5;'>"
+                f"<b>⚖️ מד סיכון מינוף · {_rk_label}</b><br/>"
+                f"מינוף {lev_ltv_max*100:.0f}% מהתיק · השוק יכול ליפול {lev_drop_tol*100:.0f}% "
+                f"לפני דרישת ביטחונות · כרית מזומן {_buf}</div>"
+            )
+            body = gauge + body
 
         inner_card = (
             f"<div style='background:{rc['bg']};border-top:{border_top};border-radius:12px;"
