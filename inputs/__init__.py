@@ -7,6 +7,7 @@ from .incomes import render_incomes_inputs
 from .amendment_190 import render_190_inputs
 from .real_tax_25 import render_track2_inputs, render_track3_inputs
 from .rental import render_rental_inputs
+from .leverage import render_leverage_inputs
 
 def render_all_sidebar_inputs():
     """מנהל את תפריט הצד ומחזיר אובייקט קלטים מאוחד"""
@@ -69,8 +70,14 @@ def render_all_sidebar_inputs():
         _start_age = float(inputs_dict["timeline"].get("start_age", 67.0))
         inputs_dict["rental"] = render_rental_inputs(inputs_dict["wealth"], _check_age, _start_age)
 
+    _net_for_190 = inputs_dict["amendment_190"].get("net_for_190", 0)
+    _new_apt = float(inputs_dict["wealth"].get("new_apartment_cost", 5500000))
+    with st.sidebar.expander("9. מסלול 5 — מינוף (הלוואת בלון)", expanded=False):
+        _show_5 = st.checkbox("הצג מסלול זה בהשוואה", value=(5 in DEFAULTS["visible_tracks"]), key="show_track_5")
+        inputs_dict["leverage"] = render_leverage_inputs(_net_for_190, _new_apt)
+
     inputs_dict["visible_tracks"] = [
-        t for t, show in [(1, _show_1), (2, _show_2), (3, _show_3), (4, _show_4)] if show
+        t for t, show in [(1, _show_1), (2, _show_2), (3, _show_3), (4, _show_4), (5, _show_5)] if show
     ]
 
     return inputs_dict

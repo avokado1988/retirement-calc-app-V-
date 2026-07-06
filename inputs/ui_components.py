@@ -40,7 +40,9 @@ DEFAULTS = {
     "maintenance_late_pct": 0.1,
     "rm_annual_rate": 0.06,
     "rm_savings_floor": 100000,
-    "visible_tracks": [1, 4],
+    "loan_amount": 2000000,
+    "loan_annual_rate": 0.0525,
+    "visible_tracks": [1, 4, 5],
 }
 
 # ==============================================================================
