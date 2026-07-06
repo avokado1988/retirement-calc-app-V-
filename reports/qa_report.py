@@ -532,6 +532,8 @@ def render_qa_section(results, user_inputs):
         if tid in visible_tracks
     ]
     rank_for_track = {tid: rank for rank, tid, *_ in ranked_order}
+    # Display order: keep the rank badges, but always show rental (track 4) last
+    ranked_order = [r for r in ranked_order if r[1] != 4] + [r for r in ranked_order if r[1] == 4]
 
     TRACK_NAMES = {
         1: "190 + קצבה מזערית",
@@ -775,7 +777,22 @@ def render_qa_section(results, user_inputs):
                 f"<div style='font-size:0.66em;color:{d['res_color']};font-weight:700;margin-top:3px;'>⏳ מחזיק עד {d['res']}</div>"
                 f"</div>")
 
+    _ROW_TIPS = {
+        "draw": "כמה מושכים מהתיק כל חודש בפרישה כדי לכסות את הפער בין ההוצאות להכנסות (ביטוח לאומי + קצבה). אפס = ההכנסות מכסות ואין צורך למשוך.",
+        "erode": "הגיל שבו יתרת התיק מפסיקה לגדול ומתחילה לרדת — כשהמשיכה עוברת את התשואה. 'צומח תמיד' = התשואה מכסה את המשיכות לכל אורך החיים.",
+        "lasts": "הגיל שבו התיק הנזיל נגמר. אם לא נגמר עד 105 — 'לכל החיים'. בשכירות זה הגיל שבו נכנסת משכנתה הפוכה; במינוף — הגיל שבו התיק אוזל.",
+        "fin": "יתרת התיק הנזיל (כספי ההשקעה) בגיל הנבדק, אחרי משיכות, מס ותשואה.",
+        "prop": "שווי הנכס בגיל הנבדק, לפי הצמדת עליית הערך השנתית. בשכירות — הדירה המושכרת; בשאר — דירת המגורים.",
+        "liab": "חוב בגיל הנבדק: משכנתה הפוכה (שכירות) או הלוואת בלון (מינוף), כולל ריבית שנצברה. מנוכה מסך הנכסים.",
+        "tax": "אומדן מס שבח עתידי על מכירת הנכס (רלוונטי למסלול שכירות ששומר את הנכס). מכויל להערכת יועץ המס ומנוכה מסך הנכסים.",
+        "kids": "העזרה לילדים, שצמחה עד הגיל הנבדק בקצב שהוגדר. נספרת כנכס משפחתי רק במסלולי המכירה (הכסף עובד בידי הילדים).",
+        "total": "השורה התחתונה: תיק פיננסי + שווי נדל\"ן − הלוואות − מס שבח + עזרה לילדים, הכל בגיל הנבדק. זה מה שנשאר למשפחה.",
+        "risk": "מונטה קרלו: ההסתברות לדרישת ביטחונות (מכירת התיק בהפסד) לאורך התקופה, לפי גודל ההלוואה ותנודתיות השוק.",
+    }
+
     def _row(label, key, strong=False):
+        tip = _ROW_TIPS.get(key, "")
+        tip_html = f" <span class='qa-tip'>ⓘ<span class='qa-tiptext'>{tip}</span></span>" if tip else ""
         cells = "".join(
             f"<div style='flex:1;background:{RANK_CFG[rank_for_track[t]]['col_bg']};border:1px solid #eee;"
             f"padding:7px 6px;text-align:center;font-size:0.86em;font-weight:{'800' if strong else '600'};"
@@ -784,7 +801,7 @@ def render_qa_section(results, user_inputs):
         return (f"<div style='display:flex;direction:rtl;gap:3px;margin-bottom:3px;'>"
                 f"<div style='flex:1.35;padding:7px 10px;background:#f8f9fc;border:1px solid #eee;"
                 f"border-right:3px solid #d0d4e8;text-align:right;font-size:0.76em;font-weight:600;color:#333;"
-                f"display:flex;align-items:center;{'font-weight:800;background:#eef0f7;' if strong else ''}'>{label}</div>{cells}</div>")
+                f"display:flex;align-items:center;{'font-weight:800;background:#eef0f7;' if strong else ''}'>{label}{tip_html}</div>{cells}</div>")
 
     def _sec(text):
         return (f"<div style='direction:rtl;text-align:right;font-size:0.72em;font-weight:800;"
