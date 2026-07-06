@@ -362,6 +362,25 @@ def render_qa_section(results, user_inputs):
     property_tax_100   = _tax_k * _betterment_raw(_prop_100_r_st, _now_year + max(0, int(round(100 - start_age))))
     property_tax_check = _tax_k * _betterment_raw(rental_prop_check, _now_year + int(round(check_age - start_age)))
 
+    # Every scenario leaves the mother with ONE apartment, so all properties get
+    # the single-home exemption. The new apartment (tracks 1,2,3,5) is bought now
+    # (base = purchase price, no pre-2014 benefit): tax the real gain only on the
+    # value above the single-home ceiling. The penthouse (track 4) gets the SAME
+    # exemption, but it is calibrated to the advisor's ~₪900k figure (which already
+    # bakes the exemption in) and carries a far bigger gain — bought 2006 for ₪2M.
+    _new_apt_base = float(wealth.get("new_apartment_cost", 5500000))
+    _SINGLE_HOME_CEILING = 5_000_000
+
+    def _residence_tax(value, sale_year):
+        yh = max(1, sale_year - _now_year)  # bought at retirement (now)
+        base_idx = _new_apt_base * (1 + _tax_infl) ** yh
+        real_gain = max(0.0, value - base_idx)
+        excess_frac = max(0.0, (value - _SINGLE_HOME_CEILING) / value) if value > 0 else 0.0
+        return _TAX_RATE * real_gain * excess_frac
+
+    new_home_tax_100   = _residence_tax(_prop_100_own_st, _now_year + max(0, int(round(100 - start_age))))
+    new_home_tax_check = _residence_tax(property_value_check, _now_year + int(round(check_age - start_age)))
+
     S4_stress   = br_100 + (_prop_100_r_st - property_tax_100) - _rm_debt_100_st
     S190_stress = b190_100 + _pension_100_st + _prop_100_own_st * 1.05 + emergency_fund
     delta_stress = S4_stress - S190_stress
@@ -417,11 +436,11 @@ def render_qa_section(results, user_inputs):
     kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0, 5: _kids_grown}
 
     sa_100 = {
-        1: b190_100 + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[1],
-        2: b25_100  + _prop_100_own_st + emergency_fund + kids_asset_check[2],
-        3: bh_100   + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[3],
+        1: b190_100 + _pension_100_st + _prop_100_own_st - new_home_tax_100 + emergency_fund + kids_asset_check[1],
+        2: b25_100  + _prop_100_own_st - new_home_tax_100 + emergency_fund + kids_asset_check[2],
+        3: bh_100   + _pension_100_st + _prop_100_own_st - new_home_tax_100 + emergency_fund + kids_asset_check[3],
         4: br_100   + max(0.0, _prop_100_r_st - _rm_debt_100_st - property_tax_100) + kids_asset_check[4],
-        5: blev_100 + _pension_100_st + _prop_100_own_st + emergency_fund - loan_debt_100 + kids_asset_check[5],
+        5: blev_100 + _pension_100_st + _prop_100_own_st - new_home_tax_100 + emergency_fund - loan_debt_100 + kids_asset_check[5],
     }
 
     husn_190 = empty_190 >= check_age
@@ -679,7 +698,8 @@ def render_qa_section(results, user_inputs):
 
     # Future betterment tax on the kept property — a real liability, track 4 only
     # (track 5 sold the old property, tax already paid via net_sale)
-    tax_check = {1: 0.0, 2: 0.0, 3: 0.0, 4: property_tax_check, 5: 0.0}
+    tax_check = {1: new_home_tax_check, 2: new_home_tax_check, 3: new_home_tax_check,
+                 4: property_tax_check, 5: new_home_tax_check}
 
     # kids_asset_check was computed above (also feeds the ranking metric sa_100)
     total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
@@ -916,6 +936,9 @@ def render_qa_section(results, user_inputs):
                 f"({withdrawal_pct:.1f}% שיעור משיכה מהתיק)</span>")
 
     # Track 5 (leverage) figures for the detail tables
+    # Kids-help as a family asset already at retirement (grown to retire_age),
+    # counted in the age-65 total for the sell tracks (1,2,3,5), not rental.
+    kids_asset_retire = _kids_help * (1 + _kids_growth) ** max(0.0, retire_age - start_age)
     blev_r = float(row_retire.get("צבירה מסלול מינוף", 0.0))
     loan_debt_r = float(row_retire.get("הלוואת בלון — יתרת חוב", 0.0))
     nn_lev_r, nn_lev_c = nn_190_r, nn_190_c
@@ -938,7 +961,7 @@ def render_qa_section(results, user_inputs):
             "הון כולל":        fmt_with_pension_note(inherit_190_r, pension_asset_retire),
             "משיכה / תזרים":   fmt_cashflow(nn_190_r),
             "קצב משיכה":       wrap_html_style(f"{pct_190_r:.2f}%", get_withdrawal_style(pct_190_r)),
-            "סך נכסים":        format_shekel(tw_190_r),
+            "סך נכסים":        format_shekel(int(tw_190_r + kids_asset_retire)),
             "תיק נזיל":        format_shekel(b190_r),
             "שווי נדלן":       format_shekel(property_value_retire),
             "חוק 400":         wrap_html_style(rule400(b190_r, nn_190_r), get_400_rule_style(rule400(b190_r, nn_190_r))),
@@ -950,7 +973,7 @@ def render_qa_section(results, user_inputs):
             "הון כולל":        format_shekel(b25_r),
             "משיכה / תזרים":   fmt_cashflow(nn_25_r),
             "קצב משיכה":       wrap_html_style(f"{pct_25_r:.2f}%", get_withdrawal_style(pct_25_r)),
-            "סך נכסים":        format_shekel(tw_25_r),
+            "סך נכסים":        format_shekel(int(tw_25_r + kids_asset_retire)),
             "תיק נזיל":        format_shekel(b25_r),
             "שווי נדלן":       format_shekel(property_value_retire),
             "חוק 400":         wrap_html_style(rule400(b25_r, nn_25_r), get_400_rule_style(rule400(b25_r, nn_25_r))),
@@ -962,7 +985,7 @@ def render_qa_section(results, user_inputs):
             "הון כולל":        fmt_with_pension_note(inherit_h_r, pension_asset_retire),
             "משיכה / תזרים":   fmt_cashflow(nn_h_r),
             "קצב משיכה":       wrap_html_style(f"{pct_h_r:.2f}%", get_withdrawal_style(pct_h_r)),
-            "סך נכסים":        format_shekel(tw_h_r),
+            "סך נכסים":        format_shekel(int(tw_h_r + kids_asset_retire)),
             "תיק נזיל":        format_shekel(bh_r),
             "שווי נדלן":       format_shekel(property_value_retire),
             "חוק 400":         wrap_html_style(rule400(bh_r, nn_h_r), get_400_rule_style(rule400(bh_r, nn_h_r))),
@@ -990,7 +1013,7 @@ def render_qa_section(results, user_inputs):
             "הון כולל":        fmt_with_pension_note(inherit_lev_r, pension_asset_retire),
             "משיכה / תזרים":   fmt_cashflow(nn_lev_r),
             "קצב משיכה":       wrap_html_style(f"{pct_lev_r:.2f}%", get_withdrawal_style(pct_lev_r)),
-            "סך נכסים":        format_shekel(tw_lev_r),
+            "סך נכסים":        format_shekel(int(tw_lev_r + kids_asset_retire)),
             "תיק נזיל":        format_shekel(blev_r),
             "שווי נדלן":       format_shekel(property_value_retire),
             "חוק 400":         wrap_html_style(rule400(blev_r, nn_lev_r), get_400_rule_style(rule400(blev_r, nn_lev_r))),
