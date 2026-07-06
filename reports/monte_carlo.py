@@ -164,8 +164,8 @@ def render_monte_carlo(user_inputs):
     verdict = "נמוך 🟢" if p_cur < 0.05 else ("בינוני 🟡" if p_cur < 0.15 else "גבוה 🔴")
     st.markdown(
         f"<div style='direction:rtl;text-align:center;font-size:0.95em;line-height:1.7;'>"
-        f"עם הלוואה של <b>{_f(cur_loan)}</b>, בכ-<b>{p_cur*100:.0f}%</b> מתרחישי השוק "
-        f"התיק יירד מספיק כדי שהבנק יאלץ אותך למכור מניות בהפסד — סיכון <b>{verdict}</b>.<br/>"
+        f"עם הלוואה של <b>{_f(cur_loan)}</b>, יש סיכוי של <b>{p_cur*100:.0f}%</b> שבמהלך שנות "
+        f"הפרישה השוק יירד מספיק והבנק יאלץ אותך למכור מניות בהפסד — סיכון <b>{verdict}</b>.<br/>"
         f"הירושה הצפויה: <b>{_f(cur['nw_p50'])}</b> · בתרחיש גרוע {_f(cur['nw_p10'])} · בתרחיש טוב {_f(cur['nw_p90'])}."
         f"</div>", unsafe_allow_html=True)
 
