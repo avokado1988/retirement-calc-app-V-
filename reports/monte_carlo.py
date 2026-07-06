@@ -130,44 +130,97 @@ def render_monte_carlo(user_inputs):
     def _f(x):
         return f"₪{x:,.0f}"
 
+    import plotly.graph_objects as go
+
+    # --- Current chosen loan → gauge + one-sentence verdict ---
+    cur_loan = max(0.0, min(float(lev.get("loan_amount", 0)), home0))
+    cur = _simulate(net_for_190 + cur_loan, cur_loan, loan_rate, mean_ret, std_ret, years,
+                    annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv)
+    p_cur = cur["p_margin_call"]
+
+    gauge = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=round(p_cur * 100),
+        number={"suffix": "%", "font": {"size": 46}},
+        title={"text": f"סיכוי שתיאלץ למכור את התיק בהפסד<br>(הלוואה {_f(cur_loan)})", "font": {"size": 15}},
+        gauge={
+            "axis": {"range": [0, 100], "ticksuffix": "%"},
+            "bar": {"color": "#2c3e50", "thickness": 0.25},
+            "steps": [
+                {"range": [0, 5], "color": "#c8f0d0"},
+                {"range": [5, 15], "color": "#ffe7a3"},
+                {"range": [15, 100], "color": "#f5b3b3"},
+            ],
+        },
+    ))
+    gauge.update_layout(height=270, margin=dict(t=70, b=10, l=40, r=40), font=dict(family="sans-serif"))
+    st.plotly_chart(gauge, use_container_width=True)
+
+    verdict = "נמוך 🟢" if p_cur < 0.05 else ("בינוני 🟡" if p_cur < 0.15 else "גבוה 🔴")
+    st.markdown(
+        f"<div style='direction:rtl;text-align:center;font-size:0.95em;line-height:1.7;'>"
+        f"עם הלוואה של <b>{_f(cur_loan)}</b>, בסבירות של <b>{p_cur*100:.0f}%</b> "
+        f"מפולת בשוק תאלץ אותך למכור את התיק בהפסד — סיכון <b>{verdict}</b>.<br/>"
+        f"הירושה הצפויה: <b>{_f(cur['nw_p50'])}</b> · בתרחיש גרוע {_f(cur['nw_p10'])} · בתרחיש טוב {_f(cur['nw_p90'])}."
+        f"</div>", unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- Risk vs reward across loan sizes ---
+    st.markdown("<div style='direction:rtl;text-align:right;font-weight:700;font-size:1.0em;'>📈 סיכון מול תשואה — לפי גודל ההלוואה</div>", unsafe_allow_html=True)
+    loans   = [r[0] for r in rows]
+    risks   = [r[2]["p_margin_call"] * 100 for r in rows]
+    medians = [r[2]["nw_p50"] / 1e6 for r in rows]
+    rr = go.Figure()
+    rr.add_trace(go.Scatter(x=loans, y=medians, name="ירושה חציונית (₪ מיליון)", mode="lines+markers",
+                            line=dict(color="#1a7a3a", width=3), yaxis="y1"))
+    rr.add_trace(go.Scatter(x=loans, y=risks, name="סיכון מכירה כפויה (%)", mode="lines+markers",
+                            line=dict(color="#c0392b", width=3, dash="dot"), yaxis="y2"))
+    rr.update_layout(
+        height=340, template="plotly_white", font=dict(family="sans-serif"),
+        margin=dict(t=20, b=40, l=10, r=10),
+        xaxis=dict(title="סכום ההלוואה (₪)", autorange="reversed"),
+        yaxis=dict(title="ירושה (₪ מיליון)", side="right"),
+        yaxis2=dict(title="סיכון %", overlaying="y", side="left", range=[0, 100]),
+        legend=dict(orientation="h", y=1.18, x=1, xanchor="right"),
+    )
+    st.plotly_chart(rr, use_container_width=True)
+    st.caption("ככל שההלוואה גדלה — הקו הירוק (ירושה) עולה, אבל גם הקו האדום (סיכון) עולה. "
+               "רמת המינוף ההגיונית היא הגבוהה ביותר שבה הקו האדום עדיין נמוך.")
+
+    # --- Full numeric table (collapsed) ---
     header = (
         "<tr style='background:#eef0f7;'>"
         "<th style='padding:6px 10px;text-align:right;'>הלוואה</th>"
         "<th style='padding:6px 10px;'>מינוף התחלתי</th>"
         "<th style='padding:6px 10px;'>סיכון דרישת ביטחונות</th>"
-        "<th style='padding:6px 10px;'>ירושה — תרחיש גרוע (10%)</th>"
+        "<th style='padding:6px 10px;'>ירושה — גרוע (10%)</th>"
         "<th style='padding:6px 10px;'>ירושה — חציון</th>"
-        "<th style='padding:6px 10px;'>ירושה — תרחיש טוב (90%)</th></tr>"
+        "<th style='padding:6px 10px;'>ירושה — טוב (90%)</th></tr>"
     )
     body = ""
     for loan, ltv0, res in rows:
         p = res["p_margin_call"]
-        risk_color = "#1a7a3a" if p < 0.05 else ("#b07800" if p < 0.15 else "#a83232")
-        risk_label = "נמוך" if p < 0.05 else ("בינוני" if p < 0.15 else "גבוה")
+        rc = "#1a7a3a" if p < 0.05 else ("#b07800" if p < 0.15 else "#a83232")
+        rl = "נמוך" if p < 0.05 else ("בינוני" if p < 0.15 else "גבוה")
         loan_lbl = "ללא מינוף (מסלול 1)" if loan == 0 else _f(loan)
         body += (
             f"<tr style='border-bottom:1px solid #eee;'>"
             f"<td style='padding:6px 10px;text-align:right;font-weight:600;'>{loan_lbl}</td>"
             f"<td style='padding:6px 10px;text-align:center;'>{ltv0:.0f}%</td>"
-            f"<td style='padding:6px 10px;text-align:center;color:{risk_color};font-weight:700;'>{p*100:.0f}% ({risk_label})</td>"
+            f"<td style='padding:6px 10px;text-align:center;color:{rc};font-weight:700;'>{p*100:.0f}% ({rl})</td>"
             f"<td style='padding:6px 10px;text-align:center;color:#a83232;'>{_f(res['nw_p10'])}</td>"
             f"<td style='padding:6px 10px;text-align:center;font-weight:700;'>{_f(res['nw_p50'])}</td>"
             f"<td style='padding:6px 10px;text-align:center;color:#1a7a3a;'>{_f(res['nw_p90'])}</td></tr>"
         )
-
-    st.markdown(
-        f"<div style='direction:rtl;font-family:sans-serif;text-align:right;'>"
-        f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.85em;direction:rtl;text-align:right;'>"
-        f"<thead>{header}</thead><tbody>{body}</tbody></table></div>",
-        unsafe_allow_html=True
-    )
-
-    st.caption(
-        f"על בסיס {years} שנים, תשואה ממוצעת {mean_ret*100:.1f}%, ריבית הלוואה {loan_rate*100:.2f}%, "
-        f"וכרית מזומן {_f(buffer_cash)}. סיכון דרישת ביטחונות = אחוז התרחישים שבהם השוק צנח מספיק "
-        f"כדי לחצות את סף המכירה ולאלץ מכירת התיק."
-    )
-    st.info(
-        "💡 איך קוראים את זה: חפש את שורת ההלוואה הגבוהה ביותר שבה הסיכון עדיין נמוך (ירוק). "
-        "זו רמת המינוף ההגיונית. מעליה, הירושה הצפויה גדלה אך הסיכון למכירה כפויה בהפסד קופץ."
-    )
+    with st.expander("📋 פירוט מספרי מלא"):
+        st.markdown(
+            f"<div style='direction:rtl;font-family:sans-serif;text-align:right;'>"
+            f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.85em;direction:rtl;text-align:right;'>"
+            f"<thead>{header}</thead><tbody>{body}</tbody></table></div>",
+            unsafe_allow_html=True)
+        st.caption(
+            f"על בסיס {years} שנים, תשואה ממוצעת {mean_ret*100:.1f}%, ריבית הלוואה {loan_rate*100:.2f}%, "
+            f"וכרית מזומן {_f(buffer_cash)}. סיכון דרישת ביטחונות = אחוז התרחישים שבהם השוק צנח מספיק "
+            f"כדי לחצות את סף המכירה ולאלץ מכירת התיק."
+        )
