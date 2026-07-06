@@ -27,7 +27,7 @@ DEFAULTS = {
     "new_apartment_cost": 5500000,
     "kids_help": 1000000,
     "kids_help_growth": 0.05,
-    "emergency_fund": 250000,
+    "emergency_fund": 300000,
     "property_appreciation": 0.03,
     "rental_property_value": 10800000,
     "rental_property_appreciation": 0.023,
@@ -40,7 +40,7 @@ DEFAULTS = {
     "maintenance_late_pct": 0.1,
     "rm_annual_rate": 0.06,
     "rm_savings_floor": 100000,
-    "visible_tracks": [1, 3, 4],
+    "visible_tracks": [1, 4],
 }
 
 # ==============================================================================
