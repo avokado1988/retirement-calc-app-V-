@@ -559,45 +559,6 @@ def render_qa_section(results, user_inputs):
     if not has_winner:
         st.warning(f"⚠️ אין מסלול מומלץ — אף מסלול אינו מחזיק את התיק עד גיל {check_age:.0f}. בכל המסלולים החיסכון עלול להיגמר לפני כן. מומלץ לבחון מחדש את ההכנסות וההוצאות, או להוריד את גיל הבדיקה אם הוא גבוה מהמתוכנן.")
 
-    # Reference TOTAL net worth for relative comparison (apples-to-apples:
-    # every card compares total wealth, not liquid portfolio).
-    winner_total = total_100_by_track[ranked_order[0][1]]
-    winner_name = TRACK_NAMES[ranked_order[0][1]]
-    second_total = total_100_by_track[ranked_order[1][1]] if len(ranked_order) > 1 else winner_total
-    second_name = TRACK_NAMES[ranked_order[1][1]] if len(ranked_order) > 1 else ""
-
-    def delta_block(label, val, ref):
-        """Build a comparison line: amount + percent vs a reference."""
-        if ref is None or ref == 0:
-            return ""
-        d = val - ref
-        pct = d / abs(ref) * 100
-        arr = "↑" if d >= 0 else "↓"
-        sgn = "+" if d >= 0 else "−"
-        col = "#1a7a3a" if d >= 0 else "#c0392b"
-        return (
-            f"<div style='font-size:0.62em;color:#999;margin-top:6px;'>{label}</div>"
-            f"<div style='font-size:0.74em;color:{col};font-weight:600;'>"
-            f"{arr} {format_shekel(abs(int(d)))}{sgn} | {abs(pct):.1f}%{sgn}</div>"
-        )
-
-    def build_why_line(is_winner, is_resilient, is_preserving, empty_age, has_pension):
-        """Short plain-language reason, tailored to the scenario."""
-        if is_winner:
-            if is_preserving:
-                base = f"נשאר איתן עד גיל {check_age:.0f} ומעבר, שומר על ההון שלך גם אם החיים יתארכו או השוק ישתנה"
-            else:
-                base = f"מחזיק את התיק עד גיל {check_age:.0f}, אך ההון נשחק לאורך הדרך — פחות טווח ביטחון אם החיים יתארכו"
-            if has_pension:
-                base += ", ומבטיח לך קצבה חודשית לכל החיים"
-            return "✓ " + base
-        if not is_resilient:
-            reason = "בלי קצבה מובטחת התיק " if not has_pension else "התיק "
-            return f"✗ {reason}מתחיל להישחק ועלול להיגמר סביב גיל {empty_age:.0f} — חסר רשת ביטחון עד גיל {check_age:.0f}"
-        if not is_preserving:
-            return f"△ מחזיק עד גיל {check_age:.0f}, אך ההון נשחק משמעותית — פחות טווח ביטחון אם דברים ישתנו"
-        return "△ מסלול בריא, אך משאיר פחות הון מהמסלול המומלץ"
-
     # Tracks that include a guaranteed pension (190 and hybrid)
     PENSION_TRACKS = {1, 3}
 
@@ -613,37 +574,6 @@ def render_qa_section(results, user_inputs):
             reasons.append("△ ניצח על בסיס שווי כולל — בתרחיש לחץ מסלול 190 קרוב")
         reasons.append(f"✓ הכי הרבה נכסים בגיל {check_age:.0f} — {format_shekel(int(total_100_val))}")
         return "<br/>".join(reasons)
-
-    # -------------------------------------------------------
-    # Rental card bottom — cash flow test
-    # -------------------------------------------------------
-    def _build_rental_card_bottom(cf, flip_age, always_positive, starts_negative, why_line, why_color, wealth_breakdown_html,
-                                   flip_is_pre_rm=False, rm_start_val=72.0, flip_recovers=False):
-        cf_color = "#1a7a3a" if cf >= 0 else "#c0392b"
-        cf_sign  = "+" if cf >= 0 else ""
-
-        if starts_negative:
-            flip_html = "<div style='font-size:0.72em;color:#c0392b;font-weight:700;margin-top:4px;'>⚠️ מתחיל בגירעון מיום הפרישה</div>"
-        elif always_positive:
-            flip_html = "<div style='font-size:0.72em;color:#1a7a3a;font-weight:700;margin-top:4px;'>✅ תזרים חיובי לכל האורך</div>"
-        elif flip_is_pre_rm and flip_recovers:
-            flip_html = (
-                f"<div style='font-size:0.72em;color:#b07800;font-weight:700;margin-top:4px;'>"
-                f"⏱️ גרעון זמני גיל {flip_age:.0f}–{rm_start_val:.0f} (מכוסה מחסכונות; RM מאזן מגיל {rm_start_val:.0f})</div>"
-            )
-        else:
-            flip_html = f"<div style='font-size:0.72em;color:#b84c00;font-weight:700;margin-top:4px;'>⚠️ הופך שלילי בגיל {flip_age:.0f}</div>"
-
-        return (
-            f"<div style='font-size:0.65em;color:#999;margin-bottom:2px;'>💸 תזרים חודשי נטו בפרישה</div>"
-            f"<div style='font-size:1.0em;font-weight:800;color:{cf_color};margin-bottom:0;'>{cf_sign}{format_shekel(int(cf))}</div>"
-            f"{flip_html}"
-            f"<div style='border-top:1px solid #e8e8e8;margin-top:8px;padding-top:8px;'>"
-            f"{wealth_breakdown_html}"
-            f"</div>"
-            f"<div style='font-size:0.72em;color:{why_color};font-weight:600;margin-top:10px;line-height:1.4;"
-            f"border-top:1px dashed #ddd;padding-top:8px;'>{why_line}</div>"
-        )
 
     # -------------------------------------------------------
     # Per-track figures for the unified executive cards
@@ -1148,7 +1078,7 @@ def render_qa_section(results, user_inputs):
     ]
     ACTUARIAL_ROWS_2 = [
         ("גיל מיצוי חסכונות — עד מתי הכסף מחזיק?", "עד איזה גיל הכסף מחזיק?"),
-        ("כמה מההון ההתחלתי נשמר בגיל 100?",         "שימור הון"),
+        ("כמה מההון ההתחלתי נשמר בגיל הנבדק?",       "שימור הון"),
         ("מה קצב המשיכה בגיל זה?",                  "קצב משיכה"),
         ("מאיזה גיל התיק עולה מעל ההון הראשוני?",    "גיל התאוששות"),
         ("גיל גרעון שכירות / גיל היפוך תיק",         "גיל היפוך"),

@@ -80,7 +80,7 @@ def run_simulation(user_inputs):
     retirement_inflation_factor = 1.0
     rental_income_factor = 1.0
     rent_paid_factor = 1.0
-    total_months = int((105 - start_age) * 12) + 1
+    total_months = max(1, int((105 - start_age) * 12) + 1)
 
     for m in range(total_months):
         current_age = start_age + (m / 12.0)
@@ -110,8 +110,9 @@ def run_simulation(user_inputs):
 
         # --- Income ---
         curr_work_inc = work_income_static if current_age < work_end_age else 0.0
-        # NI is indexed via inflation_factor from start_age, but paid only from retirement_age
-        ni_indexed = ni_base * inflation_factor if current_age >= retirement_age else 0.0
+        # NI is entered as a retirement-age figure, so it is indexed only from
+        # retirement (same treatment as the pension), and paid from retirement.
+        ni_indexed = ni_base * retirement_inflation_factor if current_age >= retirement_age else 0.0
         p_indexed = pension_base * retirement_inflation_factor if current_age >= retirement_age else 0.0
         base_income = curr_work_inc + ni_indexed
 
@@ -218,11 +219,13 @@ def run_simulation(user_inputs):
                 rm_annuity_this_month = min(remaining, room)
                 rm_uncovered_this_month = remaining - rm_annuity_this_month
 
-        # Accrue the reverse-mortgage debt (new draw + compounding interest)
+        # Accrue the reverse-mortgage debt (new draw + compounding interest).
+        # Non-recourse: the estate can never owe more than the property is worth,
+        # so cap the debt at the property value (the bank absorbs any excess).
         if rm_loan_balance > 0 or rm_annuity_this_month > 0:
             rm_loan_balance = (rm_loan_balance + rm_annuity_this_month) * (1 + rm_rate_monthly)
+            rm_loan_balance = min(rm_loan_balance, property_rental_value)
             rm_interest_this_month = rm_loan_balance - (rm_loan_balance / (1 + rm_rate_monthly))
-        rm_ltv = (rm_loan_balance / property_rental_value) if property_rental_value > 0 else 0.0
 
         # --- Apply returns (after withdrawals, before next month) ---
         if balance_190 > 0: balance_190 *= (1 + r_monthly_190)
