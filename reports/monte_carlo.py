@@ -162,12 +162,23 @@ def render_monte_carlo(user_inputs):
     st.plotly_chart(gauge, use_container_width=True)
 
     verdict = "נמוך 🟢" if p_cur < 0.05 else ("בינוני 🟡" if p_cur < 0.15 else "גבוה 🔴")
-    st.markdown(
-        f"<div style='direction:rtl;text-align:center;font-size:0.95em;line-height:1.7;'>"
-        f"עם הלוואה של <b>{_f(cur_loan)}</b>, יש סיכוי של <b>{p_cur*100:.0f}%</b> שבמהלך שנות "
-        f"הפרישה השוק יירד מספיק והבנק יאלץ אותך למכור מניות בהפסד — סיכון <b>{verdict}</b>.<br/>"
-        f"הירושה הצפויה: <b>{_f(cur['nw_p50'])}</b> · בתרחיש גרוע {_f(cur['nw_p10'])} · בתרחיש טוב {_f(cur['nw_p90'])}."
-        f"</div>", unsafe_allow_html=True)
+    _bg = "#eafaf0" if p_cur < 0.05 else ("#fff7e0" if p_cur < 0.15 else "#fdecea")
+    _bd = "#8fd3a8" if p_cur < 0.05 else ("#f0c86a" if p_cur < 0.15 else "#e0a099")
+    _ltv0 = cur_loan / (net_for_190 + cur_loan) if (net_for_190 + cur_loan) > 0 else 0.0
+    drop_needed = max(0.0, 1 - _ltv0 / call_ltv)  # how far the portfolio can fall today before a call
+    loss_impact = max(0.0, cur["nw_p50"] - cur["nw_p10"])
+
+    if cur_loan <= 0:
+        st.success(f"✅ ללא מינוף (הלוואה ₪0) — אין סיכון של מכירה כפויה. הירושה הצפויה: {_f(cur['nw_p50'])}.")
+    else:
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;background:{_bg};border:1px solid {_bd};"
+            f"border-radius:8px;padding:12px 16px;font-size:0.92em;line-height:1.9;'>"
+            f"<div>🎯 <b>מה צריך שיקרה:</b> ירידה של כ-<b>{drop_needed*100:.0f}%</b> בתיק ההשקעות במהלך שנות הפרישה.</div>"
+            f"<div>💥 <b>ההשפעה אם זה קורה:</b> הבנק מוכר לך מניות בשפל ומקבע הפסד — הירושה יורדת מ-<b>{_f(cur['nw_p50'])}</b> (צפוי) לכ-<b>{_f(cur['nw_p10'])}</b> (תרחיש גרוע). פגיעה של כ-{_f(loss_impact)}.</div>"
+            f"<div>🎲 <b>הסיכוי שזה יקרה:</b> <b>{p_cur*100:.0f}%</b> מהתרחישים לאורך הפרישה.</div>"
+            f"<div>⚖️ <b>מסקנה:</b> סיכון <b>{verdict}</b>.</div>"
+            f"</div>", unsafe_allow_html=True)
 
     st.divider()
 
