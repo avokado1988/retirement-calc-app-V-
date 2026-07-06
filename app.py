@@ -17,8 +17,15 @@ if "initialized" not in st.session_state:
                 st.session_state[k] = val_str
     st.session_state["initialized"] = True
 
-_orig_slider = st.slider
-_orig_number_input = st.number_input
+# Capture the REAL widgets only once. Streamlit re-executes this script every
+# rerun and st.slider/number_input mutations persist on the module, so without
+# this guard a rerun would capture the already-patched function → infinite
+# recursion. Storing the originals on the module keeps them stable.
+if not hasattr(st, "_orig_slider_real"):
+    st._orig_slider_real = st.slider
+    st._orig_number_input_real = st.number_input
+_orig_slider = st._orig_slider_real
+_orig_number_input = st._orig_number_input_real
 
 def patched_slider(label, *args, **kwargs):
     widget_key = f"saved_slider_{label}"
@@ -243,10 +250,12 @@ try:
 except Exception:
     qa_tab_label = "🔬 QA — ניתוח מסלולים"
 
-tab4, tab5, tab3, tab2, tab1 = st.tabs(["📋 העתקה מהירה לבדיקות", "🎲 סיכון מונטה קרלו", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
+tab4, tab3, tab2, tab1 = st.tabs(["📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
 
 with tab1:
     render_qa_section(sim_results, display_inputs)
+    st.divider()
+    render_monte_carlo(display_inputs)
 
 with tab2:
     render_charts(sim_results["df_full"], display_inputs)
@@ -301,5 +310,3 @@ with tab3:
 with tab4:
     render_qa_summary_page(sim_results, display_inputs)
 
-with tab5:
-    render_monte_carlo(display_inputs)

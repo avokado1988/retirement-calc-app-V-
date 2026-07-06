@@ -51,6 +51,28 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
     }
 
 
+def margin_call_probability(user_inputs, std_ret=0.12, call_ltv=0.85, n_sims=2000):
+    """Single Monte Carlo run for the CURRENT loan — probability of a margin call.
+    Used to surface a risk figure on the leverage card."""
+    tl = user_inputs.get("timeline", {}); ex = user_inputs.get("expenses", {})
+    w = user_inputs.get("wealth", {}); a190 = user_inputs.get("amendment_190", {})
+    lev = user_inputs.get("leverage", {})
+    years = max(1, int(round(float(tl.get("check_age", 95)) - float(tl.get("start_age", 65)))))
+    loan = float(lev.get("loan_amount", 0))
+    if loan <= 0:
+        return 0.0
+    P0 = float(a190.get("net_for_190", 0)) + loan
+    mean_ret = float(a190.get("annual_return_190", 0.07)) - float(a190.get("management_fee_190", 0.005))
+    monthly_deficit = max(0.0, float(ex.get("current_expenses", 11000))
+                          - float(w.get("national_insurance", 2500))
+                          - float(a190.get("desired_pension", 5306)))
+    res = _simulate(P0, loan, float(lev.get("loan_annual_rate", 0.0525)), mean_ret, std_ret, years,
+                    monthly_deficit * 12, float(ex.get("expected_inflation", 0.023)),
+                    float(w.get("new_apartment_cost", 5500000)), float(w.get("property_appreciation", 0.03)),
+                    float(w.get("emergency_fund", 250000)), 0.02, call_ltv, n_sims=n_sims)
+    return res["p_margin_call"]
+
+
 def render_monte_carlo(user_inputs):
     st.subheader("🎲 ניתוח סיכון — מונטה קרלו למסלול המינוף")
     st.markdown(
@@ -85,10 +107,12 @@ def render_monte_carlo(user_inputs):
 
     c1, c2 = st.columns(2)
     with c1:
-        std_ret = st.slider("תנודתיות שנתית של התיק (סטיית תקן %)", 6.0, 25.0, 12.0, 0.5,
+        std_ret = st.slider("תנודתיות שנתית של התיק (סטיית תקן %)",
+                            min_value=6.0, max_value=25.0, value=12.0, step=0.5,
                             help="תיק סולידי מפוזר סביב 10-12%. מנייתי טהור 18%+.") / 100
     with c2:
-        call_ltv = st.slider("סף מכירה (LTV שבו הבנק מוכר %)", 70.0, 95.0, 85.0, 1.0,
+        call_ltv = st.slider("סף מכירה (LTV שבו הבנק מוכר %)",
+                             min_value=70.0, max_value=95.0, value=85.0, step=1.0,
                              help="מעל שיעור המימון המקסימלי (75%). כשהיחס חוצה אותו — מכירה כפויה.") / 100
 
     home_price = home0

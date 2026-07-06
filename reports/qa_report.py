@@ -690,6 +690,14 @@ def render_qa_section(results, user_inputs):
     lev_drop_tol = max(0.0, 1 - lev_ltv_max / _CALL_LTV) if lev_ltv_max > 0 else 1.0
     _lev_draw_year = draw_retire.get(5, 0.0) * 12
     lev_buffer_years = (emergency_fund / _lev_draw_year) if _lev_draw_year > 100 else None
+    # Monte-Carlo margin-call probability for the current loan (only if track 5 shown)
+    lev_mc_prob = None
+    if 5 in visible_tracks and lev_ltv_max > 0:
+        try:
+            from reports.monte_carlo import margin_call_probability
+            lev_mc_prob = margin_call_probability(user_inputs)
+        except Exception:
+            lev_mc_prob = None
 
     def _card_row(label, value_html, strong=False, top_border=False):
         bt = "border-top:1px solid #e0e0e0;" if top_border else ""
@@ -820,12 +828,15 @@ def render_qa_section(results, user_inputs):
             else:
                 _rk_bg, _rk_fg, _rk_label = "#fdecea", "#a83232", "משחק באש"
             _buf = f"{lev_buffer_years:.0f} שנים" if lev_buffer_years else "—"
+            _mc = ""
+            if lev_mc_prob is not None:
+                _mc = f"<br/>🎲 סיכון מכירה כפויה (מונטה קרלו): <b>{lev_mc_prob*100:.0f}%</b>"
             gauge = (
                 f"<div style='background:{_rk_bg};border-radius:6px;padding:6px 8px;margin-bottom:6px;"
                 f"color:{_rk_fg};font-size:0.68em;text-align:center;line-height:1.5;'>"
                 f"<b>⚖️ מד סיכון מינוף · {_rk_label}</b><br/>"
                 f"מינוף {lev_ltv_max*100:.0f}% מהתיק · השוק יכול ליפול {lev_drop_tol*100:.0f}% "
-                f"לפני דרישת ביטחונות · כרית מזומן {_buf}</div>"
+                f"לפני דרישת ביטחונות · כרית מזומן {_buf}{_mc}</div>"
             )
             body = gauge + body
 
