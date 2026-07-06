@@ -149,8 +149,15 @@ def _render_defaults_block(d):
     lines = ",\n".join(f'    "{k}": {fmt(v)}' for k, v in d.items())
     return "DEFAULTS = {\n" + lines + ",\n}"
 
+_SAVE_MSG = "chore: update DEFAULTS from app save"
+
 def _save_defaults_to_github(ui):
-    """Write the current values into DEFAULTS in inputs/ui_components.py on GitHub."""
+    """Write DEFAULTS into inputs/ui_components.py on GitHub, overwriting the
+    previous save-commit instead of stacking a new one each time.
+
+    Uses the Git Data API: it rebases the new commit onto the first ancestor
+    that is NOT itself a save-commit, then force-updates the branch — so any run
+    of consecutive save-commits collapses into a single one."""
     import base64, re, requests
     try:
         token = st.secrets.get("github_token", "")
@@ -162,27 +169,46 @@ def _save_defaults_to_github(ui):
     repo   = st.secrets.get("github_repo", "retirement-calc-app-V-")
     branch = st.secrets.get("github_branch", "BugFix-July-5-V5")
     path = "inputs/ui_components.py"
-    api = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+    api = f"https://api.github.com/repos/{owner}/{repo}"
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-    r = requests.get(api, headers=headers, params={"ref": branch}, timeout=20)
-    if r.status_code != 200:
-        return False, f"קריאת הקובץ מגיטהאב נכשלה ({r.status_code})."
-    sha = r.json()["sha"]
-    content = base64.b64decode(r.json()["content"]).decode("utf-8")
-    new_block = _render_defaults_block(_build_defaults_dict(ui))
-    new_content, n = re.subn(r"DEFAULTS\s*=\s*\{.*?\n\}", new_block, content, count=1, flags=re.DOTALL)
-    if n == 0:
-        return False, "לא נמצא בלוק DEFAULTS בקובץ."
-    if new_content == content:
-        return True, "אין שינוי — הערכים כבר שמורים בקוד."
-    put = requests.put(api, headers=headers, timeout=20, json={
-        "message": "chore: update DEFAULTS from app save",
-        "content": base64.b64encode(new_content.encode("utf-8")).decode("ascii"),
-        "sha": sha, "branch": branch,
-    })
-    if put.status_code in (200, 201):
-        return True, "נשמר לקוד ונדחף לגיטהאב. האפליקציה תתעדכן אוטומטית תוך כדקה."
-    return False, f"הדחיפה נכשלה ({put.status_code})."
+
+    def _get(url, **kw):  return requests.get(url, headers=headers, timeout=20, **kw)
+    def _post(url, body): return requests.post(url, headers=headers, timeout=20, json=body)
+
+    try:
+        ref = _get(f"{api}/git/ref/heads/{branch}")
+        if ref.status_code != 200:
+            return False, f"קריאת הענף מגיטהאב נכשלה ({ref.status_code})."
+        # Walk back past any consecutive save-commits so they collapse into one
+        base_sha = ref.json()["object"]["sha"]
+        while True:
+            c = _get(f"{api}/git/commits/{base_sha}").json()
+            if c.get("message") == _SAVE_MSG and c.get("parents"):
+                base_sha = c["parents"][0]["sha"]
+            else:
+                break
+        base_tree = _get(f"{api}/git/commits/{base_sha}").json()["tree"]["sha"]
+
+        fc = _get(f"{api}/contents/{path}", params={"ref": base_sha}).json()
+        content = base64.b64decode(fc["content"]).decode("utf-8")
+        new_block = _render_defaults_block(_build_defaults_dict(ui))
+        new_content, n = re.subn(r"DEFAULTS\s*=\s*\{.*?\n\}", new_block, content, count=1, flags=re.DOTALL)
+        if n == 0:
+            return False, "לא נמצא בלוק DEFAULTS בקובץ."
+        head_content = base64.b64decode(_get(f"{api}/contents/{path}", params={"ref": branch}).json()["content"]).decode("utf-8")
+        if new_content == head_content:
+            return True, "אין שינוי — הערכים כבר שמורים בקוד."
+
+        blob = _post(f"{api}/git/blobs", {"content": base64.b64encode(new_content.encode()).decode("ascii"), "encoding": "base64"}).json()["sha"]
+        tree = _post(f"{api}/git/trees", {"base_tree": base_tree, "tree": [{"path": path, "mode": "100644", "type": "blob", "sha": blob}]}).json()["sha"]
+        commit = _post(f"{api}/git/commits", {"message": _SAVE_MSG, "tree": tree, "parents": [base_sha]}).json()["sha"]
+        upd = requests.patch(f"{api}/git/refs/heads/{branch}", headers=headers, timeout=20,
+                             json={"sha": commit, "force": True})
+        if upd.status_code == 200:
+            return True, "נשמר לקוד (דורס את השמירה הקודמת). האפליקציה תתעדכן תוך כדקה."
+        return False, f"עדכון הענף נכשל ({upd.status_code})."
+    except Exception as e:
+        return False, f"שגיאה בשמירה: {type(e).__name__}"
 
 if st.sidebar.button("💾 שמור נתונים אלו כברירת מחדל", use_container_width=True):
     _ok, _msg = _save_defaults_to_github(user_inputs)
