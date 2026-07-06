@@ -334,7 +334,30 @@ def render_qa_section(results, user_inputs):
     _prop_100_r_st    = float(row_100.get("שווי נדלן מסלול 4", rental_property_start))
     _prop_100_own_st  = float(row_100.get("שווי נדלן", property_value_start))
     _pension_100_st   = float(row_100.get("ערך קצבה נותר", 0.0))
-    S4_stress   = br_100 + (_prop_100_r_st * 0.85 - 500_000) - _rm_debt_100_st
+
+    # --- Future betterment tax (מס שבח) on the kept property — track 4 only ---
+    # Behind-the-scenes estimate, no user fields. Calibrated to the owner's
+    # tax-advisor figure: base ₪2M bought 2006, linear pre-2014 exemption, 25%
+    # on the real (inflation-indexed) gain, with a calibration factor so that
+    # today's tax equals the ~₪900k the advisor quoted at today's value.
+    import datetime as _dt
+    _TAX_BASE, _TAX_YEAR, _TAX_ANCHOR, _TAX_RATE, _LINEAR_YEAR = 2_000_000, 2006, 900_000, 0.25, 2014
+    _tax_infl = float(user_inputs.get("expenses", {}).get("expected_inflation", 0.023))
+    _now_year = _dt.datetime.now().year
+
+    def _betterment_raw(value, sale_year):
+        yh = max(1, sale_year - _TAX_YEAR)
+        base_idx = _TAX_BASE * (1 + _tax_infl) ** yh
+        real_gain = max(0.0, value - base_idx)
+        taxable_frac = max(0.0, yh - max(0, _LINEAR_YEAR - _TAX_YEAR)) / yh
+        return _TAX_RATE * real_gain * taxable_frac
+
+    _raw_today = _betterment_raw(rental_property_start, _now_year)
+    _tax_k = (_TAX_ANCHOR / _raw_today) if _raw_today > 0 else 0.0
+    property_tax_100   = _tax_k * _betterment_raw(_prop_100_r_st, _now_year + max(0, int(round(100 - start_age))))
+    property_tax_check = _tax_k * _betterment_raw(rental_prop_check, _now_year + int(round(check_age - start_age)))
+
+    S4_stress   = br_100 + (_prop_100_r_st - property_tax_100) - _rm_debt_100_st
     S190_stress = b190_100 + _pension_100_st + _prop_100_own_st * 1.05 + emergency_fund
     delta_stress = S4_stress - S190_stress
     track4_wins_stress = delta_stress > 0
@@ -392,7 +415,7 @@ def render_qa_section(results, user_inputs):
         1: b190_100 + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[1],
         2: b25_100  + _prop_100_own_st + emergency_fund + kids_asset_check[2],
         3: bh_100   + _pension_100_st + _prop_100_own_st + emergency_fund + kids_asset_check[3],
-        4: br_100   + max(0.0, _prop_100_r_st * 0.85 - 500_000 - _rm_debt_100_st) + kids_asset_check[4],
+        4: br_100   + max(0.0, _prop_100_r_st - _rm_debt_100_st - property_tax_100) + kids_asset_check[4],
     }
 
     husn_190 = empty_190 >= check_age
@@ -627,8 +650,11 @@ def render_qa_section(results, user_inputs):
                    3: property_value_check, 4: rental_prop_check}
     liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check}
 
+    # Future betterment tax on the kept property — a real liability, track 4 only
+    tax_check = {1: 0.0, 2: 0.0, 3: 0.0, 4: property_tax_check}
+
     # kids_asset_check was computed above (also feeds the ranking metric sa_100)
-    total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] + kids_asset_check[t]
+    total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
                    for t in (1, 2, 3, 4)}
 
     def _card_row(label, value_html, strong=False, top_border=False):
@@ -726,6 +752,8 @@ def render_qa_section(results, user_inputs):
 
         liab = liab_check[track_id]
         liab_txt = _val(f"−{format_shekel(int(liab))}", "#c0392b") if liab > 0 else _val("—", "#aaa")
+        tax_c = tax_check[track_id]
+        tax_txt = _val(f"−{format_shekel(int(tax_c))}", "#c0392b") if tax_c > 0 else _val("—", "#aaa")
         kids_a = kids_asset_check[track_id]
         kids_txt = _val(f"+{format_shekel(int(kids_a))}", "#1a7a3a") if kids_a > 0 else _val("—", "#aaa")
 
@@ -738,6 +766,7 @@ def render_qa_section(results, user_inputs):
             + _card_row("💰 תיק פיננסי", _val(format_shekel(int(fin_check[track_id]))))
             + _card_row("🏠 שווי נדל\"ן", _val(format_shekel(int(prop_check[track_id]))))
             + _card_row("➖ הלוואות והתחייבויות", liab_txt)
+            + _card_row("🧾 מס שבח עתידי", tax_txt)
             + _card_row("🎁 עזרה לילדים (נכס משפחתי)", kids_txt)
             + _card_row("📊 סך נכסים", _val(format_shekel(int(total_check[track_id]))), strong=True, top_border=True)
         )
