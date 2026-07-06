@@ -156,8 +156,8 @@ def render_monte_carlo(user_inputs):
         )
 
     st.markdown(
-        f"<div style='direction:rtl;font-family:sans-serif;'>"
-        f"<table style='width:100%;border-collapse:collapse;font-size:0.85em;'>"
+        f"<div style='direction:rtl;font-family:sans-serif;text-align:right;'>"
+        f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.85em;direction:rtl;text-align:right;'>"
         f"<thead>{header}</thead><tbody>{body}</tbody></table></div>",
         unsafe_allow_html=True
     )
