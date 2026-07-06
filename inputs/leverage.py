@@ -13,12 +13,20 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     st.caption("קונים את הדירה בהלוואת בלון כנגד תיק ההשקעות במקום במזומן, כך שכסף הדירה נשאר מושקע.")
     st.caption("מיסוי ותשואה כמו תיקון 190. מחיר הדירה ועליית הערך נלקחים משדה הדירה החדשה.")
 
+    # תקרת מימון 75%. יחס חוב לשווי 75% פירושו שההלוואה לא עוברת פי שלושה מהחלק
+    # הנזיל של התיק (loan / (net_for_190 + loan) <= 0.75  =>  loan <= 3 * net_for_190).
+    # מגבילים גם למחיר הדירה, כי אין צורך ללוות מעבר לעלות הרכישה.
+    MAX_LTV = 0.75
+    cap_by_ltv = MAX_LTV / (1 - MAX_LTV) * net_for_190  # = 3 * net_for_190
+    loan_cap = int(min(new_apartment_cost, cap_by_ltv) // 100000 * 100000)
+    default_loan = min(int(DEFAULTS["loan_amount"]), loan_cap)
+
     loan_amount = compact_number_input(
         "סכום ההלוואה (₪)",
-        value=int(DEFAULTS["loan_amount"]), min_value=0, max_value=int(new_apartment_cost),
+        value=default_loan, min_value=0, max_value=loan_cap,
         step=100000, unit="₪", color=COLOR_RED
     )
-    st.caption(f"מ-0 (זהה למסלול 1, ללא מינוף) ועד מחיר הדירה ({format_shekel(int(new_apartment_cost))}). כל שקל הלוואה נשאר מושקע בתיק.")
+    st.caption(f"מ-0 (זהה למסלול 1, ללא מינוף) ועד תקרת מימון של 75% מהתיק ({format_shekel(loan_cap)}). כל שקל הלוואה נשאר מושקע בתיק.")
 
     loan_annual_rate = compact_number_input(
         "ריבית שנתית על ההלוואה (%)",
@@ -32,7 +40,7 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     ltv = (loan_amount / portfolio * 100) if portfolio > 0 else 0.0
     show_net_summary("תיק מושקע במסלול 5 (מסלול 1 + הלוואה)", portfolio)
     _icon = "🟢" if ltv <= 50 else ("🟡" if ltv <= 65 else "🔴")
-    st.caption(f"{_icon} מינוף: {ltv:.0f}% מהתיק. תקרת מלווה מקובלת כ-75%. ככל שגבוה יותר, מסוכן יותר לדרישת ביטחונות.")
+    st.caption(f"{_icon} מינוף: {ltv:.0f}% מהתיק. השדה חסום בתקרת מימון של 75%, כמקובל אצל מלווים. ככל שקרוב לתקרה, מסוכן יותר לדרישת ביטחונות.")
 
     return {
         "loan_amount": loan_amount,
