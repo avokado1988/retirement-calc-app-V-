@@ -140,6 +140,7 @@ def _build_defaults_dict(ui):
         "maintenance_late_pct": rn.get("maintenance_late_pct", 0.1),
         "rm_annual_rate": 0.06,
         "rm_savings_floor": 100000,
+        "visible_tracks": ui.get("visible_tracks", [1, 2, 3, 4]),
     }
 
 def _render_defaults_block(d):
