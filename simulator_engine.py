@@ -51,6 +51,19 @@ def run_simulation(user_inputs):
     prop_appreciation_monthly = (1 + float(wealth.get("property_appreciation", 0.023))) ** (1/12) - 1
     rental_prop_appreciation_monthly = (1 + float(rental.get("rental_property_appreciation", 0.015))) ** (1/12) - 1
 
+    # Track 5 (leverage): buy the new home with a balloon loan against the
+    # portfolio instead of cash, so the home-money stays invested. Portfolio =
+    # track-1 liquid + loan. Same 190 tax and return as track 1; the home is the
+    # same new apartment. The loan is a real (recourse) debt that compounds and
+    # is settled from the estate — NOT capped like the reverse mortgage.
+    leverage = user_inputs.get("leverage", {})
+    loan_amount = max(0.0, min(float(leverage.get("loan_amount", 0)), property_value))
+    loan_rate_monthly = (1 + float(leverage.get("loan_annual_rate", 0.0525))) ** (1/12) - 1
+    r_monthly_lev = r_monthly_190
+    balance_lev = balance_190 + loan_amount
+    basis_lev = balance_lev
+    loan_balance_lev = loan_amount
+
     # Track 4 rental parameters
     rental_income_base = float(rental.get("rental_income_monthly", 0))
     rent_paid_base = float(rental.get("rent_paid_monthly", 0))
@@ -163,6 +176,20 @@ def run_simulation(user_inputs):
             basis_190 *= (1 - (pull / balance_190))
             balance_190 -= pull
 
+        # --- Track 5: Withdrawal (leverage — same deficit & 190 tax as track 1) ---
+        tax_lev = 0.0
+        if net_needed_190 > 0 and balance_lev > 0:
+            pr_l = max(0.0, (balance_lev - basis_lev) / balance_lev)
+            gross_l = net_needed_190 / (1 - (pr_l * 0.15))
+            pull_l = min(gross_l, balance_lev)
+            tax_lev = pull_l * pr_l * 0.15
+            basis_lev *= (1 - (pull_l / balance_lev))
+            balance_lev -= pull_l
+        # Balloon loan: interest accrues to the debt, no monthly payment
+        rm_interest_lev = loan_balance_lev * loan_rate_monthly
+        if loan_balance_lev > 0:
+            loan_balance_lev *= (1 + loan_rate_monthly)
+
         # --- Track 2: Withdrawal (25% real) ---
         if m > 0: basis_25 *= (1 + i_monthly)
         tax_25 = 0.0
@@ -232,6 +259,7 @@ def run_simulation(user_inputs):
         if balance_25 > 0: balance_25 *= (1 + r_monthly_25)
         if balance_hybrid > 0: balance_hybrid *= (1 + r_monthly_hybrid)
         if balance_rental > 0: balance_rental *= (1 + r_monthly_rental)
+        if balance_lev > 0: balance_lev *= (1 + r_monthly_lev)
         property_value *= (1 + prop_appreciation_monthly)
         property_rental_value *= (1 + rental_prop_appreciation_monthly)
         # Compute equity after appreciation so it matches "שווי נדלן מסלול 4" in the same row
@@ -272,6 +300,11 @@ def run_simulation(user_inputs):
             "משכנתה הפוכה — LTV": rm_ltv,
             "משכנתה הפוכה — ריבית חודשית": rm_interest_this_month,
             "משכנתה הפוכה — גרעון לא מכוסה": rm_uncovered_this_month,
+            "צבירה מסלול מינוף": balance_lev,
+            "מס ששולם מינוף": tax_lev,
+            "הלוואת בלון — יתרת חוב": loan_balance_lev,
+            "הלוואת בלון — ריבית חודשית": rm_interest_lev,
+            "מינוף — LTV": (loan_balance_lev / balance_lev) if balance_lev > 0 else 0.0,
             "הוצאות מטפלת": caregiver_cost_base * inflation_factor if current_age >= 85.0 else 0.0,
             "inflation_factor": inflation_factor
         })
