@@ -52,6 +52,7 @@ from simulator_engine import run_simulation
 from reports.graphs import render_charts
 from reports.qa_report import render_qa_section
 from reports.qa_summary import render_qa_summary_page
+from reports.monte_carlo import render_monte_carlo
 
 # 1. הגדרת תצורת דף אחידה
 st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", page_icon="📊", layout="wide")
@@ -242,7 +243,7 @@ try:
 except Exception:
     qa_tab_label = "🔬 QA — ניתוח מסלולים"
 
-tab4, tab3, tab2, tab1 = st.tabs(["📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
+tab4, tab5, tab3, tab2, tab1 = st.tabs(["📋 העתקה מהירה לבדיקות", "🎲 סיכון מונטה קרלו", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
 
 with tab1:
     render_qa_section(sim_results, display_inputs)
@@ -299,3 +300,6 @@ with tab3:
 
 with tab4:
     render_qa_summary_page(sim_results, display_inputs)
+
+with tab5:
+    render_monte_carlo(display_inputs)
