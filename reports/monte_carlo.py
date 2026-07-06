@@ -184,10 +184,10 @@ def render_monte_carlo(user_inputs):
     rr.update_layout(
         height=340, template="plotly_white", font=dict(family="sans-serif"),
         margin=dict(t=20, b=40, l=10, r=10),
-        xaxis=dict(title="סכום ההלוואה (₪)", autorange="reversed"),
-        yaxis=dict(title="ירושה (₪ מיליון)", side="right"),
-        yaxis2=dict(title="סיכון %", overlaying="y", side="left", range=[0, 100]),
-        legend=dict(orientation="h", y=1.18, x=1, xanchor="right"),
+        xaxis=dict(title="סכום ההלוואה (₪)"),
+        yaxis=dict(title="ירושה (₪ מיליון)", side="left"),
+        yaxis2=dict(title="סיכון %", overlaying="y", side="right", range=[0, 100]),
+        legend=dict(orientation="h", y=1.18, x=0, xanchor="left"),
     )
     st.plotly_chart(rr, use_container_width=True)
     st.caption("ככל שההלוואה גדלה — הקו הירוק (ירושה) עולה, אבל גם הקו האדום (סיכון) עולה. "
