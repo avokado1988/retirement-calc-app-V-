@@ -812,14 +812,16 @@ def render_qa_section(results, user_inputs):
             + _card_row("🎁 עזרה לילדים (נכס משפחתי)", kids_txt)
             + _card_row("📊 סך נכסים", _val(format_shekel(int(total_check[track_id]))), strong=True, top_border=True)
         )
+        # Track-specific extras go BELOW the shared rows, so every card's rows
+        # stay aligned line-to-line across the columns.
         if track_id == 4 and rm_track4_not_viable:
-            body = (
+            body = body + (
                 "<div style='background:#fdecea;border:1px solid #e0a099;border-radius:6px;"
-                "padding:6px 8px;margin-bottom:6px;color:#a83232;font-weight:700;font-size:0.72em;text-align:center;'>"
+                "padding:6px 8px;margin-top:8px;color:#a83232;font-weight:700;font-size:0.72em;text-align:center;'>"
                 "🚫 מסלול לא קביל — אין מספיק כסף לכסות את הגרעון</div>"
-            ) + body
+            )
 
-        # Leverage risk gauge — only on the leverage card
+        # Leverage risk gauge — appended below the shared rows on the leverage card
         if track_id == 5 and lev_ltv_max > 0:
             if lev_drop_tol >= 0.40:
                 _rk_bg, _rk_fg, _rk_label = "#e8f8ee", "#1a7a3a", "סביר"
@@ -832,13 +834,13 @@ def render_qa_section(results, user_inputs):
             if lev_mc_prob is not None:
                 _mc = f"<br/>🎲 סיכון מכירה כפויה (מונטה קרלו): <b>{lev_mc_prob*100:.0f}%</b>"
             gauge = (
-                f"<div style='background:{_rk_bg};border-radius:6px;padding:6px 8px;margin-bottom:6px;"
+                f"<div style='background:{_rk_bg};border-radius:6px;padding:6px 8px;margin-top:8px;"
                 f"color:{_rk_fg};font-size:0.68em;text-align:center;line-height:1.5;'>"
                 f"<b>⚖️ מד סיכון מינוף · {_rk_label}</b><br/>"
                 f"מינוף {lev_ltv_max*100:.0f}% מהתיק · השוק יכול ליפול {lev_drop_tol*100:.0f}% "
                 f"לפני דרישת ביטחונות · כרית מזומן {_buf}{_mc}</div>"
             )
-            body = gauge + body
+            body = body + gauge
 
         inner_card = (
             f"<div style='background:{rc['bg']};border-top:{border_top};border-radius:12px;"
