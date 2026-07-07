@@ -144,15 +144,28 @@ def render_monte_carlo(user_inputs):
 
     _cur_loan_disp = max(0.0, min(float(lev.get("loan_amount", 0)), loan_cap))
     _cur_pr = next((pr for ln, pr in _grid if ln >= _cur_loan_disp), _grid[-1][1])
-    _tiers = [("🟢 שמרני", 0.10, "#1a7a3a", "#eafaf0", "#8fd3a8"),
-              ("🟡 מתון", 0.25, "#b07800", "#fff8e1", "#f0c86a"),
-              ("🔴 אגרסיבי", 0.40, "#a83232", "#fdecea", "#e0a099")]
-    _rows_html = "".join(
-        f"<tr style='border-bottom:1px solid #eee;'>"
-        f"<td style='padding:7px 12px;text-align:right;font-weight:700;color:{c};'>{lbl}</td>"
-        f"<td style='padding:7px 12px;text-align:center;'>עד {int(thr*100)}%</td>"
-        f"<td style='padding:7px 12px;text-align:center;font-weight:800;'>{_f(_max_loan_under(thr))}</td></tr>"
-        for lbl, thr, c, _bgc, _bdc in _tiers)
+
+    def _drop_for_loan(ml):
+        # כמה השוק יכול לרדת עכשיו עד שהיחס חוצה את סף המכירה
+        if ml <= 0:
+            return 1.0
+        ltv0 = ml / (net_for_190 + ml)
+        return max(0.0, 1 - ltv0 / call_ltv)
+
+    _tiers = [("🟢 שמרני מאוד", 0.05, "#127a3a"),
+              ("🟢 שמרני", 0.10, "#1a7a3a"),
+              ("🟡 מתון", 0.20, "#b07800"),
+              ("🟠 אגרסיבי", 0.35, "#c9700f"),
+              ("🔴 אגרסיבי מאוד", 0.50, "#a83232")]
+    _rows_html = ""
+    for lbl, thr, c in _tiers:
+        _ml = _max_loan_under(thr)
+        _rows_html += (
+            f"<tr style='border-bottom:1px solid #eee;'>"
+            f"<td style='padding:7px 12px;text-align:right;font-weight:700;color:{c};'>{lbl}</td>"
+            f"<td style='padding:7px 12px;text-align:center;'>עד {int(thr*100)}%</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:800;'>{_f(_ml)}</td>"
+            f"<td style='padding:7px 12px;text-align:center;color:#555;'>{_drop_for_loan(_ml)*100:.0f}%</td></tr>")
     st.markdown(
         f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
         f"<div style='font-weight:800;font-size:1.02em;margin-bottom:4px;'>💰 כמה אפשר ללוות, לפי רמת הסיכון</div>"
@@ -160,7 +173,8 @@ def render_monte_carlo(user_inputs):
         f"<thead><tr style='background:#eef0f7;'>"
         f"<th style='padding:7px 12px;text-align:right;'>רמת סיכון</th>"
         f"<th style='padding:7px 12px;'>סיכוי מכירה כפויה</th>"
-        f"<th style='padding:7px 12px;'>סכום הלוואה מקסימלי</th></tr></thead>"
+        f"<th style='padding:7px 12px;'>סכום הלוואה מקסימלי</th>"
+        f"<th style='padding:7px 12px;'>כמה השוק יכול לרדת</th></tr></thead>"
         f"<tbody>{_rows_html}</tbody></table></div>", unsafe_allow_html=True)
 
     # השוואה להלוואה הנוכחית
