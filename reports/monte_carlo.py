@@ -160,22 +160,10 @@ def render_monte_carlo(user_inputs):
     # ============ חישובים ============
     loan_cap = min(home0, 4.0 * net_for_190)  # מימון עד 80% מהתיק => הלוואה עד פי 4 מהצבירה
 
-    _grid = []
-    for _i in range(41):
-        _loan = loan_cap * _i / 40
-        _pr = _simulate(net_for_190 + _loan, _loan, loan_rate, mean_ret, std_ret, years,
-                        annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv,
-                        n_sims=1500)["p_margin_call"]
-        _grid.append((_loan, _pr))
-
-    def _max_loan_under(thr):
-        ok = [ln for ln, pr in _grid if pr <= thr]
-        return max(ok) if ok else 0.0
-
-    def _drop_for_loan(ml):
-        if ml <= 0:
+    def _drop_for_loan(ln):
+        if ln <= 0:
             return 1.0
-        return max(0.0, 1 - (ml / (net_for_190 + ml)) / call_ltv)
+        return max(0.0, 1 - (ln / (net_for_190 + ln)) / call_ltv)
 
     cur_loan = max(0.0, min(float(lev.get("loan_amount", 0)), loan_cap))
     P0_cur = net_for_190 + cur_loan
@@ -265,28 +253,31 @@ def render_monte_carlo(user_inputs):
 
     # ============ 2. כמה אפשר ללוות ============
     st.divider()
-    _sec("2️⃣ כמה אפשר ללוות, לפי רמת הסיכון")
-    _tiers = [("🟢 שמרני מאוד", 0.05, "#127a3a"), ("🟢 שמרני", 0.10, "#1a7a3a"),
-              ("🟡 מתון", 0.20, "#b07800"), ("🟠 אגרסיבי", 0.35, "#c9700f"),
-              ("🔴 אגרסיבי מאוד", 0.50, "#a83232")]
+    _sec("2️⃣ הסיכון לפי גודל ההלוואה — כל הקשת")
     _rows_html = ""
-    for lbl, thr, c in _tiers:
-        _ml = _max_loan_under(thr)
+    for loan, ltv0, res in rows:
+        p = res["p_margin_call"]
+        rc, rl = (("#1a7a3a", "🟢 נמוך") if p < 0.10 else
+                  ("#b07800", "🟡 בינוני") if p < 0.25 else ("#a83232", "🔴 גבוה"))
+        loan_lbl = "ללא מינוף" if loan == 0 else _f(loan)
         _rows_html += (
             f"<tr style='border-bottom:1px solid #eee;'>"
-            f"<td style='padding:7px 12px;text-align:right;font-weight:800;'>{_f(_ml)}</td>"
-            f"<td style='padding:7px 12px;text-align:center;font-weight:700;color:{c};'>{lbl}</td>"
-            f"<td style='padding:7px 12px;text-align:center;'>עד {int(thr*100)}%</td>"
-            f"<td style='padding:7px 12px;text-align:center;color:#555;'>{_drop_for_loan(_ml)*100:.0f}%</td></tr>")
-    st.markdown(
-        f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
-        f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.9em;'>"
-        f"<thead><tr style='background:#eef0f7;'>"
-        f"<th style='padding:7px 12px;text-align:right;'>סכום הלוואה מקסימלי</th>"
-        f"<th style='padding:7px 12px;'>רמת סיכון</th>"
-        f"<th style='padding:7px 12px;'>סיכוי דרישת השלמה</th>"
-        f"<th style='padding:7px 12px;'>בכמה השוק יכול לרדת</th></tr></thead>"
-        f"<tbody>{_rows_html}</tbody></table></div>", unsafe_allow_html=True)
+            f"<td style='padding:7px 12px;text-align:right;font-weight:800;'>{loan_lbl}</td>"
+            f"<td style='padding:7px 12px;text-align:center;'>{ltv0:.0f}%</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:700;color:{rc};'>{p*100:.0f}%</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:700;color:{rc};'>{rl}</td>"
+            f"<td style='padding:7px 12px;text-align:center;color:#555;'>{_drop_for_loan(loan)*100:.0f}%</td></tr>")
+    with st.expander("📊 טבלת הסיכון לכל גודל הלוואה (0 עד המקסימום)", expanded=True):
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
+            f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.9em;'>"
+            f"<thead><tr style='background:#eef0f7;'>"
+            f"<th style='padding:7px 12px;text-align:right;'>סכום ההלוואה</th>"
+            f"<th style='padding:7px 12px;'>שיעור מימון</th>"
+            f"<th style='padding:7px 12px;'>סיכוי דרישת השלמה</th>"
+            f"<th style='padding:7px 12px;'>רמת סיכון</th>"
+            f"<th style='padding:7px 12px;'>בכמה השוק יכול לרדת</th></tr></thead>"
+            f"<tbody>{_rows_html}</tbody></table></div>", unsafe_allow_html=True)
 
     _cur_col = "#1a7a3a" if p_cur <= 0.10 else ("#b07800" if p_cur <= 0.25 else "#a83232")
     _cur_lbl = "שמרנית" if p_cur <= 0.10 else ("מתונה" if p_cur <= 0.25 else "אגרסיבית")
@@ -317,39 +308,6 @@ def render_monte_carlo(user_inputs):
         legend=dict(orientation="h", y=1.18, x=0, xanchor="left"))
     st.plotly_chart(rr, use_container_width=True)
     _rtl(
-        "<div style='color:#777;font-size:0.82em;line-height:1.6;'>"
-        "ככל שההלוואה גדלה, הקו הירוק (ירושה) עולה, אבל גם הקו האדום (סיכון) עולה. "
-        "רמת המינוף ההגיונית היא הגבוהה ביותר שבה הקו האדום עדיין נמוך.</div>")
-
-    # ============ טבלה מלאה ============
-    body = ""
-    for loan, ltv0, res in rows:
-        p = res["p_margin_call"]
-        rc = "#1a7a3a" if p < 0.05 else ("#b07800" if p < 0.15 else "#a83232")
-        rl = "נמוך" if p < 0.05 else ("בינוני" if p < 0.15 else "גבוה")
-        loan_lbl = "ללא מינוף" if loan == 0 else _f(loan)
-        body += (
-            f"<tr style='border-bottom:1px solid #eee;'>"
-            f"<td style='padding:6px 10px;text-align:right;font-weight:600;'>{loan_lbl}</td>"
-            f"<td style='padding:6px 10px;text-align:center;'>{ltv0:.0f}%</td>"
-            f"<td style='padding:6px 10px;text-align:center;color:{rc};font-weight:700;'>{p*100:.0f}% ({rl})</td>"
-            f"<td style='padding:6px 10px;text-align:center;color:#a83232;'>{_f(res['nw_p10'])}</td>"
-            f"<td style='padding:6px 10px;text-align:center;font-weight:700;'>{_f(res['nw_p50'])}</td>"
-            f"<td style='padding:6px 10px;text-align:center;color:#1a7a3a;'>{_f(res['nw_p90'])}</td></tr>")
-    with st.expander("📋 פירוט מספרי מלא"):
-        st.markdown(
-            f"<div style='direction:rtl;font-family:sans-serif;text-align:right;'>"
-            f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.85em;direction:rtl;text-align:right;'>"
-            f"<thead><tr style='background:#eef0f7;'>"
-            f"<th style='padding:6px 10px;text-align:right;'>הלוואה</th>"
-            f"<th style='padding:6px 10px;'>שיעור מימון</th>"
-            f"<th style='padding:6px 10px;'>סיכון דרישת השלמה</th>"
-            f"<th style='padding:6px 10px;'>ירושה — גרוע (10%)</th>"
-            f"<th style='padding:6px 10px;'>ירושה — חציון</th>"
-            f"<th style='padding:6px 10px;'>ירושה — טוב (90%)</th></tr></thead>"
-            f"<tbody>{body}</tbody></table></div>", unsafe_allow_html=True)
-        _rtl(
-            f"<div style='color:#777;font-size:0.82em;line-height:1.6;'>"
-            f"על בסיס {years} שנים, תשואה ממוצעת {mean_ret*100:.1f}%, ריבית הלוואה {loan_rate*100:.2f}%, "
-            f"וכרית מזומן {_f(buffer_cash)}. סיכון דרישת השלמה = אחוז התרחישים שבהם השוק צנח "
-            f"מספיק כדי לחצות את הרף.</div>")
+        f"<div style='color:#777;font-size:0.82em;line-height:1.6;'>"
+        f"ככל שההלוואה גדלה, הקו הירוק (ירושה) עולה, אבל גם הקו האדום (סיכון) עולה. "
+        f"על בסיס {years} שנים, תשואה ממוצעת {mean_ret*100:.1f}%, וריבית הלוואה {loan_rate*100:.2f}%.</div>")
