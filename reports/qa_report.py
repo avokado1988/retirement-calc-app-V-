@@ -782,9 +782,11 @@ def render_qa_section(results, user_inputs):
     if 5 in order and lev_ltv_max > 0:
         _c, _lbl = (("#1a7a3a", "סביר") if lev_drop_tol >= 0.40 else
                     ("#b07800", "זהירות") if lev_drop_tol >= 0.25 else ("#a83232", "משחק באש"))
-        _mc = f" · מכירה כפויה {lev_mc_prob*100:.0f}%" if lev_mc_prob is not None else ""
-        tv[5]["risk"] = (f"<span style='color:{_c};font-weight:800;'>{_lbl}</span>"
-                         f"<br/><span style='font-size:0.8em;color:{_c};'>מינוף {lev_ltv_max*100:.0f}% · סופג נפילה {lev_drop_tol*100:.0f}%{_mc}</span>")
+        _mc_txt = (f" (סיכוי {lev_mc_prob*100:.0f}% שזה יקרה)" if lev_mc_prob is not None else "")
+        tv[5]["risk"] = (
+            f"<span style='color:{_c};font-weight:800;'>{_lbl}</span>"
+            f"<br/><span style='font-size:0.82em;color:#444;line-height:1.35;'>"
+            f"אם השוק יורד {lev_drop_tol*100:.0f}% הבנק מוכר את התיק{_mc_txt}</span>")
 
     def _hdr(tid):
         rc = RANK_CFG[rank_for_track[tid]]; d = tv[tid]

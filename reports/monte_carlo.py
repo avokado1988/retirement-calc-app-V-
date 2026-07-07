@@ -180,32 +180,34 @@ def render_monte_carlo(user_inputs):
     with g2:
         # Stacked bar: loan (bottom) → bank's required cushion → your safety margin (top).
         # The red dashed line marks the forced-sale threshold; the green part is how far it can fall.
+        _BW = 0.32  # narrow bar — the default fills the whole slot and looks too thick
         bar = go.Figure()
         bar.add_trace(go.Bar(
-            x=["התיק שלך"], y=[cur_loan], name="הלוואה", marker_color="#c0392b",
+            x=["התיק שלך"], y=[cur_loan], name="הלוואה", marker_color="#c0392b", width=_BW,
             text=[f"הלוואה<br>{_f(cur_loan)}"], textposition="inside", insidetextanchor="middle",
             textfont=dict(color="white", size=12), hoverinfo="text",
             hovertext=[f"הלוואה שנלקחה: {_f(cur_loan)}"]))
         bar.add_trace(go.Bar(
-            x=["התיק שלך"], y=[orange_cushion], name="כרית נדרשת לבנק", marker_color="#e6a800",
-            text=[f"כרית הבנק<br>{_f(orange_cushion)}"], textposition="inside", insidetextanchor="middle",
-            textfont=dict(color="white", size=11), hoverinfo="text",
+            x=["התיק שלך"], y=[orange_cushion], name="כרית נדרשת לבנק", marker_color="#e6a800", width=_BW,
+            text=[_f(orange_cushion)], textposition="inside", insidetextanchor="middle",
+            textfont=dict(color="white", size=10), hoverinfo="text",
             hovertext=[f"כרית ביטחון שהבנק דורש מעל ההלוואה: {_f(orange_cushion)}"]))
         bar.add_trace(go.Bar(
-            x=["התיק שלך"], y=[green_margin], name="מרווח ביטחון שלך", marker_color="#27ae60",
-            text=[f"מרווח ביטחון<br>{_f(green_margin)}"], textposition="inside", insidetextanchor="middle",
-            textfont=dict(color="white", size=11), hoverinfo="text",
+            x=["התיק שלך"], y=[green_margin], name="מרווח ביטחון שלך", marker_color="#27ae60", width=_BW,
+            text=[_f(green_margin)], textposition="inside", insidetextanchor="middle",
+            textfont=dict(color="white", size=10), hoverinfo="text",
             hovertext=[f"כמה התיק יכול לרדת לפני מכירה כפויה: {_f(green_margin)} ({drop_needed*100:.0f}%)"]))
         bar.add_hline(
-            y=threshold_val, line=dict(color="#c0392b", width=3, dash="dash"),
-            annotation_text=f"🔴 סף מכירה כפויה — {_f(threshold_val)}",
-            annotation_position="top left", annotation_font=dict(color="#c0392b", size=12))
+            y=threshold_val, line=dict(color="#c0392b", width=2.5, dash="dash"),
+            annotation_text=f"סף מכירה {_f(threshold_val)}",
+            annotation_position="top right", annotation_font=dict(color="#c0392b", size=11))
         bar.update_layout(
-            barmode="stack", height=300, template="plotly_white",
+            barmode="stack", height=300, template="plotly_white", bargap=0.6,
             title={"text": f"הרכב התיק היום — סה\"כ {_f(P0_cur)}", "font": {"size": 14}, "x": 0.5},
             margin=dict(t=70, b=10, l=10, r=10), font=dict(family="sans-serif"),
+            xaxis=dict(showticklabels=False),
             yaxis=dict(title="₪", tickformat=",.0f"),
-            legend=dict(orientation="h", y=-0.12, x=0.5, xanchor="center", font=dict(size=10)),
+            legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center", font=dict(size=10)),
             showlegend=True)
         st.plotly_chart(bar, use_container_width=True)
 
