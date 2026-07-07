@@ -111,6 +111,15 @@ def render_monte_carlo(user_inputs):
         "color:#173a5e;line-height:1.7;'><b>מה הסיכון במינוף?</b> אם השוק יורד חזק, התיק "
         "מצטמק אבל החוב לא, והמלווה דורש להשלים כסף. אם אין נזילות, מוכרים לך מהתיק "
         "<b>בשפל</b> ומקבעים הפסד. זה מה שאנחנו מודדים כאן.</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;background:#f5f3fa;border:1px solid #cbc0e6;"
+        "border-right:4px solid #7e57c2;border-radius:8px;padding:10px 14px;margin:6px 0;"
+        "color:#3d2b66;line-height:1.8;'><b>איך עובד סף המכירה, בקצרה</b><br/>"
+        "1. אתה לווה עד 80% מהתיק. ההלוואה קבועה.<br/>"
+        "2. כשהשוק יורד, התיק מצטמק, אבל ההלוואה נשארת אותו דבר, אז היא תופסת אחוז גדל והולך מהתיק.<br/>"
+        "3. כשההלוואה מגיעה ל-90% מהתיק, הבנק דורש השלמה או מוכר. הוא לא מחכה שההלוואה תגיע ל-100%.<br/>"
+        "4. הרווח בין מה שלקחת (למשל 75%) לבין הסף (90%) הוא הכרית, וזה כמה התיק יכול לרדת לפני מכירה.</div>",
+        unsafe_allow_html=True)
 
     # ============ נתונים ============
     tl = user_inputs.get("timeline", {}); ex = user_inputs.get("expenses", {})
@@ -239,8 +248,8 @@ def render_monte_carlo(user_inputs):
             f"background:#f8f9fc;border:1px solid #e6e8f0;border-radius:8px;padding:10px 14px;margin:6px 0;'>"
             f"💼 <b>סך התיק היום:</b> {_f(P0_cur)} "
             f"<span style='color:#777;'>(הצבירה שלך {_f(net_for_190)} + הלוואה {_f(cur_loan)})</span><br/>"
-            f"📊 <b>שיעור מימון:</b> {_ltv0*100:.0f}% — ההלוואה חלקי התיק.<br/>"
-            f"🔴 <b>רף דרישת השלמה:</b> {_f(threshold_val)} — <span style='color:#555;'>זהו <u>שווי התיק בשקלים</u> שאם יורדים אליו, החוב מגיע ל-{call_ltv*100:.0f}% מהתיק ונדרשת השלמה.</span><br/>"
+            f"📊 <b>שיעור מימון היום:</b> {_ltv0*100:.0f}% — ההלוואה חלקי התיק (מתוך תקרה של 80%).<br/>"
+            f"🔴 <b>רף דרישת השלמה:</b> {_f(threshold_val)} — <span style='color:#555;'>שווי התיק שאם יורדים אליו, ההלוואה הופכת ל-{call_ltv*100:.0f}% מהתיק, ואז הבנק דורש השלמה או מוכר.</span><br/>"
             f"🟢 <b>מרחק מהרף:</b> <span style='color:#555;'>כדי להגיע לרף, התיק צריך <u>לרדת בשוק</u> בכ-</span><b>{drop_needed*100:.0f}%</b> <span style='color:#555;'>(מ-{_f(P0_cur)} ל-{_f(threshold_val)}).</span>"
             f"</div>", unsafe_allow_html=True)
         st.markdown(
