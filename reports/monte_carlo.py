@@ -13,36 +13,43 @@ import streamlit as st
 
 
 def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_growth,
-              home0, home_appr, buffer_cash, buffer_rate, call_ltv, n_sims=4000, seed=12345):
+              home0, home_appr, buffer_cash, buffer_rate, call_ltv, side0=0.0,
+              n_sims=4000, seed=12345):
+    """מודל ישראלי. P0 = הצבירה הממושכנת (הבטוחה), side0 = הכסף השאול המושקע בנפרד.
+    דרישת השלמה מתרחשת כשהחוב עובר את call_ltv משווי הצבירה (הבטוחה) בלבד."""
     rng = np.random.default_rng(seed)
     rets = rng.normal(mean_ret, std_ret, size=(n_sims, years))
 
-    P = np.full(n_sims, float(P0))
+    P = np.full(n_sims, float(P0))       # הצבירה הממושכנת
+    S = np.full(n_sims, float(side0))    # הכסף השאול, מושקע בנפרד
     D = np.full(n_sims, float(loan0))
     buf = np.full(n_sims, float(buffer_cash))
     margin_called = np.zeros(n_sims, dtype=bool)
     wd = float(annual_wd)
 
     for y in range(years):
-        # Live off the cash buffer first, then the portfolio
+        # Live off the cash buffer first, then the pledged accumulation
         from_buf = np.minimum(buf, wd)
         buf = (buf - from_buf) * (1 + buffer_rate)
         P = P - (wd - from_buf)
-        # Market return + loan interest accrual
+        # Market return on both pots + loan interest accrual
         P = P * (1 + rets[:, y])
+        S = S * (1 + rets[:, y])
         D = D * (1 + loan_rate)
-        # Margin call when debt/portfolio crosses the liquidation threshold
+        # דרישת השלמה כשהחוב עובר את הסף משווי הצבירה (הבטוחה) בלבד
         with np.errstate(divide="ignore", invalid="ignore"):
             ltv = np.where(P > 0, D / np.maximum(P, 1.0), 999.0)
         breach = (~margin_called) & (ltv > call_ltv)
         margin_called |= (ltv > call_ltv)
-        # Forced liquidation: sell to repay the debt; remaining equity continues unlevered
-        P = np.where(breach, np.maximum(0.0, P - D), P)
+        # אילוץ פירעון: מכסים את החוב מהצבירה ומהכסף השאול, וממשיכים בלי מינוף
+        pooled = np.maximum(0.0, P + S - D)
+        P = np.where(breach, pooled, P)
+        S = np.where(breach, 0.0, S)
         D = np.where(breach, 0.0, D)
         wd *= (1 + wd_growth)
 
     home = home0 * (1 + home_appr) ** years
-    networth = P + home - D
+    networth = P + S + home - D
     return {
         "p_margin_call": float(margin_called.mean()),
         "nw_p10": float(np.percentile(networth, 10)),
@@ -51,25 +58,30 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
     }
 
 
-def margin_call_probability(user_inputs, std_ret=0.12, call_ltv=0.85, n_sims=2000):
+GEN_RETURN = 0.055   # תשואת מסלול כללי, נומינלית לפני דמי ניהול
+GEN_VOL    = 0.08    # תנודתיות מסלול כללי
+CALL_LTV_IL = 0.80   # דרישת השלמה כשהחוב עובר 80% מהצבירה (הבטוחה)
+
+
+def margin_call_probability(user_inputs, std_ret=GEN_VOL, call_ltv=CALL_LTV_IL, n_sims=2000):
     """Single Monte Carlo run for the CURRENT loan — probability of a margin call.
-    Used to surface a risk figure on the leverage card."""
+    Israeli model: collateral = the pledged accumulation only; the loan sits aside."""
     tl = user_inputs.get("timeline", {}); ex = user_inputs.get("expenses", {})
     w = user_inputs.get("wealth", {}); a190 = user_inputs.get("amendment_190", {})
     lev = user_inputs.get("leverage", {})
     years = max(1, int(round(float(tl.get("check_age", 95)) - float(tl.get("start_age", 65)))))
-    loan = float(lev.get("loan_amount", 0))
-    if loan <= 0:
+    net_for_190 = float(a190.get("net_for_190", 0))
+    loan = min(float(lev.get("loan_amount", 0)), 0.80 * net_for_190)
+    if loan <= 0 or net_for_190 <= 0:
         return 0.0
-    P0 = float(a190.get("net_for_190", 0)) + loan
-    mean_ret = float(a190.get("annual_return_190", 0.07)) - float(a190.get("management_fee_190", 0.005))
+    mean_ret = GEN_RETURN - float(a190.get("management_fee_190", 0.005))
     monthly_deficit = max(0.0, float(ex.get("current_expenses", 11000))
                           - float(w.get("national_insurance", 2500))
                           - float(a190.get("desired_pension", 5306)))
-    res = _simulate(P0, loan, float(lev.get("loan_annual_rate", 0.0525)), mean_ret, std_ret, years,
+    res = _simulate(net_for_190, loan, float(lev.get("loan_annual_rate", 0.0525)), mean_ret, std_ret, years,
                     monthly_deficit * 12, float(ex.get("expected_inflation", 0.023)),
                     float(w.get("new_apartment_cost", 5500000)), float(w.get("property_appreciation", 0.03)),
-                    float(w.get("emergency_fund", 250000)), 0.02, call_ltv, n_sims=n_sims)
+                    float(w.get("emergency_fund", 250000)), 0.02, call_ltv, side0=loan, n_sims=n_sims)
     return res["p_margin_call"]
 
 
@@ -80,9 +92,9 @@ def render_monte_carlo(user_inputs):
         "<p style='line-height:1.7;'>המודל הרגיל מניח שהשוק עולה בקצב קבוע כל שנה. במציאות "
         "יש שנים טובות ורעות. כאן מריצים אלפי תרחישי שוק אקראיים כדי לראות עד כמה המינוף "
         "מסוכן בפועל.</p>"
-        "<p style='line-height:1.7;color:#555;font-size:0.92em;'>הערה, התיק כאן מבוסס על "
-        "מסלול 1 (תיקון 190), כלומר החלק הנזיל של מסלול 1 בתוספת ההלוואה, ואותה תשואה "
-        "ומיסוי.</p></div>", unsafe_allow_html=True)
+        "<p style='line-height:1.7;color:#555;font-size:0.92em;'>לפי חוקי הקופות בישראל, "
+        "מסלול כללי. הבטוחה היא הצבירה בלבד, המימון עד 80% ממנה, ותשואת מסלול כללי (כ-5.5%). "
+        "דרישת השלמה מתרחשת כשהחוב עובר את סף המימון משווי הצבירה.</p></div>", unsafe_allow_html=True)
     st.markdown(
         "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
         "border-right:4px solid #1565c0;border-radius:8px;padding:10px 14px;margin:6px 0;"
@@ -107,7 +119,7 @@ def render_monte_carlo(user_inputs):
     buffer_cash = float(w.get("emergency_fund", 250000))
     loan_rate = float(lev.get("loan_annual_rate", 0.0525))
 
-    mean_ret = float(a190.get("annual_return_190", 0.07)) - float(a190.get("management_fee_190", 0.005))
+    mean_ret = GEN_RETURN - float(a190.get("management_fee_190", 0.005))  # מסלול כללי
     inflation = float(ex.get("expected_inflation", 0.023))
     # Deficit funded from the portfolio: expenses − (NI + pension), monthly → annual
     monthly_deficit = max(0.0, float(ex.get("current_expenses", 11000))
@@ -120,25 +132,25 @@ def render_monte_carlo(user_inputs):
 
     c1, c2 = st.columns(2)
     with c1:
-        std_ret = st.slider("תנודתיות שנתית של התיק (סטיית תקן %)",
-                            min_value=6.0, max_value=25.0, value=12.0, step=0.5,
-                            help="תיק סולידי מפוזר סביב 10-12%. מנייתי טהור 18%+.") / 100
+        std_ret = st.slider("תנודתיות שנתית של הצבירה (סטיית תקן %)",
+                            min_value=5.0, max_value=20.0, value=GEN_VOL * 100, step=0.5,
+                            help="מסלול כללי סביב 7-9%. מנייתי טהור 15%+.") / 100
     with c2:
-        call_ltv = st.slider("סף מכירה (LTV שבו הבנק מוכר %)",
-                             min_value=70.0, max_value=95.0, value=85.0, step=1.0,
-                             help="מעל שיעור המימון המקסימלי (75%). כשהיחס חוצה אותו — מכירה כפויה.") / 100
+        call_ltv = st.slider("סף דרישת השלמה (% מהצבירה)",
+                             min_value=70.0, max_value=95.0, value=CALL_LTV_IL * 100, step=1.0,
+                             help="בקופות בישראל, כשהחוב עובר את שיעור המימון (כ-80% מהצבירה) נדרשת השלמה.") / 100
 
     # --- כמה אפשר ללוות לפי רמת הסיכון שמוכנים לקחת ---
     # מינוף הוא בהגדרה סיכון, ולכן במקום "סכום בטוח" יחיד מציגים כמה אפשר ללוות
     # בכל רמת סיכון. הסתברות המכירה הכפויה עולה באופן מונוטוני עם ההלוואה.
-    loan_cap = min(home0, 3 * net_for_190)  # תקרת מימון 75% (loan <= 3 × החלק הנזיל)
+    loan_cap = 0.80 * net_for_190  # תקרת מימון 80% מהצבירה (הבטוחה), חוקי הקופות
     _N = 40
     _grid = []
     for _i in range(_N + 1):
         _loan = loan_cap * _i / _N
-        _pr = _simulate(net_for_190 + _loan, _loan, loan_rate, mean_ret, std_ret, years,
+        _pr = _simulate(net_for_190, _loan, loan_rate, mean_ret, std_ret, years,
                         annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv,
-                        n_sims=1500)["p_margin_call"]
+                        side0=_loan, n_sims=1500)["p_margin_call"]
         _grid.append((_loan, _pr))
 
     def _max_loan_under(thr):
@@ -149,10 +161,10 @@ def render_monte_carlo(user_inputs):
     _cur_pr = next((pr for ln, pr in _grid if ln >= _cur_loan_disp), _grid[-1][1])
 
     def _drop_for_loan(ml):
-        # כמה השוק יכול לרדת עכשיו עד שהיחס חוצה את סף המכירה
-        if ml <= 0:
+        # כמה הצבירה יכולה לרדת עכשיו עד שהחוב חוצה את סף ההשלמה (יחס מול הצבירה)
+        if ml <= 0 or net_for_190 <= 0:
             return 1.0
-        ltv0 = ml / (net_for_190 + ml)
+        ltv0 = ml / net_for_190
         return max(0.0, 1 - ltv0 / call_ltv)
 
     _tiers = [("🟢 שמרני מאוד", 0.05, "#127a3a"),
@@ -200,27 +212,25 @@ def render_monte_carlo(user_inputs):
 
     rows = []
     for loan in loan_steps:
-        P0 = net_for_190 + loan
-        ltv0 = (loan / P0 * 100) if P0 > 0 else 0
-        res = _simulate(P0, loan, loan_rate, mean_ret, std_ret, years, annual_wd, inflation,
-                        home0, home_appr, buffer_cash, 0.02, call_ltv)
+        ltv0 = (loan / net_for_190 * 100) if net_for_190 > 0 else 0  # יחס מול הצבירה (בטוחה)
+        res = _simulate(net_for_190, loan, loan_rate, mean_ret, std_ret, years, annual_wd, inflation,
+                        home0, home_appr, buffer_cash, 0.02, call_ltv, side0=loan)
         rows.append((loan, ltv0, res))
 
     import plotly.graph_objects as go
 
     # --- Current chosen loan → gauge + one-sentence verdict ---
-    cur_loan = max(0.0, min(float(lev.get("loan_amount", 0)), home0))
-    cur = _simulate(net_for_190 + cur_loan, cur_loan, loan_rate, mean_ret, std_ret, years,
-                    annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv)
+    cur_loan = max(0.0, min(float(lev.get("loan_amount", 0)), loan_cap))
+    cur = _simulate(net_for_190, cur_loan, loan_rate, mean_ret, std_ret, years,
+                    annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv, side0=cur_loan)
     p_cur = cur["p_margin_call"]
 
-    # Composition today: portfolio, loan, and the forced-sale threshold
-    P0_cur = net_for_190 + cur_loan
-    _ltv0 = cur_loan / P0_cur if P0_cur > 0 else 0.0
-    threshold_val = cur_loan / call_ltv if call_ltv > 0 else P0_cur  # portfolio value that triggers a call
-    green_margin = max(0.0, P0_cur - threshold_val)   # how much the portfolio can fall before a call
-    orange_cushion = max(0.0, threshold_val - cur_loan)  # the bank's required cushion above the loan
-    drop_needed = max(0.0, 1 - _ltv0 / call_ltv)  # = green_margin / P0_cur
+    # מודל ישראלי: הבטוחה היא הצבירה בלבד. דרישת השלמה כשהחוב עובר call_ltv מהצבירה.
+    _ltv0 = cur_loan / net_for_190 if net_for_190 > 0 else 0.0
+    threshold_val = cur_loan / call_ltv if call_ltv > 0 else net_for_190  # שווי צבירה שמפעיל דרישת השלמה
+    cushion = max(0.0, net_for_190 - threshold_val)   # כמה הצבירה יכולה לרדת לפני דרישת השלמה
+    floor = min(net_for_190, threshold_val)           # הרף שהצבירה חייבת להישאר מעליו
+    drop_needed = max(0.0, 1 - _ltv0 / call_ltv)      # = cushion / net_for_190
     loss_impact = max(0.0, cur["nw_p50"] - cur["nw_p10"])
 
     verdict = "נמוך 🟢" if p_cur < 0.05 else ("בינוני 🟡" if p_cur < 0.15 else "גבוה 🔴")
@@ -234,7 +244,7 @@ def render_monte_carlo(user_inputs):
             mode="gauge+number",
             value=round(p_cur * 100),
             number={"suffix": "%", "font": {"size": 42}},
-            title={"text": f"סיכוי שתיאלץ למכור את התיק בהפסד<br>(הלוואה {_f(cur_loan)})", "font": {"size": 14}},
+            title={"text": f"סיכוי לדרישת השלמה ומימוש בשפל<br>(הלוואה {_f(cur_loan)})", "font": {"size": 14}},
             gauge={
                 "axis": {"range": [0, 100], "ticksuffix": "%"},
                 "bar": {"color": "#2c3e50", "thickness": 0.25},
@@ -249,42 +259,36 @@ def render_monte_carlo(user_inputs):
         st.plotly_chart(gauge, use_container_width=True)
 
     with g2:
-        # Stacked bar: loan (bottom) → bank's required cushion → your safety margin (top).
-        # The red dashed line marks the forced-sale threshold; the green part is how far it can fall.
-        _BW = 0.32  # narrow bar — the default fills the whole slot and looks too thick
+        # הבר מציג את הצבירה הממושכנת (הבטוחה). הרף האדום הוא שווי הצבירה שבו החוב
+        # חוצה את סף ההשלמה. הירוק הוא הכרית, כמה הצבירה יכולה לרדת לפני דרישת השלמה.
+        _BW = 0.32
         bar = go.Figure()
         bar.add_trace(go.Bar(
-            x=["התיק שלך"], y=[cur_loan], name="הלוואה", marker_color="#c0392b", width=_BW,
-            text=[f"הלוואה<br>{_f(cur_loan)}"], textposition="inside", insidetextanchor="middle",
-            textfont=dict(color="white", size=12), hoverinfo="text",
-            hovertext=[f"הלוואה שנלקחה: {_f(cur_loan)}"]))
-        bar.add_trace(go.Bar(
-            x=["התיק שלך"], y=[orange_cushion], name="כרית נדרשת לבנק", marker_color="#e6a800", width=_BW,
-            text=[_f(orange_cushion)], textposition="inside", insidetextanchor="middle",
+            x=["הצבירה"], y=[floor], name="רף מינימלי לכיסוי החוב", marker_color="#e6a800", width=_BW,
+            text=[_f(floor)], textposition="inside", insidetextanchor="middle",
             textfont=dict(color="white", size=10), hoverinfo="text",
-            hovertext=[f"כרית ביטחון שהבנק דורש מעל ההלוואה: {_f(orange_cushion)}"]))
+            hovertext=[f"הצבירה חייבת להישאר מעל {_f(floor)} כדי לא לחצות את סף ההשלמה"]))
         bar.add_trace(go.Bar(
-            x=["התיק שלך"], y=[green_margin], name="מרווח ביטחון שלך", marker_color="#27ae60", width=_BW,
-            text=[_f(green_margin)], textposition="inside", insidetextanchor="middle",
+            x=["הצבירה"], y=[cushion], name="כרית — כמה הצבירה יכולה לרדת", marker_color="#27ae60", width=_BW,
+            text=[f"{_f(cushion)}<br>({drop_needed*100:.0f}%)"], textposition="inside", insidetextanchor="middle",
             textfont=dict(color="white", size=10), hoverinfo="text",
-            hovertext=[f"כמה התיק יכול לרדת לפני מכירה כפויה: {_f(green_margin)} ({drop_needed*100:.0f}%)"]))
+            hovertext=[f"הצבירה יכולה לרדת {_f(cushion)} ({drop_needed*100:.0f}%) לפני דרישת השלמה"]))
         bar.add_hline(
             y=threshold_val, line=dict(color="#c0392b", width=2.5, dash="dash"),
-            annotation_text=f"סף מכירה {_f(threshold_val)}",
+            annotation_text=f"רף דרישת השלמה {_f(threshold_val)}",
             annotation_position="bottom right", annotation_font=dict(color="#c0392b", size=11))
-        # Clear label of the TOTAL portfolio value, right above the top of the bar
         bar.add_annotation(
-            x="התיק שלך", y=P0_cur, yshift=16, showarrow=False,
-            text=f"💼 שווי התיק {_f(P0_cur)}",
-            font=dict(color="#1a1a2e", size=13, family="sans-serif"),
+            x="הצבירה", y=net_for_190, yshift=16, showarrow=False,
+            text=f"💼 צבירה {_f(net_for_190)} · הלוואה {_f(cur_loan)}",
+            font=dict(color="#1a1a2e", size=12, family="sans-serif"),
             bgcolor="rgba(255,255,255,0.85)")
         bar.update_layout(
             barmode="stack", height=300, template="plotly_white", bargap=0.6,
-            title={"text": f"הרכב התיק (מבוסס מסלול 1 + הלוואה) — סה\"כ {_f(P0_cur)}", "font": {"size": 13}, "x": 0.5},
+            title={"text": f"הצבירה הממושכנת (בטוחה) — {_f(net_for_190)}", "font": {"size": 13}, "x": 0.5},
             margin=dict(t=70, b=10, l=10, r=10), font=dict(family="sans-serif"),
             xaxis=dict(showticklabels=False),
-            yaxis=dict(title="₪", tickformat=",.0f", range=[0, P0_cur * 1.12]),
-            legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center", font=dict(size=10)),
+            yaxis=dict(title="₪", tickformat=",.0f", range=[0, max(net_for_190, 1) * 1.12]),
+            legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center", font=dict(size=9)),
             showlegend=True)
         st.plotly_chart(bar, use_container_width=True)
 
@@ -298,10 +302,10 @@ def render_monte_carlo(user_inputs):
         st.markdown(
             f"<div style='direction:rtl;text-align:right;background:{_bg};border:1px solid {_bd};"
             f"border-radius:8px;padding:12px 16px;font-size:0.92em;line-height:1.9;'>"
-            f"<div>🎯 <b>מה צריך שיקרה:</b> ירידה של כ-<b>{drop_needed*100:.0f}%</b> בתיק — "
-            f"מ-<b>{_f(P0_cur)}</b> היום לכ-<b>{_f(threshold_val)}</b>. ברגע שהתיק חוצה את הרף הזה, "
-            f"יחס החוב מגיע ל-{call_ltv*100:.0f}% והבנק מוכר.</div>"
-            f"<div>💥 <b>ההשפעה אם זה קורה:</b> הבנק מוכר לך מניות בשפל ומקבע הפסד — הירושה יורדת מ-<b>{_f(cur['nw_p50'])}</b> (צפוי) לכ-<b>{_f(cur['nw_p10'])}</b> (תרחיש גרוע). פגיעה של כ-{_f(loss_impact)}.</div>"
+            f"<div>🎯 <b>מה צריך שיקרה:</b> ירידה של כ-<b>{drop_needed*100:.0f}%</b> בצבירה — "
+            f"מ-<b>{_f(net_for_190)}</b> היום לכ-<b>{_f(threshold_val)}</b>. ברגע שהצבירה חוצה את הרף הזה, "
+            f"החוב עובר {call_ltv*100:.0f}% מהצבירה ונדרשת השלמה.</div>"
+            f"<div>💥 <b>ההשפעה אם זה קורה:</b> הבנק דורש להשלים או מממש בשפל ומקבע הפסד — הירושה יורדת מ-<b>{_f(cur['nw_p50'])}</b> (צפוי) לכ-<b>{_f(cur['nw_p10'])}</b> (תרחיש גרוע). פגיעה של כ-{_f(loss_impact)}.</div>"
             f"<div>🎲 <b>הסיכוי שזה יקרה:</b> <b>{p_cur*100:.0f}%</b> מהתרחישים לאורך הפרישה.</div>"
             f"<div>⚖️ <b>מסקנה:</b> סיכון <b>{verdict}</b>.</div>"
             f"</div>", unsafe_allow_html=True)

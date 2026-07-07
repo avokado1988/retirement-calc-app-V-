@@ -10,15 +10,13 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     single dial: 0 = identical to track 1, up to the home price = full leverage.
     """
     st.subheader("🏦 מסלול 5 — מינוף (הלוואת בלון)")
-    st.caption("קונים את הדירה בהלוואת בלון כנגד תיק ההשקעות במקום במזומן, כך שכסף הדירה נשאר מושקע.")
-    st.caption("מיסוי ותשואה כמו תיקון 190. מחיר הדירה ועליית הערך נלקחים משדה הדירה החדשה.")
+    st.caption("הלוואה כנגד הצבירה (מסלול כללי) לפי חוקי הקופות בישראל, והכסף השאול מושקע.")
+    st.caption("תשואת מסלול כללי (כ-5.5%). הבטוחה היא הצבירה בלבד, והמימון עד 80% ממנה.")
 
-    # תקרת מימון 75%. יחס חוב לשווי 75% פירושו שההלוואה לא עוברת פי שלושה מהחלק
-    # הנזיל של התיק (loan / (net_for_190 + loan) <= 0.75  =>  loan <= 3 * net_for_190).
-    # מגבילים גם למחיר הדירה, כי אין צורך ללוות מעבר לעלות הרכישה.
-    MAX_LTV = 0.75
-    cap_by_ltv = MAX_LTV / (1 - MAX_LTV) * net_for_190  # = 3 * net_for_190
-    loan_cap = int(min(new_apartment_cost, cap_by_ltv) // 100000 * 100000)
+    # חוקי הקופות בישראל: ההלוואה נלקחת כנגד הצבירה (מסלול כללי), עד 80% ממנה.
+    # הבטוחה היא הצבירה בלבד, ולכן התקרה היא 80% מהחלק הנזיל, לא יחס על סך התיק.
+    MAX_ADVANCE = 0.80
+    loan_cap = int((MAX_ADVANCE * net_for_190) // 100000 * 100000)
     default_loan = min(int(DEFAULTS["loan_amount"]), loan_cap)
 
     loan_amount = compact_number_input(
@@ -26,7 +24,7 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
         value=default_loan, min_value=0, max_value=loan_cap,
         step=100000, unit="₪", color=COLOR_RED
     )
-    st.caption(f"מ-0 (זהה למסלול 1, ללא מינוף) ועד תקרת מימון של 75% מהתיק ({format_shekel(loan_cap)}). כל שקל הלוואה נשאר מושקע בתיק.")
+    st.caption(f"מ-0 (ללא מינוף) ועד 80% מהצבירה ({format_shekel(loan_cap)}). זו תקרת המימון המקובלת בקופות בישראל.")
 
     loan_annual_rate = compact_number_input(
         "ריבית שנתית על ההלוואה (%)",
@@ -35,12 +33,12 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     )
     st.caption("בערך פריים פחות 0.75. הריבית מצטברת לחוב, בלי תשלום חודשי, ונפרעת מהעיזבון.")
 
-    # Live view of the resulting portfolio and leverage ratio
+    # יחס המימון מחושב כנגד הצבירה (הבטוחה), לא כנגד סך התיק
     portfolio = net_for_190 + loan_amount
-    ltv = (loan_amount / portfolio * 100) if portfolio > 0 else 0.0
-    show_net_summary("תיק מושקע במסלול 5 (מסלול 1 + הלוואה)", portfolio)
-    _icon = "🟢" if ltv <= 50 else ("🟡" if ltv <= 65 else "🔴")
-    st.caption(f"{_icon} מינוף: {ltv:.0f}% מהתיק. השדה חסום בתקרת מימון של 75%, כמקובל אצל מלווים. ככל שקרוב לתקרה, מסוכן יותר לדרישת ביטחונות.")
+    ltv = (loan_amount / net_for_190 * 100) if net_for_190 > 0 else 0.0
+    show_net_summary("תיק מושקע במסלול 5 (צבירה + הלוואה)", portfolio)
+    _icon = "🟢" if ltv <= 40 else ("🟡" if ltv <= 65 else "🔴")
+    st.caption(f"{_icon} שיעור מימון: {ltv:.0f}% מהצבירה. חסום ב-80%, תקרת הקופות. ככל שקרוב לתקרה, פחות כרית עד דרישת השלמה.")
 
     return {
         "loan_amount": loan_amount,
