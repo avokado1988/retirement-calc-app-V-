@@ -143,7 +143,7 @@ def render_monte_carlo(user_inputs):
     _sec("⚙️ הנחות המודל")
     c1, c2 = st.columns(2)
     with c1:
-        std_ret = st.slider("תנודתיות שנתית של התיק (סטיית תקן %)",
+        std_ret = st.slider("תנודתיות שנתית של התיק, מסלול כללי (סטיית תקן %)",
                             min_value=5.0, max_value=20.0, value=GEN_VOL * 100, step=0.5,
                             help="מסלול כללי סביב 7-9%. מנייתי טהור 15%+.") / 100
     with c2:
