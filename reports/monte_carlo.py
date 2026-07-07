@@ -284,7 +284,7 @@ def render_monte_carlo(user_inputs):
         f"<th style='padding:7px 12px;text-align:right;'>סכום הלוואה מקסימלי</th>"
         f"<th style='padding:7px 12px;'>רמת סיכון</th>"
         f"<th style='padding:7px 12px;'>סיכוי דרישת השלמה</th>"
-        f"<th style='padding:7px 12px;'>עד כמה השוק יכול לרדת</th></tr></thead>"
+        f"<th style='padding:7px 12px;'>בכמה השוק יכול לרדת</th></tr></thead>"
         f"<tbody>{_rows_html}</tbody></table></div>", unsafe_allow_html=True)
 
     _cur_col = "#1a7a3a" if p_cur <= 0.10 else ("#b07800" if p_cur <= 0.25 else "#a83232")
