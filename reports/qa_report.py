@@ -518,19 +518,46 @@ def render_qa_section(results, user_inputs):
         for t in (1, 2, 3, 4, 5)
     }
 
+    # -------------------------------------------------------
+    # Leverage risk — computed BEFORE ranking so it can veto a risky winner.
+    # A retirement plan that shows more money on paper but carries a high
+    # forced-liquidation risk must NOT be recommended. The margin-call risk is
+    # therefore a first-class ranking factor, not an afterthought on the card.
+    # -------------------------------------------------------
+    _CALL_LTV = 0.85  # lender liquidates when loan/portfolio crosses this
+    _ltv_col = df_full[df_full["גיל"] >= retire_age]["מינוף — LTV"] if "מינוף — LTV" in df_full.columns else None
+    lev_ltv_max = float(_ltv_col.max()) if _ltv_col is not None and not _ltv_col.empty else 0.0
+    lev_drop_tol = max(0.0, 1 - lev_ltv_max / _CALL_LTV) if lev_ltv_max > 0 else 1.0
+    lev_mc_prob = None
+    if 5 in visible_tracks and lev_ltv_max > 0:
+        try:
+            from reports.monte_carlo import margin_call_probability
+            lev_mc_prob = margin_call_probability(user_inputs)
+        except Exception:
+            lev_mc_prob = None
+    # "High risk" = the leverage track can be forced into a fire-sale too easily.
+    # Either a >=15% Monte-Carlo margin-call probability, or a thin (<25%) cushion
+    # before a call. Such a track is barred from the #1 recommendation.
+    lev_risk_high = (lev_ltv_max > 0) and (
+        (lev_mc_prob is not None and lev_mc_prob >= 0.15) or (lev_drop_tol < 0.25))
+
     # 4th field = preservation ratio at check_age (drives the health badge).
+    # 6th field = risk_ok: a high-risk leverage track sorts BELOW every other
+    # track regardless of paper money, so it can never be recommended.
+    def _risk_ok(tid):
+        return not (tid == 5 and lev_risk_high)
     tracks_exec = [
-        (1, _sa_rank[1], empty_190, preservation_ratio[1], husn_190),
-        (2, _sa_rank[2], empty_25,  preservation_ratio[2], husn_25),
-        (3, _sa_rank[3], empty_h,   preservation_ratio[3], husn_h),
-        (4, _sa_rank[4], empty_r,   preservation_ratio[4], husn_r),
-        (5, _sa_rank[5], empty_lev, preservation_ratio[5], husn_lev),
+        (1, _sa_rank[1], empty_190, preservation_ratio[1], husn_190, _risk_ok(1)),
+        (2, _sa_rank[2], empty_25,  preservation_ratio[2], husn_25,  _risk_ok(2)),
+        (3, _sa_rank[3], empty_h,   preservation_ratio[3], husn_h,   _risk_ok(3)),
+        (4, _sa_rank[4], empty_r,   preservation_ratio[4], husn_r,   _risk_ok(4)),
+        (5, _sa_rank[5], empty_lev, preservation_ratio[5], husn_lev, _risk_ok(5)),
     ]
 
     # -------------------------------------------------------
-    # Rank: sort by score desc, lower track_id wins ties; filter hidden tracks
+    # Rank: risk-acceptable tracks first, then by score desc, lower id wins ties.
     # -------------------------------------------------------
-    sorted_by_score = sorted(tracks_exec, key=lambda x: (-x[1], x[0]))
+    sorted_by_score = sorted(tracks_exec, key=lambda x: (not x[5], -x[1], x[0]))
 
     # When both track 1 (190) and track 4 (rental) are visible, the stress test
     # decides their relative rank — not the score.  All other tracks stay sorted by score.
@@ -547,7 +574,7 @@ def render_qa_section(results, user_inputs):
 
     ranked_order = [
         (i + 1, tid, sc, ea, p95, husn)
-        for i, (tid, sc, ea, p95, husn) in enumerate(sorted_by_score)
+        for i, (tid, sc, ea, p95, husn, _rok) in enumerate(sorted_by_score)
         if tid in visible_tracks
     ]
     rank_for_track = {tid: rank for rank, tid, *_ in ranked_order}
@@ -705,21 +732,10 @@ def render_qa_section(results, user_inputs):
     total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
                    for t in (1, 2, 3, 4, 5)}
 
-    # --- Track 5 leverage risk gauge: LTV, margin-call cushion, cash buffer ---
-    _CALL_LTV = 0.85  # lender liquidates when loan/portfolio crosses this
-    _ltv_col = df_full[df_full["גיל"] >= retire_age]["מינוף — LTV"] if "מינוף — LTV" in df_full.columns else None
-    lev_ltv_max = float(_ltv_col.max()) if _ltv_col is not None and not _ltv_col.empty else 0.0
-    lev_drop_tol = max(0.0, 1 - lev_ltv_max / _CALL_LTV) if lev_ltv_max > 0 else 1.0
+    # --- Track 5 leverage risk gauge: cash buffer (LTV / drop-tol / MC prob were
+    # already computed above the ranking, where the risk vetoes a risky winner) ---
     _lev_draw_year = draw_retire.get(5, 0.0) * 12
     lev_buffer_years = (emergency_fund / _lev_draw_year) if _lev_draw_year > 100 else None
-    # Monte-Carlo margin-call probability for the current loan (only if track 5 shown)
-    lev_mc_prob = None
-    if 5 in visible_tracks and lev_ltv_max > 0:
-        try:
-            from reports.monte_carlo import margin_call_probability
-            lev_mc_prob = margin_call_probability(user_inputs)
-        except Exception:
-            lev_mc_prob = None
 
     def _card_row(label, value_html, strong=False, top_border=False):
         # FIXED height (not min-height) so a value that wraps to two lines still
@@ -853,6 +869,14 @@ def render_qa_section(results, user_inputs):
 
     if track4_wins_stress is not None and 4 in order and rm_track4_not_viable:
         st.warning("🚫 מסלול השכירות אינו קביל — אין מספיק כסף לכסות את הגרעון עד הגיל הנבדק.")
+
+    # Explain WHY the leverage track is not recommended even if it shows more money
+    if 5 in order and lev_risk_high:
+        _mc_txt = (f" ההסתברות למכירה כפויה כ-{lev_mc_prob*100:.0f}%." if lev_mc_prob is not None else "")
+        st.warning(
+            "⚠️ מסלול המינוף אינו מומלץ למרות שעל הנייר הוא עשוי להשאיר יותר כסף. "
+            "רמת הסיכון בו גבוהה — נפילת שוק מתונה עלולה לאלץ מכירת התיק בהפסד." + _mc_txt +
+            " בתכנון פרישה, סיכון של אובדן קבוע גובר על תוספת תשואה על הנייר, ולכן הוא הורד בדירוג.")
 
     # Pros & cons per track, collapsed below the table
     st.markdown("<br/>", unsafe_allow_html=True)
