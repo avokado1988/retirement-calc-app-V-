@@ -67,38 +67,40 @@ def _recommend_for_track(P0, annual_wd, wd_growth, years, fee=DEFAULT_FEE):
     cash_need = cum(CASH_YEARS)
     cash_pct = min(1.0, cash_need / P0) if P0 > 0 else 1.0
     safe_pct = min(1.0, safe_need / P0) if P0 > 0 else 1.0
-    eq_formula = min(EQUITY_CAP, max(0.0, 1.0 - safe_pct))
 
-    # סורקים תמהילים מרמת המניות של הנוסחה כלפי מטה, ובוחרים את הגבוה ביותר
-    # שעובר את רף ההצלחה. אם אף אחד לא עובר — התכנית בסיכון.
+    # סורקים את מלוא טווח המניות, מאפס ועד התקרה. לכל רמת מניות שומרים דלי מזומן
+    # של שנתיים, והשאר אג"ח. חשוב לסרוק גם מעלה, כי במשיכה גבוהה דווקא יותר מניות
+    # מעלות את סיכוי ההצלחה (צמיחה שמנצחת את המשיכה), לא רק מורידות סיכון.
     candidates = []
-    e = eq_formula
-    while e >= -1e-9:
-        candidates.append(max(0.0, round(e, 4)))
-        e -= 0.05
-
-    best = None
-    chosen = None
-    for eq in candidates:
-        c = min(cash_pct, 1.0 - eq)
-        b = max(0.0, 1.0 - eq - c)
-        mix = (c, b, eq)
+    eq = 0.0
+    while eq <= EQUITY_CAP + 1e-9:
+        e = round(min(EQUITY_CAP, eq), 4)
+        c = min(cash_pct, 1.0 - e)
+        b = max(0.0, 1.0 - e - c)
+        mix = (c, b, e)
         ret, vol = _blend(mix)
         succ, p10, p50, p90 = _survival(P0, annual_wd, wd_growth, years, ret - fee, vol)
-        cand = {"mix": mix, "ret": ret, "vol": vol,
-                "success": succ, "p10": p10, "p50": p50, "p90": p90}
-        if best is None or succ > best["success"]:
-            best = cand
-        if succ >= GREEN:
-            chosen = cand
-            break
+        candidates.append({"mix": mix, "ret": ret, "vol": vol,
+                           "success": succ, "p10": p10, "p50": p50, "p90": p90})
+        eq += 0.05
 
-    result = dict(chosen if chosen else best)
-    result["at_risk"] = chosen is None
+    # מבין התמהילים שעוברים את רף ההצלחה, בוחרים את זה שמשאיר הכי הרבה ליורשים
+    # (חציון הירושה). אם אף אחד לא עובר — התכנית בסיכון, ומציגים את הטוב ביותר.
+    passing = [c for c in candidates if c["success"] >= GREEN]
+    if passing:
+        chosen = max(passing, key=lambda c: c["p50"])
+        at_risk = False
+    else:
+        chosen = max(candidates, key=lambda c: c["success"])
+        at_risk = True
+
+    result = dict(chosen)
+    result["at_risk"] = at_risk
     result["safe_need"] = safe_need
     result["safe_pct"] = safe_pct
     result["annual_wd"] = annual_wd
     result["P0"] = P0
+    result["best_success"] = max(c["success"] for c in candidates)
     return result
 
 
@@ -237,13 +239,17 @@ def render_allocation_recommender(user_inputs):
         f"התרחישים שבהם הכסף החזיק עד הגיל הנבדק. טווח הירושה מציג תרחיש גרוע (10%) "
         f"מול אמצעי (חציון).</div>", unsafe_allow_html=True)
 
-    if any(recs[t].get("at_risk") for t in order):
+    risky = [t for t in order if recs[t].get("at_risk")]
+    if risky:
+        _best = max(recs[t]["best_success"] for t in risky) * 100
         st.markdown(
             "<div style='direction:rtl;text-align:right;background:#fff8e1;border:1px solid #f0c86a;"
             "border-right:4px solid #e0a800;border-radius:8px;padding:10px 14px;margin:6px 0;"
-            "color:#5a4a1a;'>⚠️ במסלול שסומן בסיכון, אפילו התמהיל השמרן ביותר לא עובר את רף "
-            "ההצלחה. המשמעות היא שהמשיכה גבוהה מדי ביחס לתיק, ושום תמהיל לא יפתור זאת — "
-            "צריך לבחון מחדש הוצאות, הכנסות או גיל בדיקה.</div>", unsafe_allow_html=True)
+            f"color:#5a4a1a;line-height:1.7;'>⚠️ במסלול שסומן בסיכון בדקנו את כל טווח התמהילים, "
+            f"ממאה אחוז סולידי ועד תקרת המניות, והסיכוי הגבוה ביותר שהצלחנו להגיע אליו הוא "
+            f"כ-{_best:.0f}%, מתחת לרף התשעים אחוז. זה לא בעיה של תמהיל אלא של המשיכה עצמה, "
+            f"שגבוהה מדי ביחס לתיק. שום תערובת לא תפתור זאת, צריך לבחון מחדש הוצאות, הכנסות "
+            f"או גיל בדיקה.</div>", unsafe_allow_html=True)
 
     st.divider()
     st.markdown(
