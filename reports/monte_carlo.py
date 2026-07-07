@@ -74,17 +74,19 @@ def margin_call_probability(user_inputs, std_ret=0.12, call_ltv=0.85, n_sims=200
 
 
 def render_monte_carlo(user_inputs):
-    st.subheader("🎲 ניתוח סיכון — מונטה קרלו למסלול המינוף")
     st.markdown(
-        "המודל הרגיל מניח שהשוק עולה בקצב קבוע כל שנה. במציאות יש שנים טובות ורעות. "
-        "כאן מריצים אלפי תרחישי שוק אקראיים כדי לראות עד כמה המינוף מסוכן בפועל."
-    )
-    st.info(
-        "**מה הסיכון במינוף?** לקחת הלוואה כנגד תיק ההשקעות. אם השוק יורד חזק, "
-        "התיק מצטמק אבל החוב לא, והבנק דורש להחזיר חלק מההלוואה. אם אין מזומן — "
-        "הבנק **מוכר לך מניות בשפל**, ומקבע הפסד כבד. זה בדיוק מה שאנחנו מודדים כאן: "
-        "מה הסבירות שזה יקרה לאורך שנות הפרישה."
-    )
+        "<div style='direction:rtl;text-align:right;'>"
+        "<h4 style='color:#1a1a2e;'>🎲 ניתוח סיכון — מונטה קרלו למסלול המינוף</h4>"
+        "<p style='line-height:1.7;'>המודל הרגיל מניח שהשוק עולה בקצב קבוע כל שנה. במציאות "
+        "יש שנים טובות ורעות. כאן מריצים אלפי תרחישי שוק אקראיים כדי לראות עד כמה המינוף "
+        "מסוכן בפועל.</p></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
+        "border-right:4px solid #1565c0;border-radius:8px;padding:10px 14px;margin:6px 0;"
+        "color:#173a5e;line-height:1.7;'><b>מה הסיכון במינוף?</b> לקחת הלוואה כנגד תיק "
+        "ההשקעות. אם השוק יורד חזק, התיק מצטמק אבל החוב לא, והבנק דורש להחזיר חלק מההלוואה. "
+        "אם אין מזומן, הבנק <b>מוכר לך מניות בשפל</b> ומקבע הפסד כבד. זה בדיוק מה שאנחנו "
+        "מודדים כאן, מה הסבירות שזה יקרה לאורך שנות הפרישה.</div>", unsafe_allow_html=True)
 
     tl = user_inputs.get("timeline", {})
     ex = user_inputs.get("expenses", {})
@@ -250,7 +252,11 @@ def render_monte_carlo(user_inputs):
         st.plotly_chart(bar, use_container_width=True)
 
     if cur_loan <= 0:
-        st.success(f"✅ ללא מינוף (הלוואה ₪0) — אין סיכון של מכירה כפויה. הירושה הצפויה: {_f(cur['nw_p50'])}.")
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;background:#eafaf0;border:1px solid #8fd3a8;"
+            f"border-right:4px solid #1a7a3a;border-radius:8px;padding:12px 16px;color:#14532d;"
+            f"line-height:1.7;'>✅ ללא מינוף (הלוואה ₪0), אין סיכון של מכירה כפויה. "
+            f"הירושה הצפויה {_f(cur['nw_p50'])}.</div>", unsafe_allow_html=True)
     else:
         st.markdown(
             f"<div style='direction:rtl;text-align:right;background:{_bg};border:1px solid {_bd};"
@@ -284,8 +290,11 @@ def render_monte_carlo(user_inputs):
         legend=dict(orientation="h", y=1.18, x=0, xanchor="left"),
     )
     st.plotly_chart(rr, use_container_width=True)
-    st.caption("ככל שההלוואה גדלה — הקו הירוק (ירושה) עולה, אבל גם הקו האדום (סיכון) עולה. "
-               "רמת המינוף ההגיונית היא הגבוהה ביותר שבה הקו האדום עדיין נמוך.")
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;'>"
+        "ככל שההלוואה גדלה, הקו הירוק (ירושה) עולה, אבל גם הקו האדום (סיכון) עולה. "
+        "רמת המינוף ההגיונית היא הגבוהה ביותר שבה הקו האדום עדיין נמוך.</div>",
+        unsafe_allow_html=True)
 
     # --- Full numeric table (collapsed) ---
     header = (
@@ -318,8 +327,8 @@ def render_monte_carlo(user_inputs):
             f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.85em;direction:rtl;text-align:right;'>"
             f"<thead>{header}</thead><tbody>{body}</tbody></table></div>",
             unsafe_allow_html=True)
-        st.caption(
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;'>"
             f"על בסיס {years} שנים, תשואה ממוצעת {mean_ret*100:.1f}%, ריבית הלוואה {loan_rate*100:.2f}%, "
             f"וכרית מזומן {_f(buffer_cash)}. סיכון דרישת ביטחונות = אחוז התרחישים שבהם השוק צנח מספיק "
-            f"כדי לחצות את סף המכירה ולאלץ מכירת התיק."
-        )
+            f"כדי לחצות את סף המכירה ולאלץ מכירת התיק.</div>", unsafe_allow_html=True)
