@@ -79,7 +79,10 @@ def render_monte_carlo(user_inputs):
         "<h4 style='color:#1a1a2e;'>🎲 ניתוח סיכון — מונטה קרלו למסלול המינוף</h4>"
         "<p style='line-height:1.7;'>המודל הרגיל מניח שהשוק עולה בקצב קבוע כל שנה. במציאות "
         "יש שנים טובות ורעות. כאן מריצים אלפי תרחישי שוק אקראיים כדי לראות עד כמה המינוף "
-        "מסוכן בפועל.</p></div>", unsafe_allow_html=True)
+        "מסוכן בפועל.</p>"
+        "<p style='line-height:1.7;color:#555;font-size:0.92em;'>הערה, התיק כאן מבוסס על "
+        "מסלול 1 (תיקון 190), כלומר החלק הנזיל של מסלול 1 בתוספת ההלוואה, ואותה תשואה "
+        "ומיסוי.</p></div>", unsafe_allow_html=True)
     st.markdown(
         "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
         "border-right:4px solid #1565c0;border-radius:8px;padding:10px 14px;margin:6px 0;"
@@ -277,7 +280,7 @@ def render_monte_carlo(user_inputs):
             bgcolor="rgba(255,255,255,0.85)")
         bar.update_layout(
             barmode="stack", height=300, template="plotly_white", bargap=0.6,
-            title={"text": f"הרכב התיק היום — סה\"כ {_f(P0_cur)}", "font": {"size": 14}, "x": 0.5},
+            title={"text": f"הרכב התיק (מבוסס מסלול 1 + הלוואה) — סה\"כ {_f(P0_cur)}", "font": {"size": 13}, "x": 0.5},
             margin=dict(t=70, b=10, l=10, r=10), font=dict(family="sans-serif"),
             xaxis=dict(showticklabels=False),
             yaxis=dict(title="₪", tickformat=",.0f", range=[0, P0_cur * 1.12]),
