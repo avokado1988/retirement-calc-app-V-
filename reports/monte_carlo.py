@@ -303,16 +303,16 @@ def render_monte_carlo(user_inputs):
             showlegend=True)
         st.plotly_chart(bar, use_container_width=True)
 
-    # פירוט מספרי נקי מתחת לגרפים
+    # פירוט מספרי נקי מתחת לגרפים, עם הבהרה בין הרף (סכום) לירידת השוק (אחוז)
     if cur_loan > 0:
         st.markdown(
             f"<div style='direction:rtl;text-align:right;font-size:0.86em;color:#333;line-height:1.9;"
             f"background:#f8f9fc;border:1px solid #e6e8f0;border-radius:8px;padding:10px 14px;margin-top:6px;'>"
-            f"💼 <b>סך התיק:</b> {_f(P0_cur)} "
-            f"<span style='color:#777;'>(הצבירה שלך {_f(net_for_190)} + הלוואה {_f(cur_loan)}, זהו הכסף שעובד בשוק ומשמש בטוחה)</span><br/>"
-            f"📊 <b>שיעור מימון:</b> {_ltv0*100:.0f}% מהתיק &nbsp;·&nbsp; "
-            f"🔴 <b>רף דרישת השלמה:</b> {_f(threshold_val)} ({call_ltv*100:.0f}% מהתיק) &nbsp;·&nbsp; "
-            f"🟢 <b>התיק יכול לרדת:</b> {drop_needed*100:.0f}% לפני דרישת השלמה"
+            f"💼 <b>סך התיק היום:</b> {_f(P0_cur)} "
+            f"<span style='color:#777;'>(הצבירה שלך {_f(net_for_190)} + הלוואה {_f(cur_loan)}, הכסף שעובד בשוק ומשמש בטוחה)</span><br/>"
+            f"📊 <b>שיעור מימון:</b> {_ltv0*100:.0f}% — ההלוואה חלקי התיק.<br/>"
+            f"🔴 <b>רף דרישת השלמה:</b> {_f(threshold_val)} — <span style='color:#555;'>זהו <u>שווי התיק בשקלים</u> שאם יורדים אליו, החוב מגיע ל-{call_ltv*100:.0f}% מהתיק והמלווה דורש השלמה.</span><br/>"
+            f"🟢 <b>מרחק מהרף:</b> <span style='color:#555;'>כדי להגיע לרף, התיק צריך <u>לרדת בשוק</u> בכ-</span><b>{drop_needed*100:.0f}%</b> <span style='color:#555;'>(מ-{_f(P0_cur)} ל-{_f(threshold_val)}).</span>"
             f"</div>", unsafe_allow_html=True)
 
     if cur_loan <= 0:
