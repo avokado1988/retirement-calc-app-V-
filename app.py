@@ -27,12 +27,28 @@ if not hasattr(st, "_orig_slider_real"):
 _orig_slider = st._orig_slider_real
 _orig_number_input = st._orig_number_input_real
 
+def _clamp_persisted(value, kwargs):
+    # A value persisted in the URL from an earlier session may now sit outside
+    # the widget's min/max (e.g. a loan cap that shrank). Clamp it so Streamlit
+    # doesn't raise StreamlitValueAboveMax/BelowMin.
+    lo = kwargs.get("min_value")
+    hi = kwargs.get("max_value")
+    try:
+        if hi is not None and value > hi:
+            value = hi
+        if lo is not None and value < lo:
+            value = lo
+    except TypeError:
+        pass
+    return value
+
 def patched_slider(label, *args, **kwargs):
     widget_key = f"saved_slider_{label}"
     kwargs["key"] = widget_key
     if widget_key in st.session_state:
+        st.session_state[widget_key] = _clamp_persisted(st.session_state[widget_key], kwargs)
         kwargs["value"] = st.session_state[widget_key]
-        
+
     val = _orig_slider(label, *args, **kwargs)
     # הזרקה ישירה לכתובת הדפדפן בזמן אמת
     st.query_params[widget_key] = str(val)
@@ -42,8 +58,9 @@ def patched_number_input(label, *args, **kwargs):
     widget_key = f"saved_num_{label}"
     kwargs["key"] = widget_key
     if widget_key in st.session_state:
+        st.session_state[widget_key] = _clamp_persisted(st.session_state[widget_key], kwargs)
         kwargs["value"] = st.session_state[widget_key]
-        
+
     val = _orig_number_input(label, *args, **kwargs)
     # הזרקה ישירה לכתובת הדפדפן בזמן אמת
     st.query_params[widget_key] = str(val)
