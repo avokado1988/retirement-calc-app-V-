@@ -557,7 +557,12 @@ def render_qa_section(results, user_inputs):
     # -------------------------------------------------------
     # Rank: risk-acceptable tracks first, then by score desc, lower id wins ties.
     # -------------------------------------------------------
-    sorted_by_score = sorted(tracks_exec, key=lambda x: (not x[5], -x[1], x[0]))
+    # Rank ONLY among the tracks the user chose to compare. A hidden track is
+    # not in the contest, so it must not occupy a place (otherwise the visible
+    # ranks get gaps like 2nd/4th/5th with no 1st).
+    sorted_by_score = sorted(
+        [t for t in tracks_exec if t[0] in visible_tracks],
+        key=lambda x: (not x[5], -x[1], x[0]))
 
     # When both track 1 (190) and track 4 (rental) are visible, the stress test
     # decides their relative rank — not the score.  All other tracks stay sorted by score.
@@ -575,7 +580,6 @@ def render_qa_section(results, user_inputs):
     ranked_order = [
         (i + 1, tid, sc, ea, p95, husn)
         for i, (tid, sc, ea, p95, husn, _rok) in enumerate(sorted_by_score)
-        if tid in visible_tracks
     ]
     rank_for_track = {tid: rank for rank, tid, *_ in ranked_order}
     # Display order: keep the rank badges, but always show rental (track 4) last
