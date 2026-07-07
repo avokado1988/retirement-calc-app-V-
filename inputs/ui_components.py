@@ -19,7 +19,7 @@ DEFAULTS = {
     "desired_pension": 5306,
     "securing_years": 20,
     "base_coefficient": 200.0,
-    "annual_return": 0.064,
+    "annual_return": 0.049,
     "management_fee": 0.006,
     "management_fee_190": 0.005,
     "net_sale": 9200000,
@@ -40,9 +40,9 @@ DEFAULTS = {
     "maintenance_late_pct": 0.1,
     "rm_annual_rate": 0.06,
     "rm_savings_floor": 100000,
-    "loan_amount": 5500000,
+    "loan_amount": 2500000,
     "loan_annual_rate": 0.0525,
-    "visible_tracks": [1, 2, 3, 4, 5],
+    "visible_tracks": [1, 4, 5],
 }
 
 # ==============================================================================
