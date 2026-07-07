@@ -162,18 +162,18 @@ def render_monte_carlo(user_inputs):
         _ml = _max_loan_under(thr)
         _rows_html += (
             f"<tr style='border-bottom:1px solid #eee;'>"
-            f"<td style='padding:7px 12px;text-align:right;font-weight:700;color:{c};'>{lbl}</td>"
+            f"<td style='padding:7px 12px;text-align:right;font-weight:800;'>{_f(_ml)}</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:700;color:{c};'>{lbl}</td>"
             f"<td style='padding:7px 12px;text-align:center;'>עד {int(thr*100)}%</td>"
-            f"<td style='padding:7px 12px;text-align:center;font-weight:800;'>{_f(_ml)}</td>"
             f"<td style='padding:7px 12px;text-align:center;color:#555;'>{_drop_for_loan(_ml)*100:.0f}%</td></tr>")
     st.markdown(
         f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
         f"<div style='font-weight:800;font-size:1.02em;margin-bottom:4px;'>💰 כמה אפשר ללוות, לפי רמת הסיכון</div>"
         f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.9em;'>"
         f"<thead><tr style='background:#eef0f7;'>"
-        f"<th style='padding:7px 12px;text-align:right;'>רמת סיכון</th>"
+        f"<th style='padding:7px 12px;text-align:right;'>סכום הלוואה מקסימלי</th>"
+        f"<th style='padding:7px 12px;'>רמת סיכון</th>"
         f"<th style='padding:7px 12px;'>סיכוי מכירה כפויה</th>"
-        f"<th style='padding:7px 12px;'>סכום הלוואה מקסימלי</th>"
         f"<th style='padding:7px 12px;'>כמה השוק יכול לרדת</th></tr></thead>"
         f"<tbody>{_rows_html}</tbody></table></div>", unsafe_allow_html=True)
 
