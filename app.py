@@ -272,9 +272,9 @@ try:
         _track_runs_out("צבירה מסלול היברידי"),
         _track_runs_out("צבירה מסלול שכירות"),
     ])
-    qa_tab_label = "🔴 QA — ניתוח מסלולים" if tracks_at_risk else "🟢 QA — ניתוח מסלולים"
+    qa_tab_label = "🔴 השוואת מסלולים והמלצה" if tracks_at_risk else "🟢 השוואת מסלולים והמלצה"
 except Exception:
-    qa_tab_label = "🔬 QA — ניתוח מסלולים"
+    qa_tab_label = "📊 השוואת מסלולים והמלצה"
 
 tab0, tab4, tab3, tab2, tab1 = st.tabs(["🎯 תמהיל מומלץ", "📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
 
