@@ -146,7 +146,7 @@ def render_monte_carlo(user_inputs):
                             min_value=5.0, max_value=20.0, value=GEN_VOL * 100, step=0.5,
                             help="מסלול כללי סביב 7-9%. מנייתי טהור 15%+.") / 100
     with c2:
-        call_ltv = st.slider("סף דרישת השלמה (% מהתיק)",
+        call_ltv = st.slider("סף דרישת השלמה למכירה (% מהתיק)",
                              min_value=80.0, max_value=100.0, value=CALL_LTV_IL * 100, step=1.0,
                              help="גבוה משיעור המימון (80%). הרווח בין מה שלקחת לסף הוא הכרית. מקובל כ-90%.") / 100
     _rtl(
