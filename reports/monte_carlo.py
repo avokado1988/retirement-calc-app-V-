@@ -192,13 +192,14 @@ def render_monte_carlo(user_inputs):
     _bg = "#eafaf0" if p_cur < 0.05 else ("#fff7e0" if p_cur < 0.15 else "#fdecea")
     _bd = "#8fd3a8" if p_cur < 0.05 else ("#f0c86a" if p_cur < 0.15 else "#e0a099")
 
-    loan_steps = sorted(set(int(loan_cap * k) for k in (0, 0.2, 0.4, 0.6, 0.8, 1.0)))
+    # כל קשת ההלוואה, מ-0 ועד התקרה (מחיר הבית), בקפיצות של 10%
+    loan_steps = sorted(set(int(loan_cap * i / 10) for i in range(11)))
     rows = []
     for loan in loan_steps:
         P0 = net_for_190 + loan
         ltv0 = (loan / P0 * 100) if P0 > 0 else 0
         res = _simulate(P0, loan, loan_rate, mean_ret, std_ret, years, annual_wd, inflation,
-                        home0, home_appr, buffer_cash, 0.02, call_ltv)
+                        home0, home_appr, buffer_cash, 0.02, call_ltv, n_sims=2500)
         rows.append((loan, ltv0, res))
 
     # ============ 1. המצב שלך ============
