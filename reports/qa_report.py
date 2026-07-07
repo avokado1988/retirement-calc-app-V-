@@ -484,10 +484,10 @@ def render_qa_section(results, user_inputs):
         },
         4: {
             "name": "שכירות",
-            "pro1": "הדירה נשמרת ועולה בערכה עם הזמן",
+            "pro1": "הקרקע שומרת על ערכה, והדירה יכולה לעלות עם הזמן",
             "pro2": 'שכ"ד מכסה חלק מהוצאות — פחות תלות בתיק',
-            "con1": 'הון נזיל קטן מאוד — כמעט כל הכסף כלוא בנדל"ן',
-            "con2": "שוכר לא תמיד מגיע — תיקונים, ריקנות, ועד בית בגיל מבוגר",
+            "con1": 'הון נזיל קטן מאוד — כמעט כל הכסף כלוא בנדל"ן, ותלוי במשכנתה הפוכה בגיל מבוגר',
+            "con2": "טרחת דיירים, תיקונים וריקנות, והבניין מתיישן ודורש שיפוץ יקר שפוגע בערכו",
         },
         5: {
             "name": "מינוף (הלוואת בלון)",
@@ -555,27 +555,31 @@ def render_qa_section(results, user_inputs):
     ]
 
     # -------------------------------------------------------
-    # Rank: risk-acceptable tracks first, then by score desc, lower id wins ties.
+    # Ranking = two goals, in order of importance:
+    #   1) Longevity protection — will the money outlast a long life? A track
+    #      whose money runs out at a late age scores a WORSE tier, even if it
+    #      looks rich at the checked age. Guaranteed-for-life beats "lasts to 95
+    #      then erodes and is gone by 100".
+    #   2) Money left to heirs — within the SAME longevity tier, more is better.
+    # A high forced-liquidation risk (leverage) vetoes the track to the bottom.
+    #
+    # This replaces the old 190-vs-rental stress swap, which let an illiquid
+    # property's paper value crown a track that was actually weaker on both
+    # longevity (reverse-mortgage dependence) and net money.
     # -------------------------------------------------------
-    # Rank ONLY among the tracks the user chose to compare. A hidden track is
-    # not in the contest, so it must not occupy a place (otherwise the visible
-    # ranks get gaps like 2nd/4th/5th with no 1st).
+    LONGEVITY_AGE = max(check_age, 100.0)  # long-life stress horizon
+
+    def _longevity_tier(empty_age):
+        if empty_age >= 104.0:        return 0  # money lasts for life
+        if empty_age >= LONGEVITY_AGE: return 1  # lasts past a long life
+        if empty_age >= check_age:    return 2  # survives your horizon, longevity risk beyond it
+        return 3                                # runs out before your horizon
+
+    # Rank ONLY among the tracks the user chose to compare, so places are
+    # contiguous from 1st with no gaps from hidden tracks.
     sorted_by_score = sorted(
         [t for t in tracks_exec if t[0] in visible_tracks],
-        key=lambda x: (not x[5], -x[1], x[0]))
-
-    # When both track 1 (190) and track 4 (rental) are visible, the stress test
-    # decides their relative rank — not the score.  All other tracks stay sorted by score.
-    if 1 in visible_tracks and 4 in visible_tracks:
-        idx1 = next((i for i, t in enumerate(sorted_by_score) if t[0] == 1), None)
-        idx4 = next((i for i, t in enumerate(sorted_by_score) if t[0] == 4), None)
-        if idx1 is not None and idx4 is not None:
-            stress_says_4_first = track4_wins_stress
-            currently_4_first   = idx4 < idx1
-            if stress_says_4_first != currently_4_first:
-                lst = list(sorted_by_score)
-                lst[idx1], lst[idx4] = lst[idx4], lst[idx1]
-                sorted_by_score = lst
+        key=lambda x: (not x[5], _longevity_tier(x[2]), -x[1], x[0]))
 
     ranked_order = [
         (i + 1, tid, sc, ea, p95, husn)
@@ -877,10 +881,14 @@ def render_qa_section(results, user_inputs):
     # Explain WHY the leverage track is not recommended even if it shows more money
     if 5 in order and lev_risk_high:
         _mc_txt = (f" ההסתברות למכירה כפויה כ-{lev_mc_prob*100:.0f}%." if lev_mc_prob is not None else "")
-        st.warning(
-            "⚠️ מסלול המינוף אינו מומלץ למרות שעל הנייר הוא עשוי להשאיר יותר כסף. "
-            "רמת הסיכון בו גבוהה — נפילת שוק מתונה עלולה לאלץ מכירת התיק בהפסד." + _mc_txt +
-            " בתכנון פרישה, סיכון של אובדן קבוע גובר על תוספת תשואה על הנייר, ולכן הוא הורד בדירוג.")
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;background:#fff8e1;border:1px solid #f0c86a;"
+            f"border-right:4px solid #e0a800;border-radius:8px;padding:12px 16px;margin:6px 0;"
+            f"font-size:0.92em;line-height:1.7;color:#5a4a1a;'>"
+            f"⚠️ מסלול המינוף אינו מומלץ למרות שעל הנייר הוא עשוי להשאיר יותר כסף. "
+            f"רמת הסיכון בו גבוהה, נפילת שוק מתונה עלולה לאלץ מכירת התיק בהפסד.{_mc_txt} "
+            f"בתכנון פרישה סיכון של אובדן קבוע גובר על תוספת תשואה על הנייר, ולכן הוא הורד בדירוג."
+            f"</div>", unsafe_allow_html=True)
 
     # Pros & cons per track, collapsed below the table
     st.markdown("<br/>", unsafe_allow_html=True)
