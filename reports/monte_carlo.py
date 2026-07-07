@@ -125,37 +125,57 @@ def render_monte_carlo(user_inputs):
                              min_value=70.0, max_value=95.0, value=85.0, step=1.0,
                              help="מעל שיעור המימון המקסימלי (75%). כשהיחס חוצה אותו — מכירה כפויה.") / 100
 
-    # --- המלצת סכום הלוואה בטוח: הגבוה ביותר ששומר סיכון מכירה כפויה מתחת ל-5% ---
+    # --- כמה אפשר ללוות לפי רמת הסיכון שמוכנים לקחת ---
+    # מינוף הוא בהגדרה סיכון, ולכן במקום "סכום בטוח" יחיד מציגים כמה אפשר ללוות
+    # בכל רמת סיכון. הסתברות המכירה הכפויה עולה באופן מונוטוני עם ההלוואה.
     loan_cap = min(home0, 3 * net_for_190)  # תקרת מימון 75% (loan <= 3 × החלק הנזיל)
-    safe_loan = 0.0
-    _n = 40
-    for _i in range(1, _n + 1):
-        _loan = loan_cap * _i / _n
-        _res = _simulate(net_for_190 + _loan, _loan, loan_rate, mean_ret, std_ret, years,
-                         annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv, n_sims=1500)
-        if _res["p_margin_call"] <= 0.05:
-            safe_loan = _loan
-        else:
-            break
+    _N = 40
+    _grid = []
+    for _i in range(_N + 1):
+        _loan = loan_cap * _i / _N
+        _pr = _simulate(net_for_190 + _loan, _loan, loan_rate, mean_ret, std_ret, years,
+                        annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv,
+                        n_sims=1500)["p_margin_call"]
+        _grid.append((_loan, _pr))
+
+    def _max_loan_under(thr):
+        ok = [ln for ln, pr in _grid if pr <= thr]
+        return max(ok) if ok else 0.0
 
     _cur_loan_disp = max(0.0, min(float(lev.get("loan_amount", 0)), loan_cap))
-    if safe_loan <= 0:
-        st.markdown(
-            "<div style='direction:rtl;text-align:right;background:#fdecea;border:1px solid #e0a099;"
-            "border-right:4px solid #c0392b;border-radius:8px;padding:12px 16px;margin:8px 0;"
-            "color:#6a1b1b;line-height:1.7;'>🔴 <b>אין מקום למינוף בטוח.</b> גם הלוואה קטנה "
-            "חוצה את רף הסיכון של 5% למכירה כפויה. עדיף מסלול בלי מינוף.</div>",
-            unsafe_allow_html=True)
-    else:
-        _over = _cur_loan_disp > safe_loan + 1
-        _extra = (f" ההלוואה הנוכחית ({_f(_cur_loan_disp)}) גבוהה מהמומלץ — כדאי להקטין."
-                  if _over else " ההלוואה הנוכחית בתחום הבטוח.")
-        st.markdown(
-            f"<div style='direction:rtl;text-align:right;background:#eafaf0;border:1px solid #8fd3a8;"
-            f"border-right:4px solid #1a7a3a;border-radius:8px;padding:12px 16px;margin:8px 0;"
-            f"color:#14532d;line-height:1.7;'>🟢 <b>סכום הלוואה בטוח מומלץ: {_f(safe_loan)}.</b> "
-            f"עד סכום זה הסיכוי למכירה כפויה נשאר מתחת ל-5%.{_extra}</div>",
-            unsafe_allow_html=True)
+    _cur_pr = next((pr for ln, pr in _grid if ln >= _cur_loan_disp), _grid[-1][1])
+    _tiers = [("🟢 שמרני", 0.10, "#1a7a3a", "#eafaf0", "#8fd3a8"),
+              ("🟡 מתון", 0.25, "#b07800", "#fff8e1", "#f0c86a"),
+              ("🔴 אגרסיבי", 0.40, "#a83232", "#fdecea", "#e0a099")]
+    _rows_html = "".join(
+        f"<tr style='border-bottom:1px solid #eee;'>"
+        f"<td style='padding:7px 12px;text-align:right;font-weight:700;color:{c};'>{lbl}</td>"
+        f"<td style='padding:7px 12px;text-align:center;'>עד {int(thr*100)}%</td>"
+        f"<td style='padding:7px 12px;text-align:center;font-weight:800;'>{_f(_max_loan_under(thr))}</td></tr>"
+        for lbl, thr, c, _bgc, _bdc in _tiers)
+    st.markdown(
+        f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
+        f"<div style='font-weight:800;font-size:1.02em;margin-bottom:4px;'>💰 כמה אפשר ללוות, לפי רמת הסיכון</div>"
+        f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.9em;'>"
+        f"<thead><tr style='background:#eef0f7;'>"
+        f"<th style='padding:7px 12px;text-align:right;'>רמת סיכון</th>"
+        f"<th style='padding:7px 12px;'>סיכוי מכירה כפויה</th>"
+        f"<th style='padding:7px 12px;'>סכום הלוואה מקסימלי</th></tr></thead>"
+        f"<tbody>{_rows_html}</tbody></table></div>", unsafe_allow_html=True)
+
+    # השוואה להלוואה הנוכחית
+    _cur_col = "#1a7a3a" if _cur_pr <= 0.10 else ("#b07800" if _cur_pr <= 0.25 else "#a83232")
+    _cur_lbl = "שמרנית" if _cur_pr <= 0.10 else ("מתונה" if _cur_pr <= 0.25 else "אגרסיבית")
+    st.markdown(
+        f"<div style='direction:rtl;text-align:right;color:#444;font-size:0.9em;line-height:1.7;margin-top:8px;'>"
+        f"ההלוואה הנוכחית ({_f(_cur_loan_disp)}) נמצאת ברמת סיכון "
+        f"<b style='color:{_cur_col};'>{_cur_lbl}</b>, עם סיכוי מכירה כפויה של כ-{_cur_pr*100:.0f}%.</div>",
+        unsafe_allow_html=True)
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;margin-top:4px;'>"
+        "מינוף הוא תמיד לקיחת סיכון, אין סכום חסר סיכון לחלוטין. הטבלה מניחה שריבית "
+        "ההלוואה מצטברת לאורך כל התקופה בלי שמשלמים אותה, וזו ההנחה השמרנית.</div>",
+        unsafe_allow_html=True)
 
     home_price = home0
     loan_steps = [0, int(loan_cap*0.2), int(loan_cap*0.4), int(loan_cap*0.6),
