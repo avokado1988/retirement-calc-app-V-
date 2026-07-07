@@ -28,12 +28,13 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
     wd = float(annual_wd)
 
     for y in range(years):
-        from_buf = np.minimum(buf, wd)
+        # ריבית משולמת שוטף (הלוואת בלון סטנדרטית) — החוב נשאר קבוע, הריבית נמשכת מהתיק
+        total_wd = wd + D * loan_rate
+        from_buf = np.minimum(buf, total_wd)
         buf = (buf - from_buf) * (1 + buffer_rate)
-        P = P - (wd - from_buf)
+        P = P - (total_wd - from_buf)
         P = P * (1 + rets[:, y])
         S = S * (1 + rets[:, y])
-        D = D * (1 + loan_rate)
         with np.errstate(divide="ignore", invalid="ignore"):
             ltv = np.where(P > 0, D / np.maximum(P, 1.0), 999.0)
         breach = (~margin_called) & (ltv > call_ltv)
@@ -293,8 +294,8 @@ def render_monte_carlo(user_inputs):
         f"ההלוואה שבחרת ({_f(cur_loan)}) נמצאת ברמת סיכון "
         f"<b style='color:{_cur_col};'>{_cur_lbl}</b>, עם סיכוי דרישת השלמה של כ-{p_cur*100:.0f}%.</div>"
         f"<div style='color:#777;font-size:0.82em;line-height:1.6;margin-top:4px;'>"
-        f"מינוף הוא תמיד לקיחת סיכון, אין סכום חסר סיכון. המודל מניח שהריבית מצטברת "
-        f"לחוב לאורך התקופה, וזו ההנחה השמרנית.</div>")
+        f"מינוף הוא תמיד לקיחת סיכון, אין סכום חסר סיכון. המודל מניח שהריבית משולמת "
+        f"שוטף מהתיק וקרן ההלוואה נשארת קבועה, כמו בהלוואת בלון סטנדרטית.</div>")
 
     # ============ 3. סיכון מול תשואה ============
     st.divider()

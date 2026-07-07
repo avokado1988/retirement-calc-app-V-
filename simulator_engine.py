@@ -189,10 +189,10 @@ def run_simulation(user_inputs):
             tax_lev = pull_l * pr_l * 0.15
             basis_lev *= (1 - (pull_l / balance_lev))
             balance_lev -= pull_l
-        # Balloon loan: interest accrues to the debt, no monthly payment
+        # הלוואת בלון סטנדרטית: הריבית משולמת שוטף מהתיק, קרן ההלוואה נשארת קבועה
         rm_interest_lev = loan_balance_lev * loan_rate_monthly
         if loan_balance_lev > 0:
-            loan_balance_lev *= (1 + loan_rate_monthly)
+            balance_lev = max(0.0, balance_lev - rm_interest_lev)
 
         # --- Track 2: Withdrawal (25% real) ---
         if m > 0: basis_25 *= (1 + i_monthly)
