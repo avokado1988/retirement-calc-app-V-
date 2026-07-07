@@ -526,7 +526,7 @@ def render_qa_section(results, user_inputs):
     # forced-liquidation risk must NOT be recommended. The margin-call risk is
     # therefore a first-class ranking factor, not an afterthought on the card.
     # -------------------------------------------------------
-    _CALL_LTV = 0.85  # lender liquidates when loan/portfolio crosses this
+    _CALL_LTV = 0.90  # דרישת השלמה כשהחוב עובר 90% מהתיק (גבוה משיעור המימון, זו הכרית)
     _ltv_col = df_full[df_full["גיל"] >= retire_age]["מינוף — LTV"] if "מינוף — LTV" in df_full.columns else None
     lev_ltv_max = float(_ltv_col.max()) if _ltv_col is not None and not _ltv_col.empty else 0.0
     lev_drop_tol = max(0.0, 1 - lev_ltv_max / _CALL_LTV) if lev_ltv_max > 0 else 1.0

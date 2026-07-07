@@ -56,7 +56,7 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
 
 GEN_RETURN = 0.06    # תשואת מסלול כללי, בסיס צופה פני עתיד (עבר 6.5-7.5%, תכנון 4-6%)
 GEN_VOL    = 0.08    # תנודתיות מסלול כללי
-CALL_LTV_IL = 0.80   # דרישת השלמה כשהחוב עובר 80% מהתיק
+CALL_LTV_IL = 0.90   # דרישת השלמה כשהחוב עובר 90% מהתיק (גבוה משיעור המימון 80%, זו הכרית)
 
 
 def margin_call_probability(user_inputs, std_ret=GEN_VOL, call_ltv=CALL_LTV_IL, n_sims=2000):
@@ -103,8 +103,8 @@ def render_monte_carlo(user_inputs):
         "מסוכן בפועל.</p>"
         "<p style='line-height:1.7;color:#555;font-size:0.92em;'>המודל לפי חוקי הקופות בישראל, "
         "מסלול כללי. הכסף נשאר מושקע וההלוואה קונה את הבית, כך שהתיק המושקע והממושכן = "
-        "הצבירה + ההלוואה, בתשואת מסלול כללי (כ-6%). דרישת השלמה מתרחשת כשהחוב עובר "
-        "את סף המימון (כ-80%) משווי התיק.</p>")
+        "הצבירה + ההלוואה, בתשואת מסלול כללי (כ-6%). המימון עד 80% מהתיק, ודרישת השלמה "
+        "מתרחשת רק כשהחוב מטפס מעל כ-90% משווי התיק. הרווח בין השניים הוא הכרית.</p>")
     st.markdown(
         "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
         "border-right:4px solid #1565c0;border-radius:8px;padding:10px 14px;margin:6px 0;"
@@ -138,8 +138,8 @@ def render_monte_carlo(user_inputs):
                             help="מסלול כללי סביב 7-9%. מנייתי טהור 15%+.") / 100
     with c2:
         call_ltv = st.slider("סף דרישת השלמה (% מהתיק)",
-                             min_value=70.0, max_value=95.0, value=CALL_LTV_IL * 100, step=1.0,
-                             help="כשהחוב עובר את שיעור המימון (כ-80% מהתיק) המלווה דורש השלמה.") / 100
+                             min_value=80.0, max_value=100.0, value=CALL_LTV_IL * 100, step=1.0,
+                             help="גבוה משיעור המימון (80%). הרווח בין מה שלקחת לסף הוא הכרית. מקובל כ-90%.") / 100
     _rtl(
         f"<div style='color:#555;font-size:0.84em;line-height:1.6;margin-top:2px;'>"
         f"📌 <b>תשואת התיק המונחת:</b> {GEN_RETURN*100:.0f}% ברוטו מסלול כללי, "
