@@ -280,11 +280,15 @@ tab0, tab4, tab3, tab2, tab1 = st.tabs(["🎯 תמהיל מומלץ", "📋 הע
 
 with tab0:
     render_allocation_recommender(display_inputs)
+    st.divider()
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;'>"
+        "<h3 style='color:#1a1a2e;'>🛠️ כלי עזר — בדיקת סכום הלוואה למסלול מינוף</h3></div>",
+        unsafe_allow_html=True)
+    render_monte_carlo(display_inputs)
 
 with tab1:
     render_qa_section(sim_results, display_inputs)
-    st.divider()
-    render_monte_carlo(display_inputs)
 
 with tab2:
     render_charts(sim_results["df_full"], display_inputs)

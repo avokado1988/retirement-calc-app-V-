@@ -110,6 +110,9 @@ def render_monte_carlo(user_inputs):
                           - float(a190.get("desired_pension", 5306)))
     annual_wd = monthly_deficit * 12
 
+    def _f(x):
+        return f"₪{x:,.0f}"
+
     c1, c2 = st.columns(2)
     with c1:
         std_ret = st.slider("תנודתיות שנתית של התיק (סטיית תקן %)",
@@ -120,9 +123,41 @@ def render_monte_carlo(user_inputs):
                              min_value=70.0, max_value=95.0, value=85.0, step=1.0,
                              help="מעל שיעור המימון המקסימלי (75%). כשהיחס חוצה אותו — מכירה כפויה.") / 100
 
+    # --- המלצת סכום הלוואה בטוח: הגבוה ביותר ששומר סיכון מכירה כפויה מתחת ל-5% ---
+    loan_cap = min(home0, 3 * net_for_190)  # תקרת מימון 75% (loan <= 3 × החלק הנזיל)
+    safe_loan = 0.0
+    _n = 40
+    for _i in range(1, _n + 1):
+        _loan = loan_cap * _i / _n
+        _res = _simulate(net_for_190 + _loan, _loan, loan_rate, mean_ret, std_ret, years,
+                         annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv, n_sims=1500)
+        if _res["p_margin_call"] <= 0.05:
+            safe_loan = _loan
+        else:
+            break
+
+    _cur_loan_disp = max(0.0, min(float(lev.get("loan_amount", 0)), loan_cap))
+    if safe_loan <= 0:
+        st.markdown(
+            "<div style='direction:rtl;text-align:right;background:#fdecea;border:1px solid #e0a099;"
+            "border-right:4px solid #c0392b;border-radius:8px;padding:12px 16px;margin:8px 0;"
+            "color:#6a1b1b;line-height:1.7;'>🔴 <b>אין מקום למינוף בטוח.</b> גם הלוואה קטנה "
+            "חוצה את רף הסיכון של 5% למכירה כפויה. עדיף מסלול בלי מינוף.</div>",
+            unsafe_allow_html=True)
+    else:
+        _over = _cur_loan_disp > safe_loan + 1
+        _extra = (f" ההלוואה הנוכחית ({_f(_cur_loan_disp)}) גבוהה מהמומלץ — כדאי להקטין."
+                  if _over else " ההלוואה הנוכחית בתחום הבטוח.")
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;background:#eafaf0;border:1px solid #8fd3a8;"
+            f"border-right:4px solid #1a7a3a;border-radius:8px;padding:12px 16px;margin:8px 0;"
+            f"color:#14532d;line-height:1.7;'>🟢 <b>סכום הלוואה בטוח מומלץ: {_f(safe_loan)}.</b> "
+            f"עד סכום זה הסיכוי למכירה כפויה נשאר מתחת ל-5%.{_extra}</div>",
+            unsafe_allow_html=True)
+
     home_price = home0
-    loan_steps = [0, int(home_price*0.2), int(home_price*0.4), int(home_price*0.6),
-                  int(home_price*0.8), int(home_price)]
+    loan_steps = [0, int(loan_cap*0.2), int(loan_cap*0.4), int(loan_cap*0.6),
+                  int(loan_cap*0.8), int(loan_cap)]
 
     rows = []
     for loan in loan_steps:
@@ -131,9 +166,6 @@ def render_monte_carlo(user_inputs):
         res = _simulate(P0, loan, loan_rate, mean_ret, std_ret, years, annual_wd, inflation,
                         home0, home_appr, buffer_cash, 0.02, call_ltv)
         rows.append((loan, ltv0, res))
-
-    def _f(x):
-        return f"₪{x:,.0f}"
 
     import plotly.graph_objects as go
 
