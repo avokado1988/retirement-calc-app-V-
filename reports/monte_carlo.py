@@ -58,7 +58,7 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
     }
 
 
-GEN_RETURN = 0.055   # תשואת מסלול כללי, נומינלית לפני דמי ניהול
+GEN_RETURN = 0.065   # תשואת מסלול כללי, נומינלית לפני דמי ניהול (ממוצע היסטורי 6.5-7.5%)
 GEN_VOL    = 0.08    # תנודתיות מסלול כללי
 CALL_LTV_IL = 0.80   # דרישת השלמה כשהחוב עובר 80% מהצבירה (הבטוחה)
 
@@ -96,7 +96,7 @@ def render_monte_carlo(user_inputs):
         "מסוכן בפועל.</p>"
         "<p style='line-height:1.7;color:#555;font-size:0.92em;'>לפי חוקי הקופות בישראל, "
         "מסלול כללי. הכסף נשאר מושקע וההלוואה קונה את הבית, כך שהתיק המושקע והממושכן = "
-        "הצבירה + ההלוואה, בתשואת מסלול כללי (כ-5.5%). דרישת השלמה מתרחשת כשהחוב עובר "
+        "הצבירה + ההלוואה, בתשואת מסלול כללי (כ-6.5%). דרישת השלמה מתרחשת כשהחוב עובר "
         "את סף המימון (כ-80%) משווי התיק.</p></div>", unsafe_allow_html=True)
     st.markdown(
         "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
