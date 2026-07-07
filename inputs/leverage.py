@@ -13,10 +13,9 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     st.caption("הלוואה כנגד הצבירה (מסלול כללי) לפי חוקי הקופות בישראל, והכסף השאול מושקע.")
     st.caption("תשואת מסלול כללי (כ-5.5%). הבטוחה היא הצבירה בלבד, והמימון עד 80% ממנה.")
 
-    # חוקי הקופות בישראל: ההלוואה נלקחת כנגד הצבירה (מסלול כללי), עד 80% ממנה.
-    # הבטוחה היא הצבירה בלבד, ולכן התקרה היא 80% מהחלק הנזיל, לא יחס על סך התיק.
-    MAX_ADVANCE = 0.80
-    loan_cap = int((MAX_ADVANCE * net_for_190) // 100000 * 100000)
+    # מודל עמית: הכסף נשאר מושקע וההלוואה קונה את הבית. התיק המושקע והממושכן =
+    # הצבירה + ההלוואה. מימון עד 80% מהתיק => הלוואה עד פי 4 מהצבירה, וגם עד מחיר הבית.
+    loan_cap = int(min(new_apartment_cost, 4.0 * net_for_190) // 100000 * 100000)
     default_loan = min(int(DEFAULTS["loan_amount"]), loan_cap)
 
     loan_amount = compact_number_input(
@@ -24,7 +23,7 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
         value=default_loan, min_value=0, max_value=loan_cap,
         step=100000, unit="₪", color=COLOR_RED
     )
-    st.caption(f"מ-0 (ללא מינוף) ועד 80% מהצבירה ({format_shekel(loan_cap)}). זו תקרת המימון המקובלת בקופות בישראל.")
+    st.caption(f"מ-0 (ללא מינוף, קניית הבית במזומן) ועד {format_shekel(loan_cap)}. תקרת מימון 80% מהתיק (הצבירה + ההלוואה), כמקובל בקופות בישראל.")
 
     loan_annual_rate = compact_number_input(
         "ריבית שנתית על ההלוואה (%)",
@@ -33,12 +32,12 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     )
     st.caption("בערך פריים פחות 0.75. הריבית מצטברת לחוב, בלי תשלום חודשי, ונפרעת מהעיזבון.")
 
-    # יחס המימון מחושב כנגד הצבירה (הבטוחה), לא כנגד סך התיק
+    # יחס המימון מחושב כנגד התיק המושקע והממושכן (הצבירה + ההלוואה)
     portfolio = net_for_190 + loan_amount
-    ltv = (loan_amount / net_for_190 * 100) if net_for_190 > 0 else 0.0
-    show_net_summary("תיק מושקע במסלול 5 (צבירה + הלוואה)", portfolio)
-    _icon = "🟢" if ltv <= 40 else ("🟡" if ltv <= 65 else "🔴")
-    st.caption(f"{_icon} שיעור מימון: {ltv:.0f}% מהצבירה. חסום ב-80%, תקרת הקופות. ככל שקרוב לתקרה, פחות כרית עד דרישת השלמה.")
+    ltv = (loan_amount / portfolio * 100) if portfolio > 0 else 0.0
+    show_net_summary("תיק מושקע וממושכן במסלול 5 (צבירה + הלוואה)", portfolio)
+    _icon = "🟢" if ltv <= 50 else ("🟡" if ltv <= 70 else "🔴")
+    st.caption(f"{_icon} שיעור מימון: {ltv:.0f}% מהתיק. חסום ב-80%, תקרת הקופות. ככל שקרוב לתקרה, פחות כרית עד דרישת השלמה.")
 
     return {
         "loan_amount": loan_amount,

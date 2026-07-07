@@ -56,17 +56,16 @@ def run_simulation(user_inputs):
     # track-1 liquid + loan. Same 190 tax and return as track 1; the home is the
     # same new apartment. The loan is a real (recourse) debt that compounds and
     # is settled from the estate — NOT capped like the reverse mortgage.
-    # חוקי הקופות בישראל: ההלוואה נלקחת כנגד הצבירה (מסלול כללי), עד 80% ממנה.
-    # הכסף השאול יושב בנפרד (לא ניתן להחזירו לתוך הקופה הממושכנת), אבל מושקע.
-    # הבטוחה למרג'ין היא הצבירה בלבד (coll_lev), לא סך התיק.
+    # מודל עמית לפי חוקי הקופות בישראל: הכסף נשאר מושקע (מסלול כללי), וההלוואה קונה
+    # את הבית. התיק המושקע והממושכן = הצבירה + ההלוואה (כי כל שקל הלוואה משחרר שקל
+    # מזומן שנשאר מושקע). המימון עד 80% מהתיק, כלומר ההלוואה עד פי 4 מהצבירה.
     _GEN_RETURN = 0.055  # תשואת מסלול כללי, נומינלית, לפני דמי ניהול
     leverage = user_inputs.get("leverage", {})
-    loan_amount = max(0.0, min(float(leverage.get("loan_amount", 0)), 0.80 * balance_190))
+    loan_amount = max(0.0, min(float(leverage.get("loan_amount", 0)), property_value, 4.0 * balance_190))
     loan_rate_monthly = (1 + float(leverage.get("loan_annual_rate", 0.0525))) ** (1/12) - 1
     r_monthly_lev = (1 + (_GEN_RETURN - float(amendment_190.get("management_fee_190", 0.005)))) ** (1/12) - 1
     balance_lev = balance_190 + loan_amount
     basis_lev = balance_lev
-    coll_lev = balance_190  # הצבירה הממושכנת ששימשת בטוחה
     loan_balance_lev = loan_amount
 
     # Track 4 rental parameters
@@ -190,8 +189,6 @@ def run_simulation(user_inputs):
             tax_lev = pull_l * pr_l * 0.15
             basis_lev *= (1 - (pull_l / balance_lev))
             balance_lev -= pull_l
-            # המשיכה יוצאת מהצבירה הממושכנת (הקופה שממנה חיים)
-            coll_lev = max(0.0, coll_lev - pull_l)
         # Balloon loan: interest accrues to the debt, no monthly payment
         rm_interest_lev = loan_balance_lev * loan_rate_monthly
         if loan_balance_lev > 0:
@@ -267,7 +264,6 @@ def run_simulation(user_inputs):
         if balance_hybrid > 0: balance_hybrid *= (1 + r_monthly_hybrid)
         if balance_rental > 0: balance_rental *= (1 + r_monthly_rental)
         if balance_lev > 0: balance_lev *= (1 + r_monthly_lev)
-        if coll_lev > 0: coll_lev *= (1 + r_monthly_lev)
         property_value *= (1 + prop_appreciation_monthly)
         property_rental_value *= (1 + rental_prop_appreciation_monthly)
         # Compute equity after appreciation so it matches "שווי נדלן מסלול 4" in the same row
@@ -312,7 +308,7 @@ def run_simulation(user_inputs):
             "מס ששולם מינוף": tax_lev,
             "הלוואת בלון — יתרת חוב": loan_balance_lev,
             "הלוואת בלון — ריבית חודשית": rm_interest_lev,
-            "מינוף — LTV": (loan_balance_lev / coll_lev) if coll_lev > 0 else 0.0,
+            "מינוף — LTV": (loan_balance_lev / balance_lev) if balance_lev > 0 else 0.0,
             "הוצאות מטפלת": caregiver_cost_base * inflation_factor if current_age >= 85.0 else 0.0,
             "inflation_factor": inflation_factor
         })
