@@ -58,7 +58,7 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
     }
 
 
-GEN_RETURN = 0.065   # תשואת מסלול כללי, נומינלית לפני דמי ניהול (ממוצע היסטורי 6.5-7.5%)
+GEN_RETURN = 0.06    # תשואת מסלול כללי, בסיס צופה פני עתיד (עבר 6.5-7.5%, תכנון 4-6%)
 GEN_VOL    = 0.08    # תנודתיות מסלול כללי
 CALL_LTV_IL = 0.80   # דרישת השלמה כשהחוב עובר 80% מהצבירה (הבטוחה)
 
@@ -96,7 +96,7 @@ def render_monte_carlo(user_inputs):
         "מסוכן בפועל.</p>"
         "<p style='line-height:1.7;color:#555;font-size:0.92em;'>לפי חוקי הקופות בישראל, "
         "מסלול כללי. הכסף נשאר מושקע וההלוואה קונה את הבית, כך שהתיק המושקע והממושכן = "
-        "הצבירה + ההלוואה, בתשואת מסלול כללי (כ-6.5%). דרישת השלמה מתרחשת כשהחוב עובר "
+        "הצבירה + ההלוואה, בתשואת מסלול כללי (כ-6%). דרישת השלמה מתרחשת כשהחוב עובר "
         "את סף המימון (כ-80%) משווי התיק.</p></div>", unsafe_allow_html=True)
     st.markdown(
         "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
@@ -289,19 +289,31 @@ def render_monte_carlo(user_inputs):
             annotation_text=f"רף דרישת השלמה {_f(threshold_val)}",
             annotation_position="bottom right", annotation_font=dict(color="#c0392b", size=11))
         bar.add_annotation(
-            x="התיק", y=P0_cur, yshift=16, showarrow=False,
-            text=f"💼 צבירה {_f(net_for_190)} + הלוואה {_f(cur_loan)}",
-            font=dict(color="#1a1a2e", size=12, family="sans-serif"),
-            bgcolor="rgba(255,255,255,0.85)")
+            x="התיק", y=P0_cur, yshift=18, showarrow=False,
+            text=f"💼 סך התיק {_f(P0_cur)}",
+            font=dict(color="#1a1a2e", size=15, family="sans-serif"),
+            bgcolor="rgba(255,255,255,0.9)")
         bar.update_layout(
             barmode="stack", height=300, template="plotly_white", bargap=0.6,
-            title={"text": f"התיק המושקע והממושכן — {_f(P0_cur)}", "font": {"size": 13}, "x": 0.5},
+            title={"text": "הרכב התיק ורף דרישת השלמה", "font": {"size": 13}, "x": 0.5},
             margin=dict(t=70, b=10, l=10, r=10), font=dict(family="sans-serif"),
             xaxis=dict(showticklabels=False),
             yaxis=dict(title="₪", tickformat=",.0f", range=[0, max(P0_cur, 1) * 1.12]),
             legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center", font=dict(size=9)),
             showlegend=True)
         st.plotly_chart(bar, use_container_width=True)
+
+    # פירוט מספרי נקי מתחת לגרפים
+    if cur_loan > 0:
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;font-size:0.86em;color:#333;line-height:1.9;"
+            f"background:#f8f9fc;border:1px solid #e6e8f0;border-radius:8px;padding:10px 14px;margin-top:6px;'>"
+            f"💼 <b>סך התיק:</b> {_f(P0_cur)} "
+            f"<span style='color:#777;'>(הצבירה שלך {_f(net_for_190)} + הלוואה {_f(cur_loan)}, זהו הכסף שעובד בשוק ומשמש בטוחה)</span><br/>"
+            f"📊 <b>שיעור מימון:</b> {_ltv0*100:.0f}% מהתיק &nbsp;·&nbsp; "
+            f"🔴 <b>רף דרישת השלמה:</b> {_f(threshold_val)} ({call_ltv*100:.0f}% מהתיק) &nbsp;·&nbsp; "
+            f"🟢 <b>התיק יכול לרדת:</b> {drop_needed*100:.0f}% לפני דרישת השלמה"
+            f"</div>", unsafe_allow_html=True)
 
     if cur_loan <= 0:
         st.markdown(
