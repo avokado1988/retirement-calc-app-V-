@@ -1,5 +1,5 @@
 import streamlit as st
-from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_BLUE, COLOR_RED, DEFAULTS
+from inputs.ui_components import compact_number_input, show_net_summary, format_shekel, COLOR_GREEN, COLOR_BLUE, COLOR_RED, DEFAULTS, RETURN_HELP
 
 def render_190_inputs(remaining_for_gimel, capital_for_pension=0):
     net_for_190 = max(0, remaining_for_gimel - capital_for_pension)
@@ -32,7 +32,8 @@ def render_190_inputs(remaining_for_gimel, capital_for_pension=0):
     st.markdown("##### 📈 תשואה ודמי ניהול")
     annual_return_190 = compact_number_input(
         "תשואה שנתית צפויה — מסלול 190 (%)",
-        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE
+        value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE,
+        help_text=RETURN_HELP
     ) / 100
     management_fee_190 = compact_number_input(
         "דמי ניהול שנתיים — מסלול 190 (%)",

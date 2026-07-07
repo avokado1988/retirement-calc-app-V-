@@ -124,9 +124,10 @@ def render_qa_section(results, user_inputs):
     rm_equity_retire = float(row_retire.get("משכנתה הפוכה — הון עצמי", rental_prop_retire))
     rm_equity_check  = float(row_check.get("משכנתה הפוכה — הון עצמי", rental_prop_check))
 
-    tw_190_r = b190_r + pension_asset_retire + property_value_retire + emergency_fund
-    tw_25_r = b25_r + property_value_retire + emergency_fund
-    tw_h_r = bh_r + pension_asset_retire + property_value_retire + emergency_fund
+    # קרן החירום היא רזרבת נזילות לחיים (לא נכס מושקע) ולכן אינה נספרת בסך הנכסים
+    tw_190_r = b190_r + pension_asset_retire + property_value_retire
+    tw_25_r = b25_r + property_value_retire
+    tw_h_r = bh_r + pension_asset_retire + property_value_retire
     tw_rent_r = br_r + rm_equity_retire  # net equity, not gross property value
 
     # -------------------------------------------------------
@@ -161,9 +162,9 @@ def render_qa_section(results, user_inputs):
     inherit_190_c = b190_c + pension_asset_check
     inherit_h_c = bh_c + pension_asset_check
 
-    tw_190_c = b190_c + pension_asset_check + property_value_check + emergency_fund
-    tw_25_c = b25_c + property_value_check + emergency_fund
-    tw_h_c = bh_c + pension_asset_check + property_value_check + emergency_fund
+    tw_190_c = b190_c + pension_asset_check + property_value_check
+    tw_25_c = b25_c + property_value_check
+    tw_h_c = bh_c + pension_asset_check + property_value_check
     tw_rent_c = br_c + rm_equity_check  # net equity, not gross property value
 
     # -------------------------------------------------------
@@ -435,12 +436,13 @@ def render_qa_section(results, user_inputs):
     _kids_grown = _kids_help * (1 + _kids_growth) ** max(0.0, check_age - start_age)
     kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0, 5: _kids_grown}
 
+    # קרן החירום אינה נספרת במדד הדירוג (רזרבת נזילות לחיים, לא נכס מושקע)
     sa_100 = {
-        1: b190_100 + _pension_100_st + _prop_100_own_st - new_home_tax_100 + emergency_fund + kids_asset_check[1],
-        2: b25_100  + _prop_100_own_st - new_home_tax_100 + emergency_fund + kids_asset_check[2],
-        3: bh_100   + _pension_100_st + _prop_100_own_st - new_home_tax_100 + emergency_fund + kids_asset_check[3],
+        1: b190_100 + _pension_100_st + _prop_100_own_st - new_home_tax_100 + kids_asset_check[1],
+        2: b25_100  + _prop_100_own_st - new_home_tax_100 + kids_asset_check[2],
+        3: bh_100   + _pension_100_st + _prop_100_own_st - new_home_tax_100 + kids_asset_check[3],
         4: br_100   + max(0.0, _prop_100_r_st - _rm_debt_100_st - property_tax_100) + kids_asset_check[4],
-        5: blev_100 + _pension_100_st + _prop_100_own_st - new_home_tax_100 + emergency_fund - loan_debt_100 + kids_asset_check[5],
+        5: blev_100 + _pension_100_st + _prop_100_own_st - new_home_tax_100 - loan_debt_100 + kids_asset_check[5],
     }
 
     husn_190 = empty_190 >= check_age
@@ -982,8 +984,8 @@ def render_qa_section(results, user_inputs):
     nn_lev_r, nn_lev_c = nn_190_r, nn_190_c
     pct_lev_r = wpct(nn_lev_r, blev_r)
     pct_lev_c = wpct(nn_lev_c, blev_c)
-    tw_lev_r = blev_r + pension_asset_retire + property_value_retire + emergency_fund - loan_debt_r
-    tw_lev_c = blev_c + pension_asset_check + property_value_check + emergency_fund - loan_debt_c
+    tw_lev_r = blev_r + pension_asset_retire + property_value_retire - loan_debt_r
+    tw_lev_c = blev_c + pension_asset_check + property_value_check - loan_debt_c
     inherit_lev_r = blev_r + pension_asset_retire - loan_debt_r
     inherit_lev_c = blev_c + pension_asset_check - loan_debt_c
     recovery_lev = find_recovery_age("צבירה מסלול מינוף") if "צבירה מסלול מינוף" in df_full.columns else "—"

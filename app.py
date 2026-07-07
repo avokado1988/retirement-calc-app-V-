@@ -77,6 +77,7 @@ from reports.graphs import render_charts
 from reports.qa_report import render_qa_section
 from reports.qa_summary import render_qa_summary_page
 from reports.monte_carlo import render_monte_carlo
+from reports.allocation import render_allocation_recommender
 
 # 1. הגדרת תצורת דף אחידה
 st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", page_icon="📊", layout="wide")
@@ -103,6 +104,14 @@ if st.sidebar.button("🗑️ נקה נתונים וחזור לברירת מחד
 
 st.sidebar.divider()
 # ==============================================================================
+
+# החלת תשואות מומלצות שממתינות (מכפתור "החל" בטאב התמהיל). חייב לרוץ כאן, לפני
+# יצירת שדות התשואה, כי אי אפשר לשנות ערך של widget אחרי שהוא כבר נוצר בריצה.
+if "alloc_pending" in st.session_state:
+    for _k, _v in st.session_state["alloc_pending"].items():
+        st.session_state[_k] = _v
+        st.query_params[_k] = str(_v)
+    del st.session_state["alloc_pending"]
 
 # 2. טעינת תפריט הצד המבוזר וקבלת מילון הנתונים המאוחד
 # (חייב לרוץ תמיד — כדי לשמור ערכים ב-URL)
@@ -267,7 +276,10 @@ try:
 except Exception:
     qa_tab_label = "🔬 QA — ניתוח מסלולים"
 
-tab4, tab3, tab2, tab1 = st.tabs(["📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
+tab0, tab4, tab3, tab2, tab1 = st.tabs(["🎯 תמהיל מומלץ", "📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
+
+with tab0:
+    render_allocation_recommender(display_inputs)
 
 with tab1:
     render_qa_section(sim_results, display_inputs)
