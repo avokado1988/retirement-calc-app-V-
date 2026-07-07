@@ -26,7 +26,6 @@ TRACK_NAMES = {
     1: "190 + קצבה",
     2: "25% ריאלי",
     3: "היברידי",
-    5: "מינוף",
 }
 
 
@@ -124,17 +123,17 @@ def compute_recommendations(user_inputs):
     net_190 = float(a190.get("net_for_190", 0))
     net_real = float(rt.get("net_for_real_pathway", 0))
     net_hybrid = float(rt.get("net_for_hybrid", 0))
-    loan = float(lev.get("loan_amount", 0))
 
     # משיכה חודשית מהתיק = הוצאה פחות הכנסה מובטחת (קצבה רק במסלולים עם קצבה)
     deficit_pension = max(0.0, expenses_m - ni - pension) * 12
     deficit_no_pension = max(0.0, expenses_m - ni) * 12
 
+    # רק מסלולי ההון (1,2,3) — בהם בוחרים תמהיל דליים. מסלול 5 (מינוף) הוא מסלול
+    # כללי בתשואה מקובעת ואינו בחירת תמהיל, ולכן אינו כלול בהמלצת התמהיל.
     specs = {
         1: (net_190, deficit_pension),
         2: (net_real, deficit_no_pension),
         3: (net_hybrid, deficit_pension),
-        5: (net_190 + loan, deficit_pension),
     }
     out = {}
     for tid, (P0, wd) in specs.items():
@@ -195,7 +194,7 @@ def render_allocation_recommender(user_inputs):
         recs, years = compute_recommendations(user_inputs)
 
     visible = set(user_inputs.get("visible_tracks", [1, 2, 3, 4, 5]))
-    order = [t for t in (1, 2, 3, 5) if t in visible and recs.get(t)]
+    order = [t for t in (1, 2, 3) if t in visible and recs.get(t)]
     if not order:
         st.markdown(
             "<div style='direction:rtl;text-align:right;background:#fff8e1;border:1px solid #f0c86a;"
