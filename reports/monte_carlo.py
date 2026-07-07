@@ -200,13 +200,19 @@ def render_monte_carlo(user_inputs):
         bar.add_hline(
             y=threshold_val, line=dict(color="#c0392b", width=2.5, dash="dash"),
             annotation_text=f"סף מכירה {_f(threshold_val)}",
-            annotation_position="top right", annotation_font=dict(color="#c0392b", size=11))
+            annotation_position="bottom right", annotation_font=dict(color="#c0392b", size=11))
+        # Clear label of the TOTAL portfolio value, right above the top of the bar
+        bar.add_annotation(
+            x="התיק שלך", y=P0_cur, yshift=16, showarrow=False,
+            text=f"💼 שווי התיק {_f(P0_cur)}",
+            font=dict(color="#1a1a2e", size=13, family="sans-serif"),
+            bgcolor="rgba(255,255,255,0.85)")
         bar.update_layout(
             barmode="stack", height=300, template="plotly_white", bargap=0.6,
             title={"text": f"הרכב התיק היום — סה\"כ {_f(P0_cur)}", "font": {"size": 14}, "x": 0.5},
             margin=dict(t=70, b=10, l=10, r=10), font=dict(family="sans-serif"),
             xaxis=dict(showticklabels=False),
-            yaxis=dict(title="₪", tickformat=",.0f"),
+            yaxis=dict(title="₪", tickformat=",.0f", range=[0, P0_cur * 1.12]),
             legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center", font=dict(size=10)),
             showlegend=True)
         st.plotly_chart(bar, use_container_width=True)
