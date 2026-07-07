@@ -279,13 +279,15 @@ except Exception:
 tab0, tab4, tab3, tab2, tab1 = st.tabs(["🎯 תמהיל מומלץ", "📋 העתקה מהירה לבדיקות", "📋 טבלת נתונים מלאה", "📈 גרפים השוואתיים", qa_tab_label])
 
 with tab0:
-    render_allocation_recommender(display_inputs)
+    # כלים אינטראקטיביים שמחשבים סימולציה משלהם — קוראים את הערכים החיים מהסרגל
+    # (user_inputs), לא את צילום המצב מהריצה האחרונה, כדי שישקפו שינוי מיידי.
+    render_allocation_recommender(user_inputs)
     st.divider()
     st.markdown(
         "<div style='direction:rtl;text-align:right;'>"
         "<h3 style='color:#1a1a2e;'>🛠️ כלי עזר — בדיקת סכום הלוואה למסלול מינוף</h3></div>",
         unsafe_allow_html=True)
-    render_monte_carlo(display_inputs)
+    render_monte_carlo(user_inputs)
 
 with tab1:
     render_qa_section(sim_results, display_inputs)
