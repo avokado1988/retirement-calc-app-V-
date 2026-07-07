@@ -165,22 +165,28 @@ def _light(rec):
 def render_allocation_recommender(user_inputs):
     import streamlit as st
 
-    st.subheader("🎯 המלצת תמהיל ותשואה — לפי הנתונים שלך")
     st.markdown(
-        "במקום לנחש תשואה, המנוע גוזר אותה מהנתונים. לכל מסלול הוא מחשב כמה מושכים "
-        "מהתיק, בונה דלי סולידי שמכסה שבע שנות משבר, ומקצה את השאר למניות עד תקרה. "
-        "ואז מריץ מונטה קרלו ומאשר שהתמהיל עומד במבחן המציאות."
-    )
-    st.info(
-        "💡 ככל שהמשיכה מהתיק קטנה יותר, אפשר להחזיק יותר מניות. לכן מסלול עם קצבה "
-        "מובטחת יכול לקחת תשואה גבוהה יותר ממסלול בלי קצבה — זה היתרון של הקצבה."
-    )
+        "<div style='direction:rtl;text-align:right;'>"
+        "<h3 style='color:#1a1a2e;'>🎯 המלצת תמהיל ותשואה — לפי הנתונים שלך</h3>"
+        "<p style='font-size:0.95em;line-height:1.7;'>במקום לנחש תשואה, המנוע גוזר אותה "
+        "מהנתונים. לכל מסלול הוא מחשב כמה מושכים מהתיק, בונה דלי סולידי שמכסה שבע שנות "
+        "משבר, ומקצה את השאר למניות עד תקרה. ואז מריץ מונטה קרלו ומאשר שהתמהיל עומד "
+        "במבחן המציאות.</p></div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
+        "border-right:4px solid #1565c0;border-radius:8px;padding:10px 14px;margin:6px 0;"
+        "color:#173a5e;line-height:1.7;'>💡 ככל שהמשיכה מהתיק קטנה יותר, אפשר להחזיק יותר "
+        "מניות. לכן מסלול עם קצבה מובטחת יכול לקחת תשואה גבוהה יותר ממסלול בלי קצבה, "
+        "זה היתרון של הקצבה.</div>", unsafe_allow_html=True)
 
     if st.button("🎯 חשב תמהיל מומלץ", use_container_width=True, type="primary", key="alloc_compute_btn"):
         st.session_state["alloc_run"] = True
 
     if not st.session_state.get("alloc_run"):
-        st.caption("לחץ על הכפתור כדי לחשב המלצת תמהיל, תשואה וסיכוי הצלחה לכל מסלול.")
+        st.markdown(
+            "<div style='direction:rtl;text-align:right;color:#777;font-size:0.9em;'>"
+            "לחץ על הכפתור כדי לחשב המלצת תמהיל, תשואה וסיכוי הצלחה לכל מסלול.</div>",
+            unsafe_allow_html=True)
         return
 
     with st.spinner("מריץ מונטה קרלו על תמהילים..."):
@@ -189,7 +195,11 @@ def render_allocation_recommender(user_inputs):
     visible = set(user_inputs.get("visible_tracks", [1, 2, 3, 4, 5]))
     order = [t for t in (1, 2, 3, 5) if t in visible and recs.get(t)]
     if not order:
-        st.warning("אין מסלול הון פעיל להמלצה (מסלול שכירות מבוסס נדל\"ן ואינו כלול).")
+        st.markdown(
+            "<div style='direction:rtl;text-align:right;background:#fff8e1;border:1px solid #f0c86a;"
+            "border-right:4px solid #e0a800;border-radius:8px;padding:10px 14px;color:#5a4a1a;'>"
+            "אין מסלול הון פעיל להמלצה (מסלול שכירות מבוסס נדל\"ן ואינו כלול).</div>",
+            unsafe_allow_html=True)
         return
 
     header = (
@@ -221,11 +231,11 @@ def render_allocation_recommender(user_inputs):
         f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.86em;direction:rtl;'>"
         f"<thead>{header}</thead><tbody>{body}</tbody></table></div>",
         unsafe_allow_html=True)
-    st.caption(
+    st.markdown(
+        f"<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;'>"
         f"על בסיס {years} שנים. התשואה נומינלית ולפני דמי ניהול. סיכוי ההצלחה = אחוז "
         f"התרחישים שבהם הכסף החזיק עד הגיל הנבדק. טווח הירושה מציג תרחיש גרוע (10%) "
-        f"מול אמצעי (חציון)."
-    )
+        f"מול אמצעי (חציון).</div>", unsafe_allow_html=True)
 
     if any(recs[t].get("at_risk") for t in order):
         st.markdown(
@@ -236,7 +246,10 @@ def render_allocation_recommender(user_inputs):
             "צריך לבחון מחדש הוצאות, הכנסות או גיל בדיקה.</div>", unsafe_allow_html=True)
 
     st.divider()
-    st.markdown("**להחיל את התשואות המומלצות על המסלולים?** (השדה הידני יישאר וניתן לעקוף)")
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;font-weight:700;'>להחיל את התשואות "
+        "המומלצות על המסלולים? <span style='font-weight:400;color:#777;'>(השדה הידני יישאר "
+        "וניתן לעקוף)</span></div>", unsafe_allow_html=True)
     if st.button("✅ החל תשואות מומלצות", use_container_width=True, key="alloc_apply_btn"):
         # אי אפשר לשנות שדה widget אחרי שנוצר בריצה זו, לכן שומרים בקשה שתוחל
         # בראש app.py לפני יצירת השדות.
