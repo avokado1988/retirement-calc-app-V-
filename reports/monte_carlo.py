@@ -140,6 +140,12 @@ def render_monte_carlo(user_inputs):
         call_ltv = st.slider("סף דרישת השלמה (% מהתיק)",
                              min_value=70.0, max_value=95.0, value=CALL_LTV_IL * 100, step=1.0,
                              help="כשהחוב עובר את שיעור המימון (כ-80% מהתיק) המלווה דורש השלמה.") / 100
+    _rtl(
+        f"<div style='color:#555;font-size:0.84em;line-height:1.6;margin-top:2px;'>"
+        f"📌 <b>תשואת התיק המונחת:</b> {GEN_RETURN*100:.0f}% ברוטו מסלול כללי, "
+        f"כ-{mean_ret*100:.1f}% נטו אחרי דמי ניהול &nbsp;·&nbsp; "
+        f"<b>ריבית ההלוואה:</b> {loan_rate*100:.2f}%. הסיכון תלוי גם ביחס החוב לתיק וגם "
+        f"בפער בין התשואה לריבית לאורך השנים.</div>")
 
     # ============ חישובים ============
     loan_cap = min(home0, 4.0 * net_for_190)  # מימון עד 80% מהתיק => הלוואה עד פי 4 מהצבירה
