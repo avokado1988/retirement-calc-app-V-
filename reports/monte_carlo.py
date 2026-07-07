@@ -143,30 +143,71 @@ def render_monte_carlo(user_inputs):
                     annual_wd, inflation, home0, home_appr, buffer_cash, 0.02, call_ltv)
     p_cur = cur["p_margin_call"]
 
-    gauge = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=round(p_cur * 100),
-        number={"suffix": "%", "font": {"size": 46}},
-        title={"text": f"סיכוי שתיאלץ למכור את התיק בהפסד<br>(הלוואה {_f(cur_loan)})", "font": {"size": 15}},
-        gauge={
-            "axis": {"range": [0, 100], "ticksuffix": "%"},
-            "bar": {"color": "#2c3e50", "thickness": 0.25},
-            "steps": [
-                {"range": [0, 5], "color": "#c8f0d0"},
-                {"range": [5, 15], "color": "#ffe7a3"},
-                {"range": [15, 100], "color": "#f5b3b3"},
-            ],
-        },
-    ))
-    gauge.update_layout(height=270, margin=dict(t=70, b=10, l=40, r=40), font=dict(family="sans-serif"))
-    st.plotly_chart(gauge, use_container_width=True)
+    # Composition today: portfolio, loan, and the forced-sale threshold
+    P0_cur = net_for_190 + cur_loan
+    _ltv0 = cur_loan / P0_cur if P0_cur > 0 else 0.0
+    threshold_val = cur_loan / call_ltv if call_ltv > 0 else P0_cur  # portfolio value that triggers a call
+    green_margin = max(0.0, P0_cur - threshold_val)   # how much the portfolio can fall before a call
+    orange_cushion = max(0.0, threshold_val - cur_loan)  # the bank's required cushion above the loan
+    drop_needed = max(0.0, 1 - _ltv0 / call_ltv)  # = green_margin / P0_cur
+    loss_impact = max(0.0, cur["nw_p50"] - cur["nw_p10"])
 
     verdict = "נמוך 🟢" if p_cur < 0.05 else ("בינוני 🟡" if p_cur < 0.15 else "גבוה 🔴")
     _bg = "#eafaf0" if p_cur < 0.05 else ("#fff7e0" if p_cur < 0.15 else "#fdecea")
     _bd = "#8fd3a8" if p_cur < 0.05 else ("#f0c86a" if p_cur < 0.15 else "#e0a099")
-    _ltv0 = cur_loan / (net_for_190 + cur_loan) if (net_for_190 + cur_loan) > 0 else 0.0
-    drop_needed = max(0.0, 1 - _ltv0 / call_ltv)  # how far the portfolio can fall today before a call
-    loss_impact = max(0.0, cur["nw_p50"] - cur["nw_p10"])
+
+    g1, g2 = st.columns([1, 1])
+
+    with g1:
+        gauge = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=round(p_cur * 100),
+            number={"suffix": "%", "font": {"size": 42}},
+            title={"text": f"סיכוי שתיאלץ למכור את התיק בהפסד<br>(הלוואה {_f(cur_loan)})", "font": {"size": 14}},
+            gauge={
+                "axis": {"range": [0, 100], "ticksuffix": "%"},
+                "bar": {"color": "#2c3e50", "thickness": 0.25},
+                "steps": [
+                    {"range": [0, 5], "color": "#c8f0d0"},
+                    {"range": [5, 15], "color": "#ffe7a3"},
+                    {"range": [15, 100], "color": "#f5b3b3"},
+                ],
+            },
+        ))
+        gauge.update_layout(height=300, margin=dict(t=70, b=10, l=30, r=30), font=dict(family="sans-serif"))
+        st.plotly_chart(gauge, use_container_width=True)
+
+    with g2:
+        # Stacked bar: loan (bottom) → bank's required cushion → your safety margin (top).
+        # The red dashed line marks the forced-sale threshold; the green part is how far it can fall.
+        bar = go.Figure()
+        bar.add_trace(go.Bar(
+            x=["התיק שלך"], y=[cur_loan], name="הלוואה", marker_color="#c0392b",
+            text=[f"הלוואה<br>{_f(cur_loan)}"], textposition="inside", insidetextanchor="middle",
+            textfont=dict(color="white", size=12), hoverinfo="text",
+            hovertext=[f"הלוואה שנלקחה: {_f(cur_loan)}"]))
+        bar.add_trace(go.Bar(
+            x=["התיק שלך"], y=[orange_cushion], name="כרית נדרשת לבנק", marker_color="#e6a800",
+            text=[f"כרית הבנק<br>{_f(orange_cushion)}"], textposition="inside", insidetextanchor="middle",
+            textfont=dict(color="white", size=11), hoverinfo="text",
+            hovertext=[f"כרית ביטחון שהבנק דורש מעל ההלוואה: {_f(orange_cushion)}"]))
+        bar.add_trace(go.Bar(
+            x=["התיק שלך"], y=[green_margin], name="מרווח ביטחון שלך", marker_color="#27ae60",
+            text=[f"מרווח ביטחון<br>{_f(green_margin)}"], textposition="inside", insidetextanchor="middle",
+            textfont=dict(color="white", size=11), hoverinfo="text",
+            hovertext=[f"כמה התיק יכול לרדת לפני מכירה כפויה: {_f(green_margin)} ({drop_needed*100:.0f}%)"]))
+        bar.add_hline(
+            y=threshold_val, line=dict(color="#c0392b", width=3, dash="dash"),
+            annotation_text=f"🔴 סף מכירה כפויה — {_f(threshold_val)}",
+            annotation_position="top left", annotation_font=dict(color="#c0392b", size=12))
+        bar.update_layout(
+            barmode="stack", height=300, template="plotly_white",
+            title={"text": f"הרכב התיק היום — סה\"כ {_f(P0_cur)}", "font": {"size": 14}, "x": 0.5},
+            margin=dict(t=70, b=10, l=10, r=10), font=dict(family="sans-serif"),
+            yaxis=dict(title="₪", tickformat=",.0f"),
+            legend=dict(orientation="h", y=-0.12, x=0.5, xanchor="center", font=dict(size=10)),
+            showlegend=True)
+        st.plotly_chart(bar, use_container_width=True)
 
     if cur_loan <= 0:
         st.success(f"✅ ללא מינוף (הלוואה ₪0) — אין סיכון של מכירה כפויה. הירושה הצפויה: {_f(cur['nw_p50'])}.")
@@ -174,7 +215,9 @@ def render_monte_carlo(user_inputs):
         st.markdown(
             f"<div style='direction:rtl;text-align:right;background:{_bg};border:1px solid {_bd};"
             f"border-radius:8px;padding:12px 16px;font-size:0.92em;line-height:1.9;'>"
-            f"<div>🎯 <b>מה צריך שיקרה:</b> ירידה של כ-<b>{drop_needed*100:.0f}%</b> בתיק ההשקעות במהלך שנות הפרישה.</div>"
+            f"<div>🎯 <b>מה צריך שיקרה:</b> ירידה של כ-<b>{drop_needed*100:.0f}%</b> בתיק — "
+            f"מ-<b>{_f(P0_cur)}</b> היום לכ-<b>{_f(threshold_val)}</b>. ברגע שהתיק חוצה את הרף הזה, "
+            f"יחס החוב מגיע ל-{call_ltv*100:.0f}% והבנק מוכר.</div>"
             f"<div>💥 <b>ההשפעה אם זה קורה:</b> הבנק מוכר לך מניות בשפל ומקבע הפסד — הירושה יורדת מ-<b>{_f(cur['nw_p50'])}</b> (צפוי) לכ-<b>{_f(cur['nw_p10'])}</b> (תרחיש גרוע). פגיעה של כ-{_f(loss_impact)}.</div>"
             f"<div>🎲 <b>הסיכוי שזה יקרה:</b> <b>{p_cur*100:.0f}%</b> מהתרחישים לאורך הפרישה.</div>"
             f"<div>⚖️ <b>מסקנה:</b> סיכון <b>{verdict}</b>.</div>"
