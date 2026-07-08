@@ -240,12 +240,12 @@ def render_monte_carlo(user_inputs):
             f"<span style='color:#777;'>(הצבירה שלך {_f(net_for_190)} + הלוואה {_f(cur_loan)})</span><br/>"
             f"📊 <b>שיעור מימון היום:</b> {_ltv0*100:.0f}% — ההלוואה חלקי התיק (מתוך תקרה של 80%).<br/>"
             f"🔴 <b>רף דרישת השלמה:</b> {_f(threshold_val)} — <span style='color:#555;'>שווי התיק שאם יורדים אליו, ההלוואה הופכת ל-{call_ltv*100:.0f}% מהתיק, ואז הבנק דורש השלמה או מוכר.</span><br/>"
-            f"🟢 <b>מרחק מהרף:</b> <span style='color:#555;'>כדי להגיע לרף, התיק צריך <u>לרדת בשוק</u> בכ-</span><b>{drop_needed*100:.0f}%</b> <span style='color:#555;'>(מ-{_f(P0_cur)} ל-{_f(threshold_val)}).</span>"
+            f"🟢 <b>מרחק מהרף:</b> <span style='color:#555;'>כדי להגיע לרף, <u>התיק</u> צריך לרדת בכ-</span><b>{drop_needed*100:.0f}%</b> <span style='color:#555;'>(מ-{_f(P0_cur)} ל-{_f(threshold_val)}). שים לב, זו ירידה של התיק הכללי, לא של שוק המניות.</span>"
             f"</div>", unsafe_allow_html=True)
         st.markdown(
             f"<div style='direction:rtl;text-align:right;background:{_bg};border:1px solid {_bd};"
             f"border-radius:8px;padding:12px 16px;font-size:0.92em;line-height:1.9;'>"
-            f"<div>🎯 <b>מה צריך שיקרה:</b> ירידה של כ-<b>{drop_needed*100:.0f}%</b> בתיק בשוק.</div>"
+            f"<div>🎯 <b>מה צריך שיקרה:</b> ירידה של כ-<b>{drop_needed*100:.0f}%</b> בתיק הכללי (לא בשוק המניות).</div>"
             f"<div>💥 <b>ההשפעה:</b> מוכרים בשפל ומקבעים הפסד — הירושה יורדת מ-<b>{_f(cur['nw_p50'])}</b> (צפוי) לכ-<b>{_f(cur['nw_p10'])}</b> (תרחיש גרוע), פגיעה של כ-{_f(loss_impact)}.</div>"
             f"<div>🎲 <b>הסיכוי שזה יקרה:</b> <b>{p_cur*100:.0f}%</b> מהתרחישים לאורך הפרישה.</div>"
             f"<div>⚖️ <b>מסקנה:</b> סיכון <b>{verdict}</b>.</div>"
@@ -276,8 +276,13 @@ def render_monte_carlo(user_inputs):
             f"<th style='padding:7px 12px;'>שיעור מימון</th>"
             f"<th style='padding:7px 12px;'>סיכוי דרישת השלמה</th>"
             f"<th style='padding:7px 12px;'>רמת סיכון</th>"
-            f"<th style='padding:7px 12px;'>בכמה השוק יכול לרדת</th></tr></thead>"
+            f"<th style='padding:7px 12px;'>בכמה התיק יכול לרדת</th></tr></thead>"
             f"<tbody>{_rows_html}</tbody></table></div>", unsafe_allow_html=True)
+        _rtl(
+            "<div style='color:#777;font-size:0.8em;line-height:1.6;margin-top:6px;'>"
+            "העמודה בכמה התיק יכול לרדת מתייחסת לירידת התיק הכללי, לא לשוק המניות. "
+            "מכיוון שמסלול כללי הוא כמחצית מניות, ירידה בתיק שקולה בערך לירידה כפולה בשוק המניות. "
+            "כלומר ירידה של 30% בתיק דורשת מפולת של כ-60% בשוק המניות, אירוע נדיר מאוד.</div>")
 
     _cur_col = "#1a7a3a" if p_cur <= 0.10 else ("#b07800" if p_cur <= 0.25 else "#a83232")
     _cur_lbl = "שמרנית" if p_cur <= 0.10 else ("מתונה" if p_cur <= 0.25 else "אגרסיבית")
