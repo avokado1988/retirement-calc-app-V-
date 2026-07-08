@@ -28,13 +28,14 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
     wd = float(annual_wd)
 
     for y in range(years):
-        # ריבית משולמת שוטף (הלוואת בלון סטנדרטית) — החוב נשאר קבוע, הריבית נמשכת מהתיק
-        total_wd = wd + D * loan_rate
-        from_buf = np.minimum(buf, total_wd)
+        # מושכים מהתיק רק את הגירעון במחיה. הריבית לא משולמת, היא מצטברת לחוב ונפרעת
+        # מהעיזבון (הלוואת בלון שנפרעת בפטירה) — לכן D תופח ולא נמשך ממנו כלום.
+        from_buf = np.minimum(buf, wd)
         buf = (buf - from_buf) * (1 + buffer_rate)
-        P = P - (total_wd - from_buf)
+        P = P - (wd - from_buf)
         P = P * (1 + rets[:, y])
         S = S * (1 + rets[:, y])
+        D = D * (1 + loan_rate)
         with np.errstate(divide="ignore", invalid="ignore"):
             ltv = np.where(P > 0, D / np.maximum(P, 1.0), 999.0)
         breach = (~margin_called) & (ltv > call_ltv)
@@ -116,8 +117,8 @@ def render_monte_carlo(user_inputs):
         "<div style='direction:rtl;text-align:right;background:#f5f3fa;border:1px solid #cbc0e6;"
         "border-right:4px solid #7e57c2;border-radius:8px;padding:10px 14px;margin:6px 0;"
         "color:#3d2b66;line-height:1.8;'><b>איך עובד סף המכירה, בקצרה</b><br/>"
-        "1. אתה לווה עד 80% מהתיק. ההלוואה קבועה.<br/>"
-        "2. כשהשוק יורד, התיק מצטמק, אבל ההלוואה נשארת אותו דבר, אז היא תופסת אחוז גדל והולך מהתיק.<br/>"
+        "1. אתה לווה עד 80% מהתיק. הריבית לא משולמת אלא מצטברת לחוב ונפרעת מהעיזבון.<br/>"
+        "2. שני דברים מקרבים את החוב לרף, ירידה בשוק שמצמקת את התיק, והחוב עצמו שתופח מהריבית.<br/>"
         "3. כשההלוואה מגיעה ל-90% מהתיק, הבנק דורש השלמה או מוכר. הוא לא מחכה שההלוואה תגיע ל-100%.<br/>"
         "4. הרווח בין מה שלקחת (למשל 75%) לבין הסף (90%) הוא הכרית, וזה כמה התיק יכול לרדת לפני מכירה.</div>",
         unsafe_allow_html=True)
@@ -291,8 +292,8 @@ def render_monte_carlo(user_inputs):
         f"ההלוואה שבחרת ({_f(cur_loan)}) נמצאת ברמת סיכון "
         f"<b style='color:{_cur_col};'>{_cur_lbl}</b>, עם סיכוי דרישת השלמה של כ-{p_cur*100:.0f}%.</div>"
         f"<div style='color:#777;font-size:0.82em;line-height:1.6;margin-top:4px;'>"
-        f"מינוף הוא תמיד לקיחת סיכון, אין סכום חסר סיכון. המודל מניח שהריבית משולמת "
-        f"שוטף מהתיק וקרן ההלוואה נשארת קבועה, כמו בהלוואת בלון סטנדרטית.</div>")
+        f"מינוף הוא תמיד לקיחת סיכון, אין סכום חסר סיכון. המודל מניח שהריבית מצטברת "
+        f"לחוב ונפרעת מהעיזבון, ולכן החוב תופח עם השנים והכרית נשחקת.</div>")
 
     # ============ 3. סיכון מול תשואה ============
     st.divider()

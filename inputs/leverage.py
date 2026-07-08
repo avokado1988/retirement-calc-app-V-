@@ -30,7 +30,7 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
         value=DEFAULTS["loan_annual_rate"] * 100, min_value=1.0, max_value=12.0,
         step=0.05, unit="%", color=COLOR_RED
     )
-    st.caption("בערך פריים פחות 0.75. הריבית משולמת שוטף מהתיק, וקרן ההלוואה נשארת קבועה.")
+    st.caption("בערך פריים פחות 0.75. הריבית מצטברת לחוב, בלי תשלום שוטף, ונפרעת מהעיזבון.")
 
     # יחס המימון מחושב כנגד התיק המושקע והממושכן (הצבירה + ההלוואה)
     portfolio = net_for_190 + loan_amount
