@@ -59,11 +59,11 @@ def run_simulation(user_inputs):
     # מודל עמית לפי חוקי הקופות בישראל: הכסף נשאר מושקע (מסלול כללי), וההלוואה קונה
     # את הבית. התיק המושקע והממושכן = הצבירה + ההלוואה (כי כל שקל הלוואה משחרר שקל
     # מזומן שנשאר מושקע). המימון עד 80% מהתיק, כלומר ההלוואה עד פי 4 מהצבירה.
-    _GEN_RETURN = 0.06  # תשואת מסלול כללי, בסיס צופה פני עתיד (עבר 6.5-7.5%, תכנון 4-6%)
     leverage = user_inputs.get("leverage", {})
+    _gen_return_lev = float(leverage.get("annual_return_lev", 0.06))  # תשואת מסלול כללי, שדה נשלט
     loan_amount = max(0.0, min(float(leverage.get("loan_amount", 0)), property_value, 4.0 * balance_190))
-    loan_rate_monthly = (1 + float(leverage.get("loan_annual_rate", 0.0525))) ** (1/12) - 1
-    r_monthly_lev = (1 + (_GEN_RETURN - float(amendment_190.get("management_fee_190", 0.005)))) ** (1/12) - 1
+    loan_rate_monthly = (1 + float(leverage.get("loan_annual_rate", 0.045))) ** (1/12) - 1
+    r_monthly_lev = (1 + (_gen_return_lev - float(amendment_190.get("management_fee_190", 0.005)))) ** (1/12) - 1
     balance_lev = balance_190 + loan_amount
     basis_lev = balance_lev
     loan_balance_lev = loan_amount

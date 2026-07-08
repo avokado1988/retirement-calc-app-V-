@@ -32,6 +32,16 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     )
     st.caption("בערך פריים פחות 0.75. הריבית מצטברת לחוב, בלי תשלום שוטף, ונפרעת מהעיזבון.")
 
+    annual_return_lev = compact_number_input(
+        "תשואה שנתית — מסלול כללי (%)",
+        value=DEFAULTS.get("annual_return_lev", 0.06) * 100, min_value=0.0, max_value=12.0,
+        step=0.1, unit="%", color=COLOR_BLUE,
+        help_text=("תשואת מסלול כללי, ברוטו לפני דמי ניהול. ממוצע היסטורי כ-6.5 עד 7.5 אחוז, "
+                   "אבל לתכנון צופה פני עתיד מומלץ להיות שמרן, 5 עד 6 אחוז, בגלל חזרה לממוצע "
+                   "ומחירים גבוהים. ברירת מחדל 6 אחוז.")
+    )
+    st.caption("בנצ'מרק מסלול כללי. מומלץ שמרן, 5 עד 6 אחוז, ולא הממוצע ההיסטורי הגבוה.")
+
     # יחס המימון מחושב כנגד התיק המושקע והממושכן (הצבירה + ההלוואה)
     portfolio = net_for_190 + loan_amount
     ltv = (loan_amount / portfolio * 100) if portfolio > 0 else 0.0
@@ -42,4 +52,5 @@ def render_leverage_inputs(net_for_190, new_apartment_cost):
     return {
         "loan_amount": loan_amount,
         "loan_annual_rate": loan_annual_rate / 100,
+        "annual_return_lev": annual_return_lev / 100,
     }

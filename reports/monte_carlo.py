@@ -69,7 +69,7 @@ def margin_call_probability(user_inputs, std_ret=GEN_VOL, call_ltv=0.90, n_sims=
     loan = min(float(lev.get("loan_amount", 0)), home, 4.0 * net_for_190)
     if loan <= 0 or net_for_190 <= 0:
         return 0.0
-    mean_ret = GEN_RETURN - float(a190.get("management_fee_190", 0.005))
+    mean_ret = float(lev.get("annual_return_lev", GEN_RETURN)) - float(a190.get("management_fee_190", 0.005))
     monthly_deficit = max(0.0, float(ex.get("current_expenses", 11000))
                           - float(w.get("national_insurance", 2500))
                           - float(a190.get("desired_pension", 5306)))
@@ -118,7 +118,8 @@ def render_monte_carlo(user_inputs):
     home_appr = float(w.get("property_appreciation", 0.03))
     buffer_cash = float(w.get("emergency_fund", 250000))
     loan_rate = float(lev.get("loan_annual_rate", 0.045))
-    mean_ret = GEN_RETURN - float(a190.get("management_fee_190", 0.005))
+    gen_return = float(lev.get("annual_return_lev", GEN_RETURN))  # שדה תשואת מסלול כללי
+    mean_ret = gen_return - float(a190.get("management_fee_190", 0.005))
     inflation = float(ex.get("expected_inflation", 0.023))
     annual_wd = max(0.0, float(ex.get("current_expenses", 11000))
                     - float(w.get("national_insurance", 2500))
@@ -131,7 +132,7 @@ def render_monte_carlo(user_inputs):
                         help="מסלול כללי סביב 7-9%. מנייתי טהור 15%+.") / 100
     _rtl(
         f"<div style='color:#555;font-size:0.84em;line-height:1.6;margin-top:2px;'>"
-        f"📌 תשואת התיק {GEN_RETURN*100:.0f}% ברוטו (כ-{mean_ret*100:.1f}% נטו) &nbsp;·&nbsp; "
+        f"📌 תשואת התיק {gen_return*100:.1f}% ברוטו (כ-{mean_ret*100:.1f}% נטו) &nbsp;·&nbsp; "
         f"ריבית ההלוואה {loan_rate*100:.2f}% &nbsp;·&nbsp; אופק {years} שנים &nbsp;·&nbsp; "
         f"<b>ללא מכירה כפויה</b>, החוב מצטבר ונפרע מהעיזבון.</div>")
 

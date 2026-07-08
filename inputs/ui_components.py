@@ -42,6 +42,7 @@ DEFAULTS = {
     "rm_savings_floor": 100000,
     "loan_amount": 5000000,
     "loan_annual_rate": 0.045,
+    "annual_return_lev": 0.06,
     "visible_tracks": [1, 4, 5],
 }
 
