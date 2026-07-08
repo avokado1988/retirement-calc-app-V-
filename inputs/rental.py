@@ -23,7 +23,7 @@ def render_rental_inputs(wealth_data, check_age=DEFAULTS["check_age"], start_age
         "עליית ערך שנתית — דירה מושכרת (%)",
         value=DEFAULTS["rental_property_appreciation"] * 100, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
     )
-    st.caption("דירות יקרות מתייקרות לאט יותר באחוזים — מומלץ 1–2% לדירה מעל ₪5M.")
+    st.caption("2.3%. פנטהאוס יוקרה מתייקר לאט יותר באחוזים, ובעוד 30 שנה גם מתיישן, לכן בערך אינפלציה בלבד.")
 
     st.divider()
     st.markdown("##### 📥 הכנסה מהשכרת הנכס")
@@ -60,12 +60,12 @@ def render_rental_inputs(wealth_data, check_age=DEFAULTS["check_age"], start_age
         "תחזוקה — 10 שנים ראשונות (% מהשכירות)",
         value=DEFAULTS["maintenance_early_pct"] * 100, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
     )
-    st.caption("דירה חדשה מקבלן — תיקונים שוטפים, ועד בית, ביטוח. נהוג 5–8% בשנים הראשונות.")
+    st.caption("10%. סך ההוצאות בשוק, ריקנות ותיקונים וועד וביטוח, הוא 15-25% מהשכירות. 10% בעשור הראשון מגלם גם חודש ריק בשנה.")
     maintenance_late_pct = compact_number_input(
         "תחזוקה — מ-10 שנים ואילך (% מהשכירות)",
         value=DEFAULTS["maintenance_late_pct"] * 100, min_value=0.0, max_value=30.0, step=0.5, unit="%", color=COLOR_RED
     )
-    st.caption("לאחר עשור — תיקונים גדולים, שיפוצים, בלאי. נהוג 10–15% מהשכירות.")
+    st.caption("15%. אחרי עשור הבניין מתיישן, תיקונים גדולים ושיפוצים, אז ההוצאה עולה לקצה הגבוה של הטווח.")
 
     st.divider()
     st.caption(

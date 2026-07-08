@@ -24,8 +24,12 @@ def render_wealth_inputs():
 
     property_appreciation_pct = compact_number_input(
         "עליה ערך נדלן שנתית (%)",
-        value=DEFAULTS["property_appreciation"] * 100, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
+        value=DEFAULTS["property_appreciation"] * 100, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE,
+        help_text=("דירת המגורים החדשה. בנצ'מרק, מחירי הדיור עלו היסטורית כ-6-7% נומינלי, "
+                   "אבל מחזיקים אותה שלושים שנה והמבנה מתיישן ודורש שיפוץ, מה שמוריד מהעלייה. "
+                   "לכן לוקחים 2.5%, מעל אינפלציה אך נמוך מהמדד הכללי שכולל בנייה חדשה.")
     )
+    st.caption("2.5%. מעל אינפלציה כי זו דירת מגורים רגילה, אך מנוכה בגלל התיישנות המבנה לאורך 30 שנה.")
 
     st.divider()
     st.markdown("#### 🎁 התחייבויות וחירום")
