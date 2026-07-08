@@ -28,7 +28,7 @@ DEFAULTS = {
     "kids_help": 1000000,
     "kids_help_growth": 0.05,
     "emergency_fund": 50000,
-    "property_appreciation": 0.025,
+    "property_appreciation": 0.028,
     "rental_property_value": 10800000,
     "rental_property_appreciation": 0.023,
     "rental_income_monthly": 25000,

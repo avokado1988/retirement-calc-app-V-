@@ -32,16 +32,17 @@ TRACK_NAMES = {
 def _blend(mix):
     c, b, e = mix
     ret = c * CASH_RET + b * BOND_RET + e * EQ_RET
-    vol = e * EQ_VOL + b * BOND_VOL  # לינארי ושמרני (בלי הטבת פיזור), מזומן אפס
+    # סטיית תקן ריאלית עם הטבת פיזור (מניות ואג"ח לא נעים יחד), מזומן ~אפס
+    vol = ((e * EQ_VOL) ** 2 + (b * BOND_VOL) ** 2) ** 0.5
     return ret, vol
 
 
 def implied_vol(gross_return):
-    """גוזר סטיית תקן שנתית מהתשואה, לפי חלק המניות שנדרש כדי להשיג אותה.
-    כך שהתנודתיות זזה יחד עם התשואה שהמשתמש בוחר, ולא נשארת קבועה."""
+    """גוזר סטיית תקן שנתית מהתשואה, לפי חלק המניות שנדרש כדי להשיגה, עם הטבת פיזור.
+    כך שהתנודתיות זזה יחד עם התשואה, ומגיעה לכ-8-9% למסלול כללי (תשואה ~6%)."""
     e = (gross_return - BOND_RET) / (EQ_RET - BOND_RET)
     e = max(0.0, min(1.0, e))
-    return e * EQ_VOL + (1 - e) * BOND_VOL
+    return ((e * EQ_VOL) ** 2 + ((1 - e) * BOND_VOL) ** 2) ** 0.5
 
 
 def _survival(P0, annual_wd, wd_growth, years, mean_ret, std_ret, n_sims=2500, seed=7):
