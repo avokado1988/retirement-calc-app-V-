@@ -666,6 +666,11 @@ def render_qa_section(results, user_inputs):
     """, unsafe_allow_html=True)
 
     st.markdown("<h3 style='text-align: center; color: #1a1a2e;'>🧭 סיכום מנהלים — השוואת מסלולים</h3>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='direction:rtl;text-align:center;color:#666;font-size:0.85em;margin:-6px 0 8px;'>"
+        "התיק הפיננסי ושווי הנדל\"ן מוצגים כשווי חציוני לפי מונטה קרלו, מה שסביר שיקרה, "
+        "50% סיכוי לעבור אותו. נמוך מהערכה דטרמיניסטית כי הוא מגלם את תנודתיות השוק.</div>",
+        unsafe_allow_html=True)
 
     if not has_winner:
         st.warning(f"⚠️ אין מסלול מומלץ — אף מסלול אינו מחזיק את התיק עד גיל {check_age:.0f}. בכל המסלולים החיסכון עלול להיגמר לפני כן. מומלץ לבחון מחדש את ההכנסות וההוצאות, או להוריד את גיל הבדיקה אם הוא גבוה מהמתוכנן.")
@@ -738,8 +743,32 @@ def render_qa_section(results, user_inputs):
     tax_check = {1: new_home_tax_check, 2: new_home_tax_check, 3: new_home_tax_check,
                  4: property_tax_check, 5: new_home_tax_check}
 
+    # --- שווי חציוני לפי מונטה קרלו ---
+    # החישוב הדטרמיניסטי מניח תשואה קבועה ומנפח. החציון של מונטה קרלו נמוך יותר בגלל
+    # דראג התנודתיות (median של lognormal = ממוצע × exp(-σ²/2·t)). מריצים רק על החלקים
+    # התנודתיים, התיק הפיננסי ועליית ערך הנדל"ן. השאר (קצבה, מס, הלוואות) דטרמיניסטי.
+    import math
+    from reports.allocation import implied_vol
+    _rt = user_inputs.get("real_tax_25", {})
+    _a190 = user_inputs.get("amendment_190", {})
+    _track_ret = {
+        1: float(_a190.get("annual_return_190", 0.06)),
+        2: float(_rt.get("annual_return_25", 0.06)),
+        3: float(_rt.get("annual_return_hybrid", 0.06)),
+        4: float(_rt.get("annual_return_25", 0.06)),
+        5: float(user_inputs.get("leverage", {}).get("annual_return_lev", 0.06)),
+    }
+    _RE_VOL = 0.08  # תנודתיות נדל"ן ישראלי, נכס בודד
+    _horizon = max(1.0, check_age - start_age)
+    track_vol = {t: implied_vol(_track_ret[t]) for t in (1, 2, 3, 4, 5)}
+    _fin_med_factor = {t: math.exp(-(track_vol[t] ** 2) / 2 * _horizon) for t in (1, 2, 3, 4, 5)}
+    _prop_med_factor = math.exp(-(_RE_VOL ** 2) / 2 * _horizon)
+    fin_med = {t: fin_check[t] * _fin_med_factor[t] for t in (1, 2, 3, 4, 5)}
+    prop_med = {t: prop_check[t] * _prop_med_factor for t in (1, 2, 3, 4, 5)}
+
     # kids_asset_check was computed above (also feeds the ranking metric sa_100)
-    total_check = {t: fin_check[t] + prop_check[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
+    # הכרטיסים מציגים את החציון (מונטה קרלו) בתיק ובנדל"ן; השאר דטרמיניסטי
+    total_check = {t: fin_med[t] + prop_med[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
                    for t in (1, 2, 3, 4, 5)}
 
     # --- Track 5 leverage risk gauge: cash buffer (LTV / drop-tol / MC prob were
@@ -794,8 +823,8 @@ def render_qa_section(results, user_inputs):
         hbg, hcolor = get_health_style(is_res, is_pres)
         tv[tid] = {
             "draw": draw_txt, "erode": erode_txt, "lasts": lasts_txt,
-            "fin": _val(format_shekel(int(fin_check[tid]))),
-            "prop": _val(format_shekel(int(prop_check[tid]))),
+            "fin": _val(format_shekel(int(fin_med[tid]))),
+            "prop": _val(format_shekel(int(prop_med[tid]))),
             "liab": _val(f"−{format_shekel(int(liab))}", "#c0392b") if liab > 0 else _val("—", "#aaa"),
             "tax": _val(f"−{format_shekel(int(tax_c))}", "#c0392b") if tax_c > 0 else _val("—", "#aaa"),
             "kids": _val(f"+{format_shekel(int(kids_a))}", "#1a7a3a") if kids_a > 0 else _val("—", "#aaa"),
@@ -829,12 +858,12 @@ def render_qa_section(results, user_inputs):
         "draw": "כמה מושכים מהתיק כל חודש בפרישה כדי לכסות את הפער בין ההוצאות להכנסות (ביטוח לאומי + קצבה). אפס = ההכנסות מכסות ואין צורך למשוך.",
         "erode": "הגיל שבו יתרת התיק מפסיקה לגדול ומתחילה לרדת — כשהמשיכה עוברת את התשואה. 'צומח תמיד' = התשואה מכסה את המשיכות לכל אורך החיים.",
         "lasts": "הגיל שבו התיק הנזיל נגמר. אם לא נגמר עד 105 — 'לכל החיים'. בשכירות זה הגיל שבו נכנסת משכנתה הפוכה; במינוף — הגיל שבו התיק אוזל.",
-        "fin": "יתרת התיק הנזיל (כספי ההשקעה) בגיל הנבדק, אחרי משיכות, מס ותשואה.",
-        "prop": "שווי הנכס בגיל הנבדק, לפי הצמדת עליית הערך השנתית. בשכירות — הדירה המושכרת; בשאר — דירת המגורים.",
+        "fin": "יתרת התיק הפיננסי בגיל הנבדק, שווי חציוני לפי מונטה קרלו. כלומר יש 50% סיכוי לעבור אותו. נמוך מהחישוב הדטרמיניסטי בגלל תנודתיות התיק.",
+        "prop": "שווי הנכס בגיל הנבדק, שווי חציוני לפי מונטה קרלו על עליית הערך. בשכירות הדירה המושכרת, בשאר דירת המגורים.",
         "liab": "חוב בגיל הנבדק: משכנתה הפוכה (שכירות) או הלוואת בלון (מינוף), כולל ריבית שנצברה. מנוכה מסך הנכסים.",
         "tax": "אומדן מס שבח עתידי על מכירת הנכס (רלוונטי למסלול שכירות ששומר את הנכס). מכויל להערכת יועץ המס ומנוכה מסך הנכסים.",
         "kids": "העזרה לילדים, שצמחה עד הגיל הנבדק בקצב שהוגדר. נספרת כנכס משפחתי רק במסלולי המכירה (הכסף עובד בידי הילדים).",
-        "total": "השורה התחתונה: תיק פיננסי + שווי נדל\"ן − הלוואות − מס שבח + עזרה לילדים, הכל בגיל הנבדק. זה מה שנשאר למשפחה.",
+        "total": "השורה התחתונה, שווי חציוני לפי מונטה קרלו: תיק פיננסי + נדל\"ן − הלוואות − מס שבח + עזרה לילדים. זה מה שסביר שיישאר למשפחה, עם 50% סיכוי לעבור אותו.",
         "risk": "מונטה קרלו: ההסתברות לדרישת ביטחונות (מכירת התיק בהפסד) לאורך התקופה, לפי גודל ההלוואה ותנודתיות השוק.",
     }
 

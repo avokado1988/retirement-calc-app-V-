@@ -36,6 +36,14 @@ def _blend(mix):
     return ret, vol
 
 
+def implied_vol(gross_return):
+    """גוזר סטיית תקן שנתית מהתשואה, לפי חלק המניות שנדרש כדי להשיג אותה.
+    כך שהתנודתיות זזה יחד עם התשואה שהמשתמש בוחר, ולא נשארת קבועה."""
+    e = (gross_return - BOND_RET) / (EQ_RET - BOND_RET)
+    e = max(0.0, min(1.0, e))
+    return e * EQ_VOL + (1 - e) * BOND_VOL
+
+
 def _survival(P0, annual_wd, wd_growth, years, mean_ret, std_ret, n_sims=2500, seed=7):
     """מחזיר את הסתברות השרידות (התיק לא אזל עד סוף התקופה) ואת אחוזוני היתרה."""
     rng = np.random.default_rng(seed)
@@ -209,6 +217,7 @@ def render_allocation_recommender(user_inputs):
         "<th style='padding:7px 10px;'>משיכה שנתית מהתיק</th>"
         "<th style='padding:7px 10px;'>תמהיל מומלץ</th>"
         "<th style='padding:7px 10px;'>תשואה</th>"
+        "<th style='padding:7px 10px;'>סטיית תקן</th>"
         "<th style='padding:7px 10px;'>טווח ירושה (גרוע→אמצעי)</th>"
         "<th style='padding:7px 10px;'>סיכוי הצלחה</th></tr>"
     )
@@ -224,6 +233,7 @@ def render_allocation_recommender(user_inputs):
             f"<td style='padding:7px 10px;text-align:center;'>{_fmt(r['annual_wd'])}</td>"
             f"<td style='padding:7px 10px;text-align:center;'>{mix_txt}</td>"
             f"<td style='padding:7px 10px;text-align:center;font-weight:800;color:#1565c0;'>{r['ret']*100:.1f}%</td>"
+            f"<td style='padding:7px 10px;text-align:center;color:#7e57c2;'>{r['vol']*100:.0f}%</td>"
             f"<td style='padding:7px 10px;text-align:center;color:#555;'>{_fmt(r['p10'])} → {_fmt(r['p50'])}</td>"
             f"<td style='padding:7px 10px;text-align:center;font-weight:800;color:{col};'>{r['success']*100:.0f}% {lbl}</td></tr>"
         )

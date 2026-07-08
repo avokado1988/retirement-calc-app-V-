@@ -35,6 +35,8 @@ def render_190_inputs(remaining_for_gimel, capital_for_pension=0):
         value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE,
         help_text=RETURN_HELP
     ) / 100
+    from reports.allocation import implied_vol
+    st.caption(f"סטיית תקן למונטה קרלו כ-{implied_vol(annual_return_190)*100:.0f}%, נגזרת מהתשואה לפי חלק המניות. משנה תשואה, משנה גם את הסטייה.")
     management_fee_190 = compact_number_input(
         "דמי ניהול שנתיים — מסלול 190 (%)",
         value=DEFAULTS["management_fee_190"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED

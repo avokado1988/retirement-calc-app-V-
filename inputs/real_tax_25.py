@@ -16,6 +16,8 @@ def render_track2_inputs(remaining_for_gimel):
         value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE,
         help_text=RETURN_HELP
     ) / 100
+    from reports.allocation import implied_vol
+    st.caption(f"סטיית תקן למונטה קרלו כ-{implied_vol(annual_return_25)*100:.0f}%, נגזרת מהתשואה.")
     management_fee_25 = compact_number_input(
         "דמי ניהול שנתיים — מסלול 2 (%)",
         value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
@@ -42,6 +44,8 @@ def render_track3_inputs(net_for_hybrid):
         value=DEFAULTS["annual_return"] * 100, min_value=0.0, max_value=15.0, step=0.1, unit="%", color=COLOR_BLUE,
         help_text=RETURN_HELP
     ) / 100
+    from reports.allocation import implied_vol
+    st.caption(f"סטיית תקן למונטה קרלו כ-{implied_vol(annual_return_hybrid)*100:.0f}%, נגזרת מהתשואה.")
     management_fee_hybrid = compact_number_input(
         "דמי ניהול שנתיים — מסלול 3 (%)",
         value=DEFAULTS["management_fee"] * 100, min_value=0.0, max_value=2.0, step=0.05, unit="%", color=COLOR_RED
