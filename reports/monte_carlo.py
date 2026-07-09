@@ -227,9 +227,50 @@ def render_monte_carlo(user_inputs):
             f"שינוי של <b>{'+' if up10>=0 else ''}{_f(up10)}</b>.<br/>"
             f"⚖️ {_verdict}</div>")
 
-    # ============ 2. שווי התיק לפי גודל ההלוואה ============
+    # ============ 2. כמה התיק יכול לרדת ============
     st.divider()
-    _sec("2️⃣ שווי התיק לפי גודל ההלוואה — כל הקשת")
+    _sec("2️⃣ כמה התיק יכול לרדת לפני שהחוב משתווה לו")
+    _drop_html = ""
+    for loan, res in rows:
+        P0 = net_for_190 + loan
+        ltv0 = (loan / P0 * 100) if P0 > 0 else 0.0
+        drop_uw = (net_for_190 / P0) if P0 > 0 else 1.0  # ירידת התיק עד שהחוב = שווי התיק
+        loan_lbl = "ללא מינוף" if loan == 0 else _f(loan)
+        if loan == 0:
+            uw_txt, mkt_txt, dcol = "אין חוב", "—", "#1a7a3a"
+        else:
+            dcol = "#1a7a3a" if drop_uw >= 0.40 else ("#b07800" if drop_uw >= 0.25 else "#a83232")
+            uw_txt = f"{drop_uw*100:.0f}%"
+            mkt_txt = f"כ-{drop_uw*200:.0f}%"
+        hl = "background:#fff7e6;" if abs(loan - cur_loan) < 1 else ""
+        _drop_html += (
+            f"<tr style='border-bottom:1px solid #eee;{hl}'>"
+            f"<td style='padding:7px 12px;text-align:right;font-weight:800;'>{loan_lbl}</td>"
+            f"<td style='padding:7px 12px;text-align:center;color:#555;'>{ltv0:.0f}%</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:800;color:{dcol};'>{uw_txt}</td>"
+            f"<td style='padding:7px 12px;text-align:center;color:#555;'>{mkt_txt}</td></tr>")
+    with st.expander("📉 בכמה התיק יכול לרדת — לכל גודל הלוואה", expanded=True):
+        st.markdown(
+            f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
+            f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.9em;'>"
+            f"<thead><tr style='background:#eef0f7;'>"
+            f"<th style='padding:7px 12px;text-align:right;'>סכום ההלוואה</th>"
+            f"<th style='padding:7px 12px;'>שיעור מימון היום</th>"
+            f"<th style='padding:7px 12px;'>בכמה התיק יכול לרדת</th>"
+            f"<th style='padding:7px 12px;'>תרגום לשוק מניות</th></tr></thead>"
+            f"<tbody>{_drop_html}</tbody></table></div>", unsafe_allow_html=True)
+        _rtl(
+            "<div style='color:#777;font-size:0.82em;line-height:1.7;margin-top:8px;'>"
+            "העמודה מראה בכמה <b>התיק הכללי</b> יכול לרדת עד שהחוב משתווה לשוויו. מתחת לזה "
+            "התיק לבדו כבר לא מכסה את ההלוואה, והיתרה נאכלת מהעיזבון (הבית). "
+            "מכיוון שמסלול כללי הוא כמחצית מניות, ירידת תיק שקולה לכ<b>פליים</b> בשוק המניות, "
+            "כך שירידת תיק של 30% דורשת מפולת של כ-60% במניות, אירוע נדיר. "
+            "לפי מה שהמלווה מסר אין מכירה כפויה בנקודה הזו, אבל זו עדיין הנקודה שבה המינוף "
+            "מתחיל לשחוק את הירושה במקום להגדיל אותה.</div>")
+
+    # ============ 3. שווי התיק לפי גודל ההלוואה ============
+    st.divider()
+    _sec("3️⃣ שווי התיק לפי גודל ההלוואה — כל הקשת")
     _rows_html = ""
     for loan, res in rows:
         d50 = res["nw_p50"] - b50
