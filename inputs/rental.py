@@ -23,7 +23,7 @@ def render_rental_inputs(wealth_data, check_age=DEFAULTS["check_age"], start_age
         "עליית ערך שנתית — דירה מושכרת (%)",
         value=DEFAULTS["rental_property_appreciation"] * 100, min_value=0.0, max_value=10.0, step=0.1, unit="%", color=COLOR_BLUE
     )
-    st.caption("2.3%, בערך כמו האינפלציה, אפס פרמיה ריאלית. פנטהאוס יוקרה עולה לאט, ובעוד 30 שנה גם מתיישן.")
+    st.caption("3.3%, כלומר כאחוז מעל האינפלציה. פנטהאוס יוקרה בצפון תל אביב, פרמיה נמוכה מדירת מגורים כי המבנה מתיישן. תואם לטבלת המומלצים בטאב התמהיל.")
 
     st.divider()
     st.markdown("##### 📥 הכנסה מהשכרת הנכס")
