@@ -77,7 +77,7 @@ from reports.graphs import render_charts
 from reports.qa_report import render_qa_section
 from reports.qa_summary import render_qa_summary_page
 from reports.monte_carlo import render_monte_carlo
-from reports.allocation import render_allocation_recommender
+from reports.allocation import render_allocation_recommender, render_re_recommender
 
 # 1. הגדרת תצורת דף אחידה
 st.set_page_config(page_title="מחשבון פרישה אקטוארי חכם", page_icon="📊", layout="wide")
@@ -282,6 +282,8 @@ with tab0:
     # כלים אינטראקטיביים שמחשבים סימולציה משלהם — קוראים את הערכים החיים מהסרגל
     # (user_inputs), לא את צילום המצב מהריצה האחרונה, כדי שישקפו שינוי מיידי.
     render_allocation_recommender(user_inputs)
+    st.divider()
+    render_re_recommender(user_inputs)
     st.divider()
     st.markdown(
         "<div style='direction:rtl;text-align:right;'>"

@@ -276,3 +276,82 @@ def render_allocation_recommender(user_inputs):
         st.session_state["alloc_pending"] = pending
         st.session_state["alloc_run"] = True
         st.rerun()
+
+
+# ------------------------------------------------------------------
+# המלצת הנחות נדל"ן — פרמיה מעל אינפלציה, וכפתור שממלא את השדות
+# ------------------------------------------------------------------
+_RE_FIELD_KEY = {
+    "res_appr":    "saved_num_עליה ערך נדלן שנתית (%)",
+    "pent_appr":   "saved_num_עליית ערך שנתית — דירה מושכרת (%)",
+    "rent_in":     "saved_num_עלייה שנתית בדמי שכירות גביה (%)",
+    "rent_out":    "saved_num_עלייה שנתית בדמי שכירות תשלום (%)",
+    "maint_early": "saved_num_תחזוקה — 10 שנים ראשונות (% מהשכירות)",
+    "maint_late":  "saved_num_תחזוקה — מ-10 שנים ואילך (% מהשכירות)",
+}
+
+
+def render_re_recommender(user_inputs):
+    import streamlit as st
+
+    infl = float(user_inputs.get("expenses", {}).get("expected_inflation", 0.023))
+
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;'>"
+        "<h3 style='color:#1a1a2e;'>🏠 ערכי נדל\"ן מומלצים — יחסית לאינפלציה</h3>"
+        f"<p style='font-size:0.92em;line-height:1.7;color:#444;'>עליית הערך והשכירות מנוסחות "
+        f"כפרמיה מעל האינפלציה שהזנת ({infl*100:.1f}%), כי בסוף מה שקובע הוא כמה הנכס מנצח את "
+        f"האינפלציה. אם תשנה את האינפלציה, הערכים הנומינליים יזוזו איתה. עליית מחיר ריאלית של "
+        f"דיור לטווח ארוך היא כאחוז עד שניים, ורוב תשואת הנדל\"ן היא השכירות, שנספרת בנפרד.</p></div>",
+        unsafe_allow_html=True)
+
+    # (מפתח, תווית, פרמיה מעל אינפלציה, הערה)
+    prem_rows = [
+        ("res_appr",  "עליית ערך דירת מגורים",   0.015, "צפון ת\"א, דירה חדשה. +1.5% ריאלי, נטו אחרי התיישנות."),
+        ("pent_appr", "עליית ערך פנטהאוס מושכר", 0.010, "צפון ת\"א, בניין שמתיישן אך הקרקע שומרת ערך. +1.0% ריאלי."),
+        ("rent_in",   "צמיחת שכר דירה נגבה",       0.007, "כ-0.7% מעל אינפלציה."),
+        ("rent_out",  "צמיחת שכר דירה משולם",      0.012, "כ-1.2% מעל אינפלציה, מעט מעל הנגבה."),
+    ]
+    abs_rows = [
+        ("maint_early", "תחזוקה — עשור ראשון",   0.10, "10% מהשכירות, כולל ריקנות ותיקונים."),
+        ("maint_late",  "תחזוקה — מעשור והלאה",  0.15, "15% מהשכירות, התיישנות ותיקונים גדולים."),
+    ]
+
+    body = ""
+    for _k, lbl, prem, note in prem_rows:
+        nominal = infl + prem
+        body += (
+            f"<tr style='border-bottom:1px solid #eee;'>"
+            f"<td style='padding:7px 12px;text-align:right;font-weight:700;'>{lbl}</td>"
+            f"<td style='padding:7px 12px;text-align:center;color:#1565c0;'>+{prem*100:.1f}% מעל אינפלציה</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:800;'>{nominal*100:.1f}%</td>"
+            f"<td style='padding:7px 12px;text-align:right;color:#777;font-size:0.9em;'>{note}</td></tr>")
+    for _k, lbl, val, note in abs_rows:
+        body += (
+            f"<tr style='border-bottom:1px solid #eee;'>"
+            f"<td style='padding:7px 12px;text-align:right;font-weight:700;'>{lbl}</td>"
+            f"<td style='padding:7px 12px;text-align:center;color:#777;'>% מהשכירות</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:800;'>{val*100:.0f}%</td>"
+            f"<td style='padding:7px 12px;text-align:right;color:#777;font-size:0.9em;'>{note}</td></tr>")
+    st.markdown(
+        f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
+        f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.88em;'>"
+        f"<thead><tr style='background:#eef0f7;'>"
+        f"<th style='padding:7px 12px;text-align:right;'>פרמטר</th>"
+        f"<th style='padding:7px 12px;'>מומלץ</th>"
+        f"<th style='padding:7px 12px;'>ערך נומינלי</th>"
+        f"<th style='padding:7px 12px;text-align:right;'>הסבר</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></div>", unsafe_allow_html=True)
+
+    if st.button("✅ החל ערכי נדל\"ן מומלצים", use_container_width=True, key="re_apply_btn"):
+        pending = st.session_state.get("alloc_pending", {})
+        for _k, lbl, prem, note in prem_rows:
+            pending[_RE_FIELD_KEY[_k]] = round((infl + prem) * 100, 1)
+        for _k, lbl, val, note in abs_rows:
+            pending[_RE_FIELD_KEY[_k]] = round(val * 100, 1)
+        st.session_state["alloc_pending"] = pending
+        st.rerun()
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;'>"
+        "בלחיצה, הערכים הנומינליים (אינפלציה + פרמיה) ייכנסו לשדות הנדל\"ן. השדות הידניים נשארים וניתן לעקוף.</div>",
+        unsafe_allow_html=True)
