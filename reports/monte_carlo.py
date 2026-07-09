@@ -237,18 +237,25 @@ def render_monte_carlo(user_inputs):
         drop_uw = (net_for_190 / P0) if P0 > 0 else 1.0  # ירידת התיק עד שהחוב = שווי התיק
         loan_lbl = "ללא מינוף" if loan == 0 else _f(loan)
         if loan == 0:
-            uw_txt, mkt_txt, dcol = "אין חוב", "—", "#1a7a3a"
+            uw_txt, mkt_txt, prob_txt, dcol, pcol = "אין חוב", "—", "0%", "#1a7a3a", "#1a7a3a"
         else:
             dcol = "#1a7a3a" if drop_uw >= 0.40 else ("#b07800" if drop_uw >= 0.25 else "#a83232")
             uw_txt = f"{drop_uw*100:.0f}%"
             mkt_txt = f"כ-{drop_uw*200:.0f}%"
+            # הסתברות שהחוב יעקוף את התיק אי-פעם לאורך התוכנית (סף LTV=100%)
+            _uw = _simulate(P0, loan, loan_rate, mean_ret, std_ret, years, annual_wd,
+                            inflation, home0, home_appr, buffer_cash, 0.02, 1.0, n_sims=2000)
+            p_uw = _uw["p_margin_call"]
+            pcol = "#1a7a3a" if p_uw < 0.10 else ("#b07800" if p_uw < 0.25 else "#a83232")
+            prob_txt = f"{p_uw*100:.0f}%"
         hl = "background:#fff7e6;" if abs(loan - cur_loan) < 1 else ""
         _drop_html += (
             f"<tr style='border-bottom:1px solid #eee;{hl}'>"
             f"<td style='padding:7px 12px;text-align:right;font-weight:800;'>{loan_lbl}</td>"
             f"<td style='padding:7px 12px;text-align:center;color:#555;'>{ltv0:.0f}%</td>"
             f"<td style='padding:7px 12px;text-align:center;font-weight:800;color:{dcol};'>{uw_txt}</td>"
-            f"<td style='padding:7px 12px;text-align:center;color:#555;'>{mkt_txt}</td></tr>")
+            f"<td style='padding:7px 12px;text-align:center;color:#555;'>{mkt_txt}</td>"
+            f"<td style='padding:7px 12px;text-align:center;font-weight:800;color:{pcol};'>{prob_txt}</td></tr>")
     with st.expander("📉 בכמה התיק יכול לרדת — לכל גודל הלוואה", expanded=True):
         st.markdown(
             f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
@@ -257,16 +264,28 @@ def render_monte_carlo(user_inputs):
             f"<th style='padding:7px 12px;text-align:right;'>סכום ההלוואה</th>"
             f"<th style='padding:7px 12px;'>שיעור מימון היום</th>"
             f"<th style='padding:7px 12px;'>בכמה התיק יכול לרדת</th>"
-            f"<th style='padding:7px 12px;'>תרגום לשוק מניות</th></tr></thead>"
+            f"<th style='padding:7px 12px;'>תרגום לשוק מניות</th>"
+            f"<th style='padding:7px 12px;'>סיכוי שיקרה לאורך התוכנית</th></tr></thead>"
             f"<tbody>{_drop_html}</tbody></table></div>", unsafe_allow_html=True)
         _rtl(
             "<div style='color:#777;font-size:0.82em;line-height:1.7;margin-top:8px;'>"
-            "העמודה מראה בכמה <b>התיק הכללי</b> יכול לרדת עד שהחוב משתווה לשוויו. מתחת לזה "
-            "התיק לבדו כבר לא מכסה את ההלוואה, והיתרה נאכלת מהעיזבון (הבית). "
-            "מכיוון שמסלול כללי הוא כמחצית מניות, ירידת תיק שקולה לכ<b>פליים</b> בשוק המניות, "
-            "כך שירידת תיק של 30% דורשת מפולת של כ-60% במניות, אירוע נדיר. "
-            "לפי מה שהמלווה מסר אין מכירה כפויה בנקודה הזו, אבל זו עדיין הנקודה שבה המינוף "
-            "מתחיל לשחוק את הירושה במקום להגדיל אותה.</div>")
+            "העמודה <b>בכמה התיק יכול לרדת</b> מראה בכמה <b>התיק הכללי</b> יכול לרדת עד שהחוב "
+            "משתווה לשוויו. מתחת לזה התיק לבדו כבר לא מכסה את ההלוואה, והיתרה נאכלת מהעיזבון (הבית).<br/>"
+            "<b>תרגום לשוק מניות</b> — מסלול כללי הוא כמחצית מניות, ולכן ירידת תיק שקולה לכ<b>פליים</b> "
+            "בשוק המניות. ירידת תיק של 28% דורשת מפולת של כ-56% במניות.<br/>"
+            "<b>סיכוי שיקרה לאורך התוכנית</b> — כמה מתוך אלפי תרחישי המונטה קרלו הגיעו לנקודה הזו "
+            "אי-פעם עד הגיל הנבדק. זה כבר מגלם שהחוב תופח עם הזמן והכרית נשחקת.</div>")
+        _rtl(
+            "<div style='color:#777;font-size:0.82em;line-height:1.7;margin-top:6px;"
+            "background:#f8f9fc;border:1px solid #e6e8f0;border-radius:8px;padding:10px 14px;'>"
+            "📅 <b>כמה נדירה מפולת כזו, מהיסטוריה</b><br/>"
+            "ירידה של כ-20% בשוק המניות קורית בערך פעם בארבע עד חמש שנים. "
+            "ירידה של כ-35% בערך פעם בעשור (2020, 2008, 2000, 1974). "
+            "ירידה של כ-50% ומעלה קרתה בערך ארבע פעמים במאה השנים האחרונות (1929, 1974, 2002, 2008), "
+            "כלומר סדר גודל של פעם ב-20 עד 30 שנה, וזה בשוק המניות. "
+            "מכיוון שהתיק שלך מגוון, הוא יורד כמחצית מזה, ולכן צריך מפולת קיצונית וממושכת "
+            "כדי להביא את התיק לרדת בשיעורים שבטבלה. זו בדיוק הסיבה שהעמודה של הסיכוי חשובה, "
+            "היא מתרגמת את הנדירות למספר אחד.</div>")
 
     # ============ 3. שווי התיק לפי גודל ההלוואה ============
     st.divider()
