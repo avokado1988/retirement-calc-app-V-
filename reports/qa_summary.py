@@ -17,6 +17,17 @@ def render_qa_summary_page(results, user_inputs):
     amendment_190 = user_inputs.get("amendment_190", {})
     real_tax_25   = user_inputs.get("real_tax_25", {})
     rental        = user_inputs.get("rental", {})
+    leverage      = user_inputs.get("leverage", {})
+
+    # ─── רק המסלולים שנבחרו בסימולציה נכללים בדוח ────────────────────────────
+    visible = set(user_inputs.get("visible_tracks", [1, 2, 3, 4, 5]))
+    TRACK_TITLES = {
+        1: "מסלול 1 — תיקון 190",
+        2: "מסלול 2 — 25% מס ריאלי",
+        3: "מסלול 3 — היברידי",
+        4: "מסלול 4 — שכירות",
+        5: "מסלול 5 — מינוף",
+    }
 
     # ─── זמנים ───────────────────────────────────────────────────────────────
     start_age  = float(timeline.get("start_age", 65.5))
@@ -66,6 +77,11 @@ def render_qa_summary_page(results, user_inputs):
     yield_hybrid        = float(real_tax_25.get("annual_return_hybrid", 0.05))
     fee_hybrid          = float(real_tax_25.get("management_fee_hybrid", 0.006))
 
+    # ─── מסלול 5 — מינוף ─────────────────────────────────────────────────────
+    loan_amount_s     = float(leverage.get("loan_amount", 0) or 0)
+    loan_rate_s       = float(leverage.get("loan_annual_rate", 0.045))
+    gen_return_lev_s  = float(leverage.get("annual_return_lev", 0.06))
+
     # ─── מסלול 4 — שכירות ────────────────────────────────────────────────────
     net_for_rental          = float(rental.get("net_for_rental", 0) or 0)
     rental_inc_monthly      = float(rental.get("rental_income_monthly", 0))
@@ -104,6 +120,13 @@ def render_qa_summary_page(results, user_inputs):
     b25_102    = float(row_102["צבירה מסלול ריאלי"])
     bhyb_102   = float(row_102.get("צבירה מסלול היברידי", 0))
     brent_102  = float(row_102.get("צבירה מסלול שכירות", 0))
+
+    # ─── מסלול 5 — מינוף (צבירה + יתרת הלוואת בלון) ─────────────────────────
+    blev_ret   = float(row_retire.get("צבירה מסלול מינוף", 0))
+    blev_chk   = float(row_check.get("צבירה מסלול מינוף", 0))
+    blev_102   = float(row_102.get("צבירה מסלול מינוף", 0))
+    loan_bal_chk = float(row_check.get("הלוואת בלון — יתרת חוב", 0))
+    loan_bal_ret = float(row_retire.get("הלוואת בלון — יתרת חוב", 0))
 
     # ─── תזרים מסלול שכירות ──────────────────────────────────────────────────
     df_full["rental_cashflow"] = df_full["תזרים נטו שכירות"]
@@ -182,38 +205,46 @@ def render_qa_summary_page(results, user_inputs):
     #  UI
     # =========================================================================
     st.subheader("📋 כלי סיכום נתונים להעתקה מהירה (QA)")
-    st.caption("הדף שולף נתונים ישירות מהסליידרים ומהמנוע — אינו מחשב דבר בעצמו.")
+    st.caption("הדף שולף נתונים ישירות מהסליידרים ומהמנוע — אינו מחשב דבר בעצמו. נכללים רק המסלולים שנבחרו בסימולציה.")
 
-    # ─── גוש טקסט להעתקה ─────────────────────────────────────────────────────
-    copy_text = f"""=== סימולציית פרישה אקטוארית — דוח QA מהיר ===
+    # ─── בונים את הדוח מרשימת מקטעים, וכוללים רק מסלולים שנבחרו ──────────────
+    def _hdr(title):
+        return f"━━━━━━━━━━  {title}  ━━━━━━━━━━"
 
-━━━━━━━━━━  זמנים  ━━━━━━━━━━
+    selected_txt = " · ".join(TRACK_TITLES[t] for t in sorted(visible)) or "(לא נבחר מסלול)"
+    parts = []
+    parts.append("=== סימולציית פרישה אקטוארית — דוח QA מהיר ===")
+    parts.append(f"מסלולים שנבחרו להשוואה: {selected_txt}")
+
+    parts.append(f"""{_hdr("זמנים")}
   גיל התחלה          : {start_age}
   גיל פרישה          : {retire_age}
-  גיל בדיקה          : {check_age}
+  גיל בדיקה          : {check_age}""")
 
-━━━━━━━━━━  הוצאות  ━━━━━━━━━━
+    parts.append(f"""{_hdr("הוצאות")}
   הוצאה חודשית בסיס  : {base_exp:,.0f} ₪
   אינפלציה שנתית     : {inflation*100:.1f}%
   תוספת אינפלציה 75–85 : {age_75_85_inc*100:.1f}%
   תוספת אינפלציה 85+  : {age_85_plus_inc*100:.1f}%
   מטפלת סיעודית (מ-85): {caregiver_cost:,.0f} ₪/חודש
-  הוצאה חד-פעמית     : {one_time_exp:,.0f} ₪ (כל {one_time_freq:.0f} שנים)
+  הוצאה חד-פעמית     : {one_time_exp:,.0f} ₪ (כל {one_time_freq:.0f} שנים)""")
 
-━━━━━━━━━━  הכנסות  ━━━━━━━━━━
+    parts.append(f"""{_hdr("הכנסות")}
   הכנסה מעבודה       : {work_inc:,.0f} ₪/חודש (עד גיל {work_end_age:.1f})
-  ביטוח לאומי        : {ni_base:,.0f} ₪/חודש (ערך בסיס)
+  ביטוח לאומי        : {ni_base:,.0f} ₪/חודש (ערך בסיס)""")
 
-━━━━━━━━━━  הון ונדל"ן  ━━━━━━━━━━
+    parts.append(f"""{_hdr('הון ונדל"ן')}
   נטו ממכירה         : {net_sale:,.0f} ₪
   חסכונות קיימים     : {existing_savings:,.0f} ₪
   עלות דירה חדשה     : {new_apartment_cost:,.0f} ₪
   עזרה לילדים        : {kids_help:,.0f} ₪
   קרן חירום          : {emergency_fund:,.0f} ₪
   הון פנוי למסלולים  : {remaining_gimel:,.0f} ₪
-  עליית ערך נדל"ן    : {prop_appreciation*100:.1f}%/שנה
+  עליית ערך נדל"ן    : {prop_appreciation*100:.1f}%/שנה""")
 
-━━━━━━━━━━  מסלול 1 — תיקון 190  ━━━━━━━━━━
+    # ─── בלוקי קלט לכל מסלול — רק אלו שנבחרו ─────────────────────────────────
+    if 1 in visible:
+        parts.append(f"""{_hdr("מסלול 1 — תיקון 190")}
   קצבה רצויה         : {desired_pension:,.0f} ₪/חודש
   תקופת אבטחה        : {securing_years:.0f} שנים
   מקדם בסיסי         : {base_coeff:.1f}
@@ -221,18 +252,21 @@ def render_qa_summary_page(results, user_inputs):
   הון לרכישת קצבה    : {capital_for_pension:,.0f} ₪
   קצבה חודשית מחושבת : {pension_monthly_computed:,.0f} ₪  (הון÷מקדם)
   הון נטו במסלול 190 : {net_for_190:,.0f} ₪
-  תשואה / דמי ניהול  : {yield_190*100:.1f}% / {fee_190*100:.2f}%
+  תשואה / דמי ניהול  : {yield_190*100:.1f}% / {fee_190*100:.2f}%""")
 
-━━━━━━━━━━  מסלול 2 — 25% מס ריאלי  ━━━━━━━━━━
+    if 2 in visible:
+        parts.append(f"""{_hdr("מסלול 2 — 25% מס ריאלי")}
   הון במסלול         : {net_for_25:,.0f} ₪
-  תשואה / דמי ניהול  : {yield_25*100:.1f}% / {fee_25*100:.2f}%
+  תשואה / דמי ניהול  : {yield_25*100:.1f}% / {fee_25*100:.2f}%""")
 
-━━━━━━━━━━  מסלול 3 — היברידי  ━━━━━━━━━━
+    if 3 in visible:
+        parts.append(f"""{_hdr("מסלול 3 — היברידי")}
   הון במסלול         : {net_for_hybrid:,.0f} ₪
   תשואה / דמי ניהול  : {yield_hybrid*100:.1f}% / {fee_hybrid*100:.2f}%
-  קצבה חודשית מחושבת : {pension_monthly_computed:,.0f} ₪  (זהה למסלול 1)
+  קצבה חודשית מחושבת : {pension_monthly_computed:,.0f} ₪  (זהה למסלול 1)""")
 
-━━━━━━━━━━  מסלול 4 — שכירות  ━━━━━━━━━━
+    if 4 in visible:
+        parts.append(f"""{_hdr("מסלול 4 — שכירות")}
   הון נזיל           : {net_for_rental:,.0f} ₪
   שווי דירה מושכרת   : {rental_prop_value:,.0f} ₪  (עליית ערך: {rental_appreciation*100:.1f}%/שנה)
   שכ"ד גביה          : {rental_inc_monthly:,.0f} ₪/חודש (צמיחה: {rental_inc_growth*100:.1f}%/שנה)
@@ -244,78 +278,112 @@ def render_qa_summary_page(results, user_inputs):
   תזרים בגיל {check_age:.0f}      : {"+" if cf_check >= 0 else ""}{cf_check:,.0f} ₪/חודש
   גיל היפוך תזרים    : {f"גיל {flip_age:.1f}" if flip_age else "נשאר חיובי לאורך כל הדרך"}
   ── משכנתה הפוכה ──
-{rm_summary_block}
+{rm_summary_block}""")
 
-━━━━━━━━━━  תוצאות תיק נזיל — נקודות מפתח  ━━━━━━━━━━
-  מסלול 1  | גיל פרישה ({retire_age:.1f}): {b190_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b190_chk:>14,.0f} ₪  |  גיל 102: {b190_102:>14,.0f} ₪
-  מסלול 2  | גיל פרישה ({retire_age:.1f}): {b25_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {b25_chk:>14,.0f} ₪  |  גיל 102: {b25_102:>14,.0f} ₪
-  מסלול 3  | גיל פרישה ({retire_age:.1f}): {bhyb_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {bhyb_chk:>14,.0f} ₪  |  גיל 102: {bhyb_102:>14,.0f} ₪
-  מסלול 4  | גיל פרישה ({retire_age:.1f}): {brent_ret:>14,.0f} ₪  |  גיל {check_age:.0f}: {brent_chk:>14,.0f} ₪  |  גיל 102: {brent_102:>14,.0f} ₪
+    if 5 in visible:
+        parts.append(f"""{_hdr("מסלול 5 — מינוף")}
+  סכום הלוואה (בלון) : {loan_amount_s:,.0f} ₪
+  ריבית ההלוואה      : {loan_rate_s*100:.2f}%
+  תשואת מסלול כללי   : {gen_return_lev_s*100:.1f}%
+  מודל               : ללא מכירה כפויה, הריבית מצטברת ונפרעת מהעיזבון
+  יתרת חוב בפרישה    : {loan_bal_ret:,.0f} ₪
+  יתרת חוב בגיל {check_age:.0f}    : {loan_bal_chk:,.0f} ₪""")
 
-━━━━━━━━━━  תוצאות מנוע — אימות חישובים  ━━━━━━━━━━
-  [גיל פרישה = {retire_age:.1f}]
-  הוצאה נומינלית        : {exp_ret:,.0f} ₪/חודש
-  הכנסה נומינלית (ב"ל)  : {inc_ret:,.0f} ₪/חודש
-  קצבה חודשית (מנוע)    : {pension_ret:,.0f} ₪/חודש
-  ערך קצבה נותר         : {pension_asset_ret:,.0f} ₪
-  שווי נדל"ן (מגורים)   : {prop_ret:,.0f} ₪
-  שווי נדל"ן (מושכרת)   : {rental_prop_ret:,.0f} ₪
-  מס ששולם — מסלול 190  : {tax_190_ret:,.0f} ₪
-  מס ששולם — מסלול 25   : {tax_25_ret:,.0f} ₪
-  מס ששולם — היברידי     : {tax_hyb_ret:,.0f} ₪
+    # ─── תוצאות תיק נזיל — נקודות מפתח (רק מסלולים שנבחרו) ───────────────────
+    _keypts = {
+        1: (b190_ret, b190_chk, b190_102),
+        2: (b25_ret, b25_chk, b25_102),
+        3: (bhyb_ret, bhyb_chk, bhyb_102),
+        4: (brent_ret, brent_chk, brent_102),
+        5: (blev_ret, blev_chk, blev_102),
+    }
+    _res_lines = [_hdr("תוצאות תיק נזיל — נקודות מפתח")]
+    for t in sorted(visible):
+        r, c, h = _keypts[t]
+        _res_lines.append(
+            f"  {TRACK_TITLES[t]:<20} | פרישה ({retire_age:.1f}): {r:>13,.0f} ₪  |  "
+            f"גיל {check_age:.0f}: {c:>13,.0f} ₪  |  גיל 102: {h:>13,.0f} ₪")
+    if 5 in visible:
+        _res_lines.append(
+            f"  * מסלול 5: הצבירה היא התיק המושקע. יתרת הלוואת הבלון "
+            f"({loan_bal_chk:,.0f} ₪ בגיל {check_age:.0f}) מנוכה מהעיזבון.")
+    parts.append("\n".join(_res_lines))
 
-  [גיל נבדק = {check_age:.0f}]
-  הוצאה נומינלית        : {exp_chk_nom:,.0f} ₪/חודש
-  הכנסה נומינלית (ב"ל)  : {inc_chk_nom:,.0f} ₪/חודש
-  קצבה חודשית (מנוע)    : {pension_chk:,.0f} ₪/חודש
-  ערך קצבה נותר         : {pension_asset_chk:,.0f} ₪
-  שווי נדל"ן (מגורים)   : {prop_chk:,.0f} ₪
-  שווי נדל"ן (מושכרת)   : {rental_prop_chk:,.0f} ₪
+    # ─── תוצאות מנוע — אימות חישובים ─────────────────────────────────────────
+    _eng = [_hdr("תוצאות מנוע — אימות חישובים"),
+            f"  [גיל פרישה = {retire_age:.1f}]",
+            f"  הוצאה נומינלית        : {exp_ret:,.0f} ₪/חודש",
+            f'  הכנסה נומינלית (ב"ל)  : {inc_ret:,.0f} ₪/חודש']
+    if {1, 3, 5} & visible:
+        _eng.append(f"  קצבה חודשית (מנוע)    : {pension_ret:,.0f} ₪/חודש")
+        _eng.append(f"  ערך קצבה נותר         : {pension_asset_ret:,.0f} ₪")
+    if {1, 2, 3, 5} & visible:
+        _eng.append(f'  שווי נדל"ן (מגורים)   : {prop_ret:,.0f} ₪')
+    if 4 in visible:
+        _eng.append(f'  שווי נדל"ן (מושכרת)   : {rental_prop_ret:,.0f} ₪')
+    if 1 in visible:
+        _eng.append(f"  מס ששולם — מסלול 190  : {tax_190_ret:,.0f} ₪")
+    if 2 in visible:
+        _eng.append(f"  מס ששולם — מסלול 25   : {tax_25_ret:,.0f} ₪")
+    if 3 in visible:
+        _eng.append(f"  מס ששולם — היברידי     : {tax_hyb_ret:,.0f} ₪")
+    parts.append("\n".join(_eng))
 
-━━━━━━━━━━  משיכה חודשית נדרשת — גיל {check_age:.0f}  ━━━━━━━━━━
-  מסלול 1 (190 + קצבה)  : {nn_190_chk:>10,.0f} ₪/חודש
-  מסלול 2 (25% ריאלי)   : {nn_25_chk:>10,.0f} ₪/חודש
-  מסלול 3 (היברידי)      : {nn_hyb_chk:>10,.0f} ₪/חודש
-  מסלול 4 (שכירות)       : {nn_rent_chk:>10,.0f} ₪/חודש  {"(גירעון תזרים)" if nn_rent_chk > 0 else "(תזרים עצמאי)"}
-============================================================"""
+    # ─── משיכה חודשית נדרשת — גיל בדיקה (רק מסלולים שנבחרו) ──────────────────
+    _wd = {
+        1: (nn_190_chk, "הוצאה פחות ב\"ל + קצבה"),
+        2: (nn_25_chk, "הוצאה פחות ב\"ל בלבד"),
+        3: (nn_hyb_chk, "הוצאה פחות ב\"ל + קצבה"),
+        4: (nn_rent_chk, "גירעון תזרים שכ\"ד" if nn_rent_chk > 0 else "תזרים עצמאי"),
+        5: (nn_190_chk, "גירעון זהה למסלול 1"),
+    }
+    _wd_lines = [_hdr(f"משיכה חודשית נדרשת — גיל {check_age:.0f}")]
+    for t in sorted(visible):
+        val, note = _wd[t]
+        _wd_lines.append(f"  {TRACK_TITLES[t]:<20}: {val:>10,.0f} ₪/חודש  ({note})")
+    parts.append("\n".join(_wd_lines))
+
+    copy_text = "\n\n".join(parts) + "\n" + "=" * 60
 
     st.code(copy_text, language="text")
 
-    # ─── טבלת תוצאות ויזואלית ────────────────────────────────────────────────
+    # ─── טבלת תוצאות ויזואלית (רק מסלולים שנבחרו) ───────────────────────────
     st.write("---")
     st.markdown("**🔍 תיק נזיל — נקודות מפתח:**")
+    _summary_cols = {
+        1: ("מסלול 1 — 190",       [format_shekel(b190_ret),  format_shekel(b190_chk),  format_shekel(b190_102)]),
+        2: ("מסלול 2 — 25% ריאלי", [format_shekel(b25_ret),   format_shekel(b25_chk),   format_shekel(b25_102)]),
+        3: ("מסלול 3 — היברידי",   [format_shekel(bhyb_ret),  format_shekel(bhyb_chk),  format_shekel(bhyb_102)]),
+        4: ("מסלול 4 — שכירות",    [format_shekel(brent_ret), format_shekel(brent_chk), format_shekel(brent_102)]),
+        5: ("מסלול 5 — מינוף",     [format_shekel(blev_ret),  format_shekel(blev_chk),  format_shekel(blev_102)]),
+    }
     df_summary = pd.DataFrame({
         "נקודת זמן": [
             f"גיל פרישה ({retire_age:.1f})",
             f"גיל נבדק ({check_age:.1f})",
             "גיל 102",
         ],
-        "מסלול 1 — 190":        [format_shekel(b190_ret),  format_shekel(b190_chk),  format_shekel(b190_102)],
-        "מסלול 2 — 25% ריאלי":  [format_shekel(b25_ret),   format_shekel(b25_chk),   format_shekel(b25_102)],
-        "מסלול 3 — היברידי":    [format_shekel(bhyb_ret),  format_shekel(bhyb_chk),  format_shekel(bhyb_102)],
-        "מסלול 4 — שכירות":     [format_shekel(brent_ret), format_shekel(brent_chk), format_shekel(brent_102)],
+        **{_summary_cols[t][0]: _summary_cols[t][1] for t in sorted(visible)},
     })
     st.table(df_summary.set_index("נקודת זמן"))
+    if 5 in visible:
+        st.caption(f"מסלול 5 מציג את התיק המושקע. יתרת הלוואת הבלון בגיל {check_age:.0f} היא "
+                   f"{format_shekel(loan_bal_chk)} ומנוכה מהעיזבון.")
 
     st.markdown(f"**💸 משיכה חודשית נדרשת — גיל {check_age:.0f}:**")
-    df_withdrawal = pd.DataFrame({
-        "מסלול": [
-            "מסלול 1 — 190 + קצבה",
-            "מסלול 2 — 25% ריאלי",
-            "מסלול 3 — היברידי",
-            "מסלול 4 — שכירות",
-        ],
-        "משיכה חודשית": [
-            format_shekel(nn_190_chk),
-            format_shekel(nn_25_chk),
-            format_shekel(nn_hyb_chk),
+    _wd_rows = {
+        1: ("מסלול 1 — 190 + קצבה", format_shekel(nn_190_chk), "הוצאה פחות ב\"ל + קצבה"),
+        2: ("מסלול 2 — 25% ריאלי",  format_shekel(nn_25_chk),  "הוצאה פחות ב\"ל בלבד"),
+        3: ("מסלול 3 — היברידי",    format_shekel(nn_hyb_chk), "הוצאה פחות ב\"ל + קצבה"),
+        4: ("מסלול 4 — שכירות",
             format_shekel(nn_rent_chk) if nn_rent_chk > 0 else "✅ תזרים עצמאי",
-        ],
-        "הערה": [
-            "הוצאה פחות ב\"ל + קצבה",
-            "הוצאה פחות ב\"ל בלבד",
-            "הוצאה פחות ב\"ל + קצבה",
-            "גירעון תזרים שכ\"ד" if nn_rent_chk > 0 else f"תזרים חיובי +{format_shekel(int(-cf_check))}",
-        ],
+            "גירעון תזרים שכ\"ד" if nn_rent_chk > 0 else f"תזרים חיובי +{format_shekel(int(-cf_check))}"),
+        5: ("מסלול 5 — מינוף", format_shekel(nn_190_chk), "גירעון זהה למסלול 1"),
+    }
+    _sel_wd = [t for t in sorted(visible)]
+    df_withdrawal = pd.DataFrame({
+        "מסלול":        [_wd_rows[t][0] for t in _sel_wd],
+        "משיכה חודשית": [_wd_rows[t][1] for t in _sel_wd],
+        "הערה":         [_wd_rows[t][2] for t in _sel_wd],
     })
     st.table(df_withdrawal.set_index("מסלול"))

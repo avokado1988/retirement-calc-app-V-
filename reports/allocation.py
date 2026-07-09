@@ -177,17 +177,32 @@ def render_allocation_recommender(user_inputs):
 
     st.markdown(
         "<div style='direction:rtl;text-align:right;'>"
-        "<h3 style='color:#1a1a2e;'>🎯 המלצת תמהיל ותשואה — לפי הנתונים שלך</h3>"
-        "<p style='font-size:0.95em;line-height:1.7;'>במקום לנחש תשואה, המנוע גוזר אותה "
-        "מהנתונים. לכל מסלול הוא מחשב כמה מושכים מהתיק, בונה דלי סולידי שמכסה שבע שנות "
-        "משבר, ומקצה את השאר למניות עד תקרה. ואז מריץ מונטה קרלו ומאשר שהתמהיל עומד "
-        "במבחן המציאות.</p></div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div style='direction:rtl;text-align:right;background:#e7f0fb;border:1px solid #a9c9ef;"
-        "border-right:4px solid #1565c0;border-radius:8px;padding:10px 14px;margin:6px 0;"
-        "color:#173a5e;line-height:1.7;'>💡 ככל שהמשיכה מהתיק קטנה יותר, אפשר להחזיק יותר "
-        "מניות. לכן מסלול עם קצבה מובטחת יכול לקחת תשואה גבוהה יותר ממסלול בלי קצבה, "
-        "זה היתרון של הקצבה.</div>", unsafe_allow_html=True)
+        "<h3 style='color:#1a1a2e;'>🎯 המלצת תמהיל ותשואה</h3></div>",
+        unsafe_allow_html=True)
+
+    _cpop, _cexp = st.columns(2)
+    with _cpop:
+        with st.popover("❓ מה נלקח בחשבון", use_container_width=True):
+            st.markdown(
+                "<div style='direction:rtl;text-align:right;line-height:1.8;font-size:0.9em;'>"
+                "<b>משיכה שנתית מהתיק</b><br/>הפער בין ההוצאות להכנסות (ביטוח לאומי וקצבה), לאורך השנים עד הגיל הנבדק.<br/><br/>"
+                "<b>תמהיל</b><br/>דלי סולידי (מזומן ואג\"ח) שמכסה שבע שנות משבר, והשאר במניות עד תקרה.<br/><br/>"
+                "<b>תשואה וסטיית תקן</b><br/>נומינלית ולפני דמי ניהול. סטיית התקן נגזרת מהתמהיל.<br/><br/>"
+                "<b>סיכוי הצלחה</b><br/>אחוז התרחישים שבהם הכסף החזיק עד הגיל הנבדק.<br/><br/>"
+                "<b>טווח ירושה</b><br/>תרחיש גרוע (10%) מול תרחיש אמצעי (חציון).</div>",
+                unsafe_allow_html=True)
+    with _cexp:
+        with st.expander("📖 איך זה עובד"):
+            st.markdown(
+                "<div style='direction:rtl;text-align:right;line-height:1.7;'>"
+                "<p>במקום לנחש תשואה, המנוע גוזר אותה מהנתונים. לכל מסלול הוא מחשב כמה מושכים "
+                "מהתיק, בונה דלי סולידי שמכסה שבע שנות משבר, ומקצה את השאר למניות עד תקרה. ואז "
+                "מריץ מונטה קרלו ומאשר שהתמהיל עומד במבחן המציאות.</p>"
+                "<div style='background:#e7f0fb;border:1px solid #a9c9ef;border-right:4px solid #1565c0;"
+                "border-radius:8px;padding:10px 14px;margin-top:8px;color:#173a5e;line-height:1.7;'>"
+                "💡 ככל שהמשיכה מהתיק קטנה יותר, אפשר להחזיק יותר מניות. לכן מסלול עם קצבה מובטחת "
+                "יכול לקחת תשואה גבוהה יותר ממסלול בלי קצבה, זה היתרון של הקצבה.</div></div>",
+                unsafe_allow_html=True)
 
     if st.button("🎯 חשב תמהיל מומלץ", use_container_width=True, type="primary", key="alloc_compute_btn"):
         st.session_state["alloc_run"] = True
@@ -245,9 +260,8 @@ def render_allocation_recommender(user_inputs):
         unsafe_allow_html=True)
     st.markdown(
         f"<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;'>"
-        f"על בסיס {years} שנים. התשואה נומינלית ולפני דמי ניהול. סיכוי ההצלחה = אחוז "
-        f"התרחישים שבהם הכסף החזיק עד הגיל הנבדק. טווח הירושה מציג תרחיש גרוע (10%) "
-        f"מול אמצעי (חציון).</div>", unsafe_allow_html=True)
+        f"על בסיס {years} שנים עד הגיל הנבדק. הסבר לכל עמודה בכפתור ❓ שמעל.</div>",
+        unsafe_allow_html=True)
 
     risky = [t for t in order if recs[t].get("at_risk")]
     if risky:
@@ -298,12 +312,19 @@ def render_re_recommender(user_inputs):
 
     st.markdown(
         "<div style='direction:rtl;text-align:right;'>"
-        "<h3 style='color:#1a1a2e;'>🏠 ערכי נדל\"ן מומלצים — יחסית לאינפלציה</h3>"
-        f"<p style='font-size:0.92em;line-height:1.7;color:#444;'>עליית הערך והשכירות מנוסחות "
-        f"כפרמיה מעל האינפלציה שהזנת ({infl*100:.1f}%), כי בסוף מה שקובע הוא כמה הנכס מנצח את "
-        f"האינפלציה. אם תשנה את האינפלציה, הערכים הנומינליים יזוזו איתה. עליית מחיר ריאלית של "
-        f"דיור לטווח ארוך היא כאחוז עד שניים, ורוב תשואת הנדל\"ן היא השכירות, שנספרת בנפרד.</p></div>",
+        "<h3 style='color:#1a1a2e;'>🏠 ערכי נדל\"ן מומלצים</h3></div>",
         unsafe_allow_html=True)
+
+    with st.popover("❓ מה נלקח בחשבון", use_container_width=True):
+        st.markdown(
+            "<div style='direction:rtl;text-align:right;line-height:1.8;font-size:0.9em;'>"
+            f"<b>מסגור כפרמיה מעל אינפלציה</b><br/>עליית הערך והשכירות מנוסחות כפרמיה מעל "
+            f"האינפלציה שהזנת ({infl*100:.1f}%). הערך הנומינלי הוא אינפלציה ועוד הפרמיה, כך שאם "
+            f"תשנה את האינפלציה הערכים יזוזו איתה.<br/><br/>"
+            "<b>תחזוקה</b><br/>אחוז מדמי השכירות, לא צמודה לאינפלציה, ולכן מוצגת כמספר מוחלט.<br/><br/>"
+            "<b>עליית ערך מול שכירות</b><br/>עליית מחיר ריאלית של דיור לטווח ארוך היא כאחוז עד "
+            "שניים. רוב תשואת הנדל\"ן היא השכירות, שנספרת אצלנו בנפרד.</div>",
+            unsafe_allow_html=True)
 
     # (מפתח, תווית, פרמיה מעל אינפלציה, הערה)
     prem_rows = [

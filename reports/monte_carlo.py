@@ -142,15 +142,6 @@ def render_monte_carlo(user_inputs):
             f"<div style='direction:rtl;text-align:right;font-weight:800;font-size:1.05em;"
             f"color:#1a1a2e;margin:14px 0 6px;'>{txt}</div>", unsafe_allow_html=True)
 
-    # ============ כותרת והסבר ============
-    _rtl(
-        "<p style='line-height:1.7;'>המודל הרגיל מניח שהשוק עולה בקצב קבוע. כאן מריצים אלפי "
-        "תרחישי שוק אקראיים כדי לראות את טווח התוצאות האמיתי.</p>"
-        "<p style='line-height:1.7;color:#555;font-size:0.92em;'>לפי מה שהמלווה מסר, אין מכירה "
-        "כפויה, ההלוואה מסוג בלון שנפרעת מהעיזבון (הריבית מצטברת לחוב), מסלול כללי, וניתן "
-        "למחזר. לכן השאלה כאן היא לא סיכון מכירה, אלא <b>כמה יהיה שווה התיק בסוף</b>, עם "
-        "מינוף מול בלי מינוף, והאם המינוף שווה את זה.</p>")
-
     # ============ נתונים ============
     tl = user_inputs.get("timeline", {}); ex = user_inputs.get("expenses", {})
     w = user_inputs.get("wealth", {}); a190 = user_inputs.get("amendment_190", {})
@@ -169,16 +160,28 @@ def render_monte_carlo(user_inputs):
                     - float(w.get("national_insurance", 2500))
                     - float(a190.get("desired_pension", 5306))) * 12
 
-    # ============ ⚙️ הנחות המודל ============
-    _sec("⚙️ הנחות המודל")
-    std_ret = st.slider("תנודתיות שנתית של התיק, מסלול כללי (סטיית תקן %)",
-                        min_value=5.0, max_value=20.0, value=GEN_VOL * 100, step=0.5,
-                        help="מסלול כללי סביב 7-9%. מנייתי טהור 15%+.") / 100
-    _rtl(
-        f"<div style='color:#555;font-size:0.84em;line-height:1.6;margin-top:2px;'>"
-        f"📌 תשואת התיק {gen_return*100:.1f}% ברוטו (כ-{mean_ret*100:.1f}% נטו) &nbsp;·&nbsp; "
-        f"ריבית ההלוואה {loan_rate*100:.2f}% &nbsp;·&nbsp; אופק {years} שנים &nbsp;·&nbsp; "
-        f"<b>ללא מכירה כפויה</b>, החוב מצטבר ונפרע מהעיזבון.</div>")
+    # ============ ❓ פרמטרים + 📖 הסבר ============
+    _cpop, _cexp = st.columns(2)
+    with _cpop:
+        with st.popover("❓ הנחות המודל והפרמטרים", use_container_width=True):
+            std_ret = st.slider("תנודתיות שנתית של התיק, מסלול כללי (סטיית תקן %)",
+                                min_value=5.0, max_value=20.0, value=GEN_VOL * 100, step=0.5,
+                                help="מסלול כללי סביב 7-9%. מנייתי טהור 15%+.") / 100
+            _rtl(
+                f"<div style='color:#444;font-size:0.9em;line-height:1.9;margin-top:8px;'>"
+                f"<b>תשואת התיק</b> {gen_return*100:.1f}% ברוטו, כ-{mean_ret*100:.1f}% נטו<br/>"
+                f"<b>ריבית ההלוואה</b> {loan_rate*100:.2f}%<br/>"
+                f"<b>אופק</b> {years} שנים<br/>"
+                f"<b>ללא מכירה כפויה</b> — החוב מצטבר ונפרע מהעיזבון.</div>")
+    with _cexp:
+        with st.expander("📖 מה הכלי בודק"):
+            _rtl(
+                "<p style='line-height:1.7;'>המודל הרגיל מניח שהשוק עולה בקצב קבוע. כאן מריצים "
+                "אלפי תרחישי שוק אקראיים כדי לראות את טווח התוצאות האמיתי.</p>"
+                "<p style='line-height:1.7;color:#555;font-size:0.92em;'>לפי מה שהמלווה מסר, אין "
+                "מכירה כפויה, ההלוואה מסוג בלון שנפרעת מהעיזבון (הריבית מצטברת לחוב), מסלול כללי, "
+                "וניתן למחזר. לכן השאלה כאן היא לא סיכון מכירה, אלא <b>כמה יהיה שווה התיק בסוף</b>, "
+                "עם מינוף מול בלי מינוף, והאם המינוף שווה את זה.</p>")
 
     # ============ חישובים — ללא מכירה כפויה ============
     loan_cap = min(home0, 3.0 * net_for_190)  # מימון עד 75% מהתיק (מסלול כללי, לפי המלווה)
@@ -239,7 +242,7 @@ def render_monte_carlo(user_inputs):
             f"<td style='padding:7px 12px;text-align:center;font-weight:700;'>{_m(res['nw_p50'])}</td>"
             f"<td style='padding:7px 12px;text-align:center;color:#1a7a3a;'>{_m(res['nw_p90'])}</td>"
             f"<td style='padding:7px 12px;text-align:center;font-weight:700;color:{dcol};'>{'+' if d50>=0 else ''}{_m(d50)}</td></tr>")
-    with st.expander("📊 שווי התיק לכל גודל הלוואה (0 עד המקסימום)", expanded=True):
+    with st.expander("📊 שווי התיק לכל גודל הלוואה (0 עד המקסימום)"):
         st.markdown(
             f"<div style='direction:rtl;text-align:right;font-family:sans-serif;'>"
             f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.9em;'>"
@@ -258,7 +261,6 @@ def render_monte_carlo(user_inputs):
 
     # ============ 3. גרף — שווי התיק מול גודל ההלוואה ============
     st.divider()
-    _sec("3️⃣ שווי התיק מול גודל ההלוואה")
     rr = go.Figure()
     rr.add_trace(go.Scatter(x=[r[0] for r in rows], y=[r[1]["nw_p50"] / 1e6 for r in rows],
                             name="חציון (אמצעי)", mode="lines+markers",
@@ -275,9 +277,10 @@ def render_monte_carlo(user_inputs):
         xaxis=dict(title="סכום ההלוואה (₪)"),
         yaxis=dict(title="שווי נטו (₪ מיליון)"),
         legend=dict(orientation="h", y=1.15, x=0, xanchor="left"))
-    st.plotly_chart(rr, use_container_width=True)
-    _rtl(
-        "<div style='color:#777;font-size:0.82em;line-height:1.6;'>"
-        "הקו הירוק הוא הירושה הצפויה. הקו האדום הוא התרחיש הגרוע. אם המינוף מגדיל את "
-        "שניהם, הוא שווה. אם הוא מגדיל את הירוק אבל מוריד את האדום, זו פשרה בין ירושה גדולה "
-        "יותר בממוצע לבין סיכון להשאיר פחות כשהתשואה מאכזבת.</div>")
+    with st.expander("📈 גרף — שווי התיק מול גודל ההלוואה"):
+        st.plotly_chart(rr, use_container_width=True)
+        _rtl(
+            "<div style='color:#777;font-size:0.82em;line-height:1.6;'>"
+            "הקו הירוק הוא הירושה הצפויה. הקו האדום הוא התרחיש הגרוע. אם המינוף מגדיל את "
+            "שניהם, הוא שווה. אם הוא מגדיל את הירוק אבל מוריד את האדום, זו פשרה בין ירושה גדולה "
+            "יותר בממוצע לבין סיכון להשאיר פחות כשהתשואה מאכזבת.</div>")
