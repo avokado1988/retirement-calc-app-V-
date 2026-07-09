@@ -522,26 +522,24 @@ def render_qa_section(results, user_inputs):
 
     # -------------------------------------------------------
     # Leverage risk — computed BEFORE ranking so it can veto a risky winner.
-    # A retirement plan that shows more money on paper but carries a high
-    # forced-liquidation risk must NOT be recommended. The margin-call risk is
-    # therefore a first-class ranking factor, not an afterthought on the card.
+    # Per the reframed model (no forced sale; a balloon loan repaid from the
+    # estate, interest accruing), the real risk is NOT a fire-sale but that the
+    # accrued debt erodes the estate when returns disappoint. We measure it the
+    # same way the helper tool does: the estate uplift vs no-leverage, at the
+    # median and — critically — in the bad (p10) scenario. A track that fails to
+    # add value, or damages the bad scenario, must not be crowned #1.
     # -------------------------------------------------------
-    _CALL_LTV = 0.90  # דרישת השלמה כשהחוב עובר 90% מהתיק (גבוה משיעור המימון, זו הכרית)
-    _ltv_col = df_full[df_full["גיל"] >= retire_age]["מינוף — LTV"] if "מינוף — LTV" in df_full.columns else None
-    lev_ltv_max = float(_ltv_col.max()) if _ltv_col is not None and not _ltv_col.empty else 0.0
-    lev_drop_tol = max(0.0, 1 - lev_ltv_max / _CALL_LTV) if lev_ltv_max > 0 else 1.0
-    lev_mc_prob = None
-    if 5 in visible_tracks and lev_ltv_max > 0:
+    lev_outlook = None
+    if 5 in visible_tracks:
         try:
-            from reports.monte_carlo import margin_call_probability
-            lev_mc_prob = margin_call_probability(user_inputs)
+            from reports.monte_carlo import leverage_estate_outlook
+            lev_outlook = leverage_estate_outlook(user_inputs)
         except Exception:
-            lev_mc_prob = None
-    # "High risk" = the leverage track can be forced into a fire-sale too easily.
-    # Either a >=15% Monte-Carlo margin-call probability, or a thin (<25%) cushion
-    # before a call. Such a track is barred from the #1 recommendation.
-    lev_risk_high = (lev_ltv_max > 0) and (
-        (lev_mc_prob is not None and lev_mc_prob >= 0.15) or (lev_drop_tol < 0.25))
+            lev_outlook = None
+    # "High risk" = leverage doesn't clearly pay: no median uplift over no-leverage,
+    # or it materially damages the bad-scenario estate. Barred from #1.
+    lev_risk_high = (lev_outlook is not None) and (
+        lev_outlook["up50"] <= 0 or lev_outlook["hurts_downside"])
 
     # 4th field = preservation ratio at check_age (drives the health badge).
     # 6th field = risk_ok: a high-risk leverage track sorts BELOW every other
@@ -834,14 +832,19 @@ def render_qa_section(results, user_inputs):
             "res_color": "#1a7a3a" if empty_age >= check_age else ("#b84c00" if empty_age >= 90 else "#c0392b"),
             "is_winner": is_winner, "risk": _val("—", "#aaa"),
         }
-    if 5 in order and lev_ltv_max > 0:
-        _c, _lbl = (("#1a7a3a", "סביר") if lev_drop_tol >= 0.40 else
-                    ("#b07800", "זהירות") if lev_drop_tol >= 0.25 else ("#a83232", "משחק באש"))
-        _mc_txt = (f" (סיכוי {lev_mc_prob*100:.0f}% שזה יקרה)" if lev_mc_prob is not None else "")
+    if 5 in order and lev_outlook is not None:
+        if lev_outlook["worth"]:
+            _c, _lbl = "#1a7a3a", "משתלם"
+        elif lev_outlook["up50"] > 0:
+            _c, _lbl = "#b07800", "פשרה"
+        else:
+            _c, _lbl = "#a83232", "לא משתלם"
+        _u50 = lev_outlook["up50"]; _u10 = lev_outlook["up10"]
         tv[5]["risk"] = (
             f"<span style='color:{_c};font-weight:800;'>{_lbl}</span>"
             f"<br/><span style='font-size:0.82em;color:#444;line-height:1.35;'>"
-            f"אם השוק יורד {lev_drop_tol*100:.0f}% הבנק מוכר את התיק{_mc_txt}</span>")
+            f"מול בלי מינוף — חציון {'+' if _u50>=0 else '−'}{format_shekel(abs(int(_u50)))}, "
+            f"גרוע {'+' if _u10>=0 else '−'}{format_shekel(abs(int(_u10)))}</span>")
 
     def _hdr(tid):
         rc = RANK_CFG[rank_for_track[tid]]; d = tv[tid]
@@ -864,7 +867,7 @@ def render_qa_section(results, user_inputs):
         "tax": "אומדן מס שבח עתידי על מכירת הנכס (רלוונטי למסלול שכירות ששומר את הנכס). מכויל להערכת יועץ המס ומנוכה מסך הנכסים.",
         "kids": "העזרה לילדים, שצמחה עד הגיל הנבדק בקצב שהוגדר. נספרת כנכס משפחתי רק במסלולי המכירה (הכסף עובד בידי הילדים).",
         "total": "השורה התחתונה, שווי חציוני לפי מונטה קרלו: תיק פיננסי + נדל\"ן − הלוואות − מס שבח + עזרה לילדים. זה מה שסביר שיישאר למשפחה, עם 50% סיכוי לעבור אותו.",
-        "risk": "מונטה קרלו: ההסתברות לדרישת ביטחונות (מכירת התיק בהפסד) לאורך התקופה, לפי גודל ההלוואה ותנודתיות השוק.",
+        "risk": "מונטה קרלו, מודל ללא מכירה כפויה (בלון שנפרע מהעיזבון): כמה המינוף מוסיף לירושה מול בלי מינוף, בתרחיש האמצעי ובתרחיש הגרוע. 'משתלם' = מוסיף ולא פוגע בתרחיש הגרוע. 'פשרה' = מוסיף בממוצע אך פוגע בגרוע. 'לא משתלם' = לא מוסיף אפילו בממוצע.",
     }
 
     def _row(label, key, strong=False):
@@ -900,9 +903,9 @@ def render_qa_section(results, user_inputs):
     html.append(_row("🧾 מס שבח עתידי", "tax"))
     html.append(_row("🎁 עזרה לילדים (נכס משפחתי)", "kids"))
     html.append(_row("📊 סך נכסים", "total", strong=True))
-    if 5 in order and lev_ltv_max > 0:
-        html.append(_sec("⚖️ סיכון מינוף (מונטה קרלו)"))
-        html.append(_row("רמת סיכון", "risk"))
+    if 5 in order and lev_outlook is not None:
+        html.append(_sec("⚖️ כדאיות המינוף (מונטה קרלו)"))
+        html.append(_row("האם משתלם", "risk"))
     html.append("</div>")
     st.markdown("".join(html), unsafe_allow_html=True)
 
@@ -910,15 +913,22 @@ def render_qa_section(results, user_inputs):
         st.warning("🚫 מסלול השכירות אינו קביל — אין מספיק כסף לכסות את הגרעון עד הגיל הנבדק.")
 
     # Explain WHY the leverage track is not recommended even if it shows more money
-    if 5 in order and lev_risk_high:
-        _mc_txt = (f" ההסתברות למכירה כפויה כ-{lev_mc_prob*100:.0f}%." if lev_mc_prob is not None else "")
+    if 5 in order and lev_risk_high and lev_outlook is not None:
+        if lev_outlook["up50"] <= 0:
+            _why = (f"בתרחיש האמצעי המינוף לא מוסיף לירושה, אלא גורע ממנה "
+                    f"כ-{format_shekel(abs(int(lev_outlook['up50'])))}, כי הריבית שנצברת על "
+                    f"החוב גדולה מהתשואה העודפת שהתיק מייצר.")
+        else:
+            _why = (f"בתרחיש האמצעי המינוף מוסיף לירושה, אבל בתרחיש הגרוע הוא פוגע בה "
+                    f"כ-{format_shekel(abs(int(lev_outlook['up10'])))} מול בלי מינוף. כשהתשואה "
+                    f"מאכזבת, החוב שהצטבר גדול מהרווח.")
         st.markdown(
             f"<div style='direction:rtl;text-align:right;background:#fff8e1;border:1px solid #f0c86a;"
             f"border-right:4px solid #e0a800;border-radius:8px;padding:12px 16px;margin:6px 0;"
             f"font-size:0.92em;line-height:1.7;color:#5a4a1a;'>"
-            f"⚠️ מסלול המינוף אינו מומלץ למרות שעל הנייר הוא עשוי להשאיר יותר כסף. "
-            f"רמת הסיכון בו גבוהה, נפילת שוק מתונה עלולה לאלץ מכירת התיק בהפסד.{_mc_txt} "
-            f"בתכנון פרישה סיכון של אובדן קבוע גובר על תוספת תשואה על הנייר, ולכן הוא הורד בדירוג."
+            f"⚠️ מסלול המינוף אינו מומלץ כמסלול הראשון. גם לפי המודל שבו אין מכירה כפויה, "
+            f"ההלוואה נפרעת מהעיזבון, {_why} "
+            f"בתכנון פרישה לא נכון להמליץ על מינוף שלא מוסיף ביטחון ופוגע בתרחיש הגרוע, ולכן הורד בדירוג."
             f"</div>", unsafe_allow_html=True)
 
     # Pros & cons per track, collapsed below the table

@@ -80,6 +80,50 @@ def margin_call_probability(user_inputs, std_ret=GEN_VOL, call_ltv=0.90, n_sims=
     return res["p_margin_call"]
 
 
+def leverage_estate_outlook(user_inputs, std_ret=GEN_VOL, n_sims=3000):
+    """מודל ללא מכירה כפויה (בלון שנפרע מהעיזבון). מחזיר את שווי העיזבון עם ההלוואה
+    שנבחרה מול בלי מינוף, כדי שכרטיס ההשוואה ישקף את אותו סיפור כמו כלי העזר: לא
+    'סיכוי למכירה כפויה' אלא האם המינוף מוסיף לירושה ומה קורה בתרחיש הגרוע.
+    מחזיר None אם אין תיק 190 או אין הלוואה."""
+    tl = user_inputs.get("timeline", {}); ex = user_inputs.get("expenses", {})
+    w = user_inputs.get("wealth", {}); a190 = user_inputs.get("amendment_190", {})
+    lev = user_inputs.get("leverage", {})
+    net_for_190 = float(a190.get("net_for_190", 0))
+    if net_for_190 <= 0:
+        return None
+    home0 = float(w.get("new_apartment_cost", 5500000))
+    loan_cap = min(home0, 3.0 * net_for_190)
+    cur_loan = max(0.0, min(float(lev.get("loan_amount", 0)), loan_cap))
+    if cur_loan <= 0:
+        return None
+    years = max(1, int(round(float(tl.get("check_age", 95)) - float(tl.get("start_age", 65)))))
+    loan_rate = float(lev.get("loan_annual_rate", 0.045))
+    mean_ret = float(lev.get("annual_return_lev", GEN_RETURN)) - float(a190.get("management_fee_190", 0.005))
+    inflation = float(ex.get("expected_inflation", 0.023))
+    annual_wd = max(0.0, float(ex.get("current_expenses", 11000))
+                    - float(w.get("national_insurance", 2500))
+                    - float(a190.get("desired_pension", 5306))) * 12
+    home_appr = float(w.get("property_appreciation", 0.03))
+    buffer_cash = float(w.get("emergency_fund", 50000))
+
+    def _run(loan):
+        return _simulate(net_for_190 + loan, loan, loan_rate, mean_ret, std_ret, years, annual_wd,
+                         inflation, home0, home_appr, buffer_cash, 0.02, NO_FORCED_SALE, n_sims=n_sims)
+
+    base = _run(0.0); cur = _run(cur_loan)
+    b10, b50 = base["nw_p10"], base["nw_p50"]
+    up50 = cur["nw_p50"] - b50
+    up10 = cur["nw_p10"] - b10
+    hurts_downside = up10 < -0.15 * b10  # פגיעה חריפה בתרחיש הגרוע מול בלי מינוף
+    return {
+        "loan": cur_loan, "b10": b10, "b50": b50,
+        "cur_p10": cur["nw_p10"], "cur_p50": cur["nw_p50"],
+        "up10": up10, "up50": up50,
+        "hurts_downside": hurts_downside,
+        "worth": (up50 > 0) and (not hurts_downside),
+    }
+
+
 def _rtl(html):
     st.markdown(f"<div style='direction:rtl;text-align:right;'>{html}</div>", unsafe_allow_html=True)
 
