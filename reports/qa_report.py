@@ -845,7 +845,7 @@ def render_qa_section(results, user_inputs):
             "health": get_health_label(is_res, is_pres), "hbg": hbg, "hcolor": hcolor,
             "res": (f"גיל {check_age:.0f}+" if empty_age >= check_age else f"גיל {empty_age:.0f}"),
             "res_color": "#1a7a3a" if empty_age >= check_age else ("#b84c00" if empty_age >= 90 else "#c0392b"),
-            "is_winner": is_winner, "risk": _val("—", "#aaa"),
+            "is_winner": is_winner, "risk": _val("—", "#aaa"), "spread": _val("—", "#aaa"),
         }
     if 5 in order and lev_outlook is not None:
         if lev_outlook["worth"]:
@@ -860,6 +860,12 @@ def render_qa_section(results, user_inputs):
             f"<br/><span style='font-size:0.82em;color:#444;line-height:1.35;'>"
             f"מול בלי מינוף — חציון {'+' if _u50>=0 else '−'}{format_shekel(abs(int(_u50)))}, "
             f"גרוע {'+' if _u10>=0 else '−'}{format_shekel(abs(int(_u10)))}</span>")
+        _sl = lev_outlook["spread_loan"]; _sp = lev_outlook["spread_pot"]
+        tv[5]["spread"] = (
+            f"<span style='color:#1a1a2e;font-weight:800;'>{_sl*100:.1f}%</span>"
+            f"<br/><span style='font-size:0.82em;color:#444;line-height:1.35;'>"
+            f"≈{format_shekel(int(lev_outlook['annual_loan_shekel']))}/שנה<br/>"
+            f"כלל התיק {_sp*100:.1f}%</span>")
 
     # --- Stash the decision-level results so the QA copy report (qa_summary,
     # which renders AFTER this tab in app.py) can include not just the inputs
@@ -925,6 +931,7 @@ def render_qa_section(results, user_inputs):
         "total": "השורה התחתונה, שווי חציוני לפי מונטה קרלו: תיק פיננסי + נדל\"ן − הלוואות − מס שבח + עזרה לילדים. זה מה שסביר שיישאר למשפחה, עם 50% סיכוי לעבור אותו.",
         "total_p10": "סך הנכסים בתרחיש רע, האחוזון ה-10 של מונטה קרלו. יש כ-90% סיכוי להישאר מעליו. זה 'כמה זה כואב אם השוק מאכזב', והפער מול החציון הוא מחיר הסיכון של המסלול. המינוף בולט כאן כי החוב תופח בעוד התיק יורד.",
         "risk": "מונטה קרלו, מודל ללא מכירה כפויה (בלון שנפרע מהעיזבון): כמה המינוף מוסיף לירושה מול בלי מינוף, בתרחיש האמצעי ובתרחיש הגרוע. 'משתלם' = מוסיף ולא פוגע בתרחיש הגרוע. 'פשרה' = מוסיף בממוצע אך פוגע בגרוע. 'לא משתלם' = לא מוסיף אפילו בממוצע.",
+        "spread": "המרווח על ההלוואה: תשואה נטו פחות ריבית ההלוואה, וכמה זה שווה בשקלים בשנה. 'כלל התיק' מוריד גם את אחוז המשיכה מהתיק (כמו דמי ניהול). המרווח הוא ממוצע, הממומש בפועל אחרי תנודתיות מופיע בשורת 'האם משתלם'.",
     }
 
     def _row(label, key, strong=False):
@@ -963,6 +970,7 @@ def render_qa_section(results, user_inputs):
     html.append(_row("↘️ בתרחיש רע (p10)", "total_p10"))
     if 5 in order and lev_outlook is not None:
         html.append(_sec("⚖️ כדאיות המינוף (מונטה קרלו)"))
+        html.append(_row("מרווח (ארביטראז')", "spread"))
         html.append(_row("האם משתלם", "risk"))
     html.append("</div>")
     st.markdown("".join(html), unsafe_allow_html=True)
