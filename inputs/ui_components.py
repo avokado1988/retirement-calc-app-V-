@@ -6,7 +6,7 @@ import streamlit as st
 DEFAULTS = {
     "start_age": 65.0,
     "retirement_age": 65.0,
-    "check_age": 90.0,
+    "check_age": 92.0,
     "expected_inflation": 0.023,
     "current_expenses": 11000,
     "caregiver_cost": 2500,
@@ -36,11 +36,11 @@ DEFAULTS = {
     "rent_paid_monthly": 12500,
     "rent_paid_growth_rate": 0.035,
     "rental_tax_rate": 0.1,
-    "maintenance_early_pct": 0.1,
-    "maintenance_late_pct": 0.15,
+    "maintenance_early_pct": 0.08,
+    "maintenance_late_pct": 0.1,
     "rm_annual_rate": 0.06,
     "rm_savings_floor": 100000,
-    "loan_amount": 5000000,
+    "loan_amount": 5500000,
     "loan_annual_rate": 0.045,
     "visible_tracks": [1, 4, 5],
 }
