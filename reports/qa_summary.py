@@ -343,6 +343,45 @@ def render_qa_summary_page(results, user_inputs):
         _wd_lines.append(f"  {TRACK_TITLES[t]:<20}: {val:>10,.0f} ₪/חודש  ({note})")
     parts.append("\n".join(_wd_lines))
 
+    # ─── תוצאות והשוואה — נשלף מכרטיס ההשוואה (qa_report מאחסן ב-session_state) ──
+    exec_sum = st.session_state.get("qa_exec_summary")
+    if exec_sum and exec_sum.get("tracks"):
+        et = exec_sum["tracks"]
+        _res = [_hdr(f"תוצאות והשוואה — חציון מונטה קרלו, גיל {check_age:.0f}")]
+        _res.append("  (זה מה שמופיע בכרטיס ההשוואה וממנו נגזר הדירוג)")
+        for t in sorted(visible):
+            d = et.get(t)
+            if not d:
+                continue
+            _rank = d.get("rank")
+            _rank_txt = f"מקום {_rank}" if _rank else ""
+            _ero = d.get("erosion_age")
+            _ero_txt = "צומח תמיד" if _ero is None else f"גיל {_ero:.0f}"
+            _lasts = d.get("lasts_age", 120)
+            _lasts_txt = "לכל החיים" if _lasts >= 105 else f"גיל {_lasts:.0f}"
+            _res.append(
+                f"\n  {TRACK_TITLES[t]}  [{_rank_txt} · {d.get('health','')}]\n"
+                f"    תיק (חציון)      : {d['fin_med']:>13,.0f} ₪\n"
+                f"    נדל\"ן (חציון)    : {d['prop_med']:>13,.0f} ₪\n"
+                f"    הלוואות          : {(-d['liab']):>13,.0f} ₪\n"
+                f"    מס שבח עתידי     : {(-d['tax']):>13,.0f} ₪\n"
+                f"    עזרה לילדים      : {d['kids']:>13,.0f} ₪\n"
+                f"    ── סך נכסים נטו  : {d['total']:>13,.0f} ₪\n"
+                f"    מחזיק עד         : {_lasts_txt}  |  תחילת שחיקה: {_ero_txt}  |  "
+                f"משיכה חודשית: {d['draw_month']:,.0f} ₪")
+        lev = exec_sum.get("leverage")
+        if lev and 5 in visible:
+            _res.append(
+                f"\n  כדאיות מינוף (מסלול 5): {lev['verdict']}. מול בלי מינוף — "
+                f"תוספת בחציון {'+' if lev['up50']>=0 else ''}{lev['up50']:,.0f} ₪, "
+                f"תרחיש גרוע {'+' if lev['up10']>=0 else ''}{lev['up10']:,.0f} ₪ "
+                f"(עיזבון חציון {lev['cur_p50']:,.0f}, גרוע {lev['cur_p10']:,.0f}).")
+        parts.append("\n".join(_res))
+    else:
+        parts.append("━━━━━━━━━━  תוצאות והשוואה  ━━━━━━━━━━\n"
+                     "  (פתח את לשונית 'השוואת מסלולים והמלצה' פעם אחת בריצה זו כדי "
+                     "שהתוצאות המלאות ייכללו כאן.)")
+
     copy_text = "\n\n".join(parts) + "\n" + "=" * 60
 
     st.code(copy_text, language="text")
@@ -387,3 +426,32 @@ def render_qa_summary_page(results, user_inputs):
         "הערה":         [_wd_rows[t][2] for t in _sel_wd],
     })
     st.table(df_withdrawal.set_index("מסלול"))
+
+    # ─── שורה תחתונה — סך נכסים נטו (חציון מונטה קרלו) מכרטיס ההשוואה ─────────
+    if exec_sum and exec_sum.get("tracks"):
+        et = exec_sum["tracks"]
+        st.markdown(f"**🏁 סך נכסים נטו — חציון מונטה קרלו, גיל {check_age:.0f} (מכרטיס ההשוואה):**")
+        _rows = []
+        for t in sorted(visible):
+            d = et.get(t)
+            if not d:
+                continue
+            _rank = d.get("rank")
+            _lasts = d.get("lasts_age", 120)
+            _rows.append({
+                "מסלול": TRACK_TITLES[t],
+                "מקום": (f"{_rank}" if _rank else "—"),
+                "תיק (חציון)": format_shekel(d["fin_med"]),
+                'נדל"ן (חציון)': format_shekel(d["prop_med"]),
+                "הלוואות/מס": format_shekel(-(d["liab"] + d["tax"])),
+                "עזרה לילדים": format_shekel(d["kids"]),
+                "סך נכסים נטו": format_shekel(d["total"]),
+                "מחזיק עד": ("לכל החיים" if _lasts >= 105 else f"גיל {_lasts:.0f}"),
+            })
+        st.table(pd.DataFrame(_rows).set_index("מסלול"))
+        lev = exec_sum.get("leverage")
+        if lev and 5 in visible:
+            st.caption(
+                f"כדאיות מינוף (מסלול 5): {lev['verdict']}. תוספת בחציון "
+                f"{format_shekel(lev['up50'])} מול פגיעה של {format_shekel(lev['up10'])} "
+                f"בתרחיש הגרוע, לעומת בלי מינוף.")

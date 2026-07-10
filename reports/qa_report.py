@@ -846,6 +846,40 @@ def render_qa_section(results, user_inputs):
             f"מול בלי מינוף — חציון {'+' if _u50>=0 else '−'}{format_shekel(abs(int(_u50)))}, "
             f"גרוע {'+' if _u10>=0 else '−'}{format_shekel(abs(int(_u10)))}</span>")
 
+    # --- Stash the decision-level results so the QA copy report (qa_summary,
+    # which renders AFTER this tab in app.py) can include not just the inputs
+    # but the actual outputs we compare and rank on. Plain numbers only. ---
+    _health_by = {}
+    for _rk, _tid, _sc, _empty, _pres, _h in ranked_order:
+        _ir, _ip, _ = track_health(_empty, _pres)
+        _health_by[_tid] = get_health_label(_ir, _ip)
+    if lev_outlook is None:
+        _lev_stash = None
+    else:
+        _lv = ("משתלם" if lev_outlook["worth"] else
+               ("פשרה" if lev_outlook["up50"] > 0 else "לא משתלם"))
+        _lev_stash = {"up50": float(lev_outlook["up50"]), "up10": float(lev_outlook["up10"]),
+                      "cur_p50": float(lev_outlook["cur_p50"]), "cur_p10": float(lev_outlook["cur_p10"]),
+                      "verdict": _lv}
+    st.session_state["qa_exec_summary"] = {
+        "meta": {"check_age": float(check_age), "retire_age": float(retire_age),
+                 "start_age": float(start_age)},
+        "order": list(order),
+        "tracks": {
+            _t: {
+                "fin_med": float(fin_med[_t]), "prop_med": float(prop_med[_t]),
+                "liab": float(liab_check[_t]), "tax": float(tax_check[_t]),
+                "kids": float(kids_asset_check[_t]), "total": float(total_check[_t]),
+                "lasts_age": float(portfolio_lasts[_t]),
+                "erosion_age": (None if erosion_age[_t] is None else float(erosion_age[_t])),
+                "draw_month": float(draw_retire[_t]),
+                "rank": (int(rank_for_track[_t]) if _t in rank_for_track else None),
+                "health": _health_by.get(_t, ""),
+            } for _t in (1, 2, 3, 4, 5)
+        },
+        "leverage": _lev_stash,
+    }
+
     def _hdr(tid):
         rc = RANK_CFG[rank_for_track[tid]]; d = tv[tid]
         top = "⭐ המסלול המומלץ" if d["is_winner"] else f"{rc['badge']} {rc['label']}"
