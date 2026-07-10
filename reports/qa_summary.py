@@ -366,7 +366,8 @@ def render_qa_summary_page(results, user_inputs):
                 f"    הלוואות          : {(-d['liab']):>13,.0f} ₪\n"
                 f"    מס שבח עתידי     : {(-d['tax']):>13,.0f} ₪\n"
                 f"    עזרה לילדים      : {d['kids']:>13,.0f} ₪\n"
-                f"    ── סך נכסים נטו  : {d['total']:>13,.0f} ₪\n"
+                f"    ── סך נכסים (חציון): {d['total']:>13,.0f} ₪\n"
+                f"    בתרחיש רע (p10)  : {d.get('total_p10', 0):>13,.0f} ₪\n"
                 f"    מחזיק עד         : {_lasts_txt}  |  תחילת שחיקה: {_ero_txt}  |  "
                 f"משיכה חודשית: {d['draw_month']:,.0f} ₪")
         lev = exec_sum.get("leverage")
@@ -451,7 +452,8 @@ def render_qa_summary_page(results, user_inputs):
                 'נדל"ן (חציון)': format_shekel(d["prop_med"]),
                 "הלוואות/מס": format_shekel(-(d["liab"] + d["tax"])),
                 "עזרה לילדים": format_shekel(d["kids"]),
-                "סך נכסים נטו": format_shekel(d["total"]),
+                "סך נכסים (חציון)": format_shekel(d["total"]),
+                "בתרחיש רע (p10)": format_shekel(d.get("total_p10", 0)),
                 "מחזיק עד": ("לכל החיים" if _lasts >= 105 else f"גיל {_lasts:.0f}"),
             })
         st.table(pd.DataFrame(_rows).set_index("מסלול"))

@@ -436,6 +436,52 @@ def render_qa_section(results, user_inputs):
     _kids_grown = _kids_help * (1 + _kids_growth) ** max(0.0, check_age - start_age)
     kids_asset_check = {1: _kids_grown, 2: _kids_grown, 3: _kids_grown, 4: 0.0, 5: _kids_grown}
 
+    # -------------------------------------------------------
+    # Net wealth at the checked age, at the Monte-Carlo MEDIAN and the BAD (p10)
+    # scenario — computed HERE, before the ranking, so the recommendation is based
+    # on exactly the three numbers the card shows: longevity, median, and downside.
+    # Volatile parts (financial portfolio + RE appreciation) get the median /
+    # 10th-percentile of a lognormal; the rest (pension, loans, tax, kids) is
+    # deterministic. Median = mean-path × exp(-σ²/2·t); p10 = median × exp(-1.28·σ·√t).
+    # -------------------------------------------------------
+    import math
+    from reports.allocation import implied_vol
+    _rt = user_inputs.get("real_tax_25", {})
+    _a190 = user_inputs.get("amendment_190", {})
+    _track_ret = {
+        1: float(_a190.get("annual_return_190", 0.06)),
+        2: float(_rt.get("annual_return_25", 0.06)),
+        3: float(_rt.get("annual_return_hybrid", 0.06)),
+        4: float(_rt.get("annual_return_25", 0.06)),
+        5: float(user_inputs.get("leverage", {}).get("annual_return_lev", 0.06)),
+    }
+    _RE_VOL = 0.08  # תנודתיות נדל"ן ישראלי, נכס בודד
+    _horizon = max(1.0, check_age - start_age)
+    track_vol = {t: implied_vol(_track_ret[t]) for t in (1, 2, 3, 4, 5)}
+
+    fin_check   = {1: b190_c, 2: b25_c, 3: bh_c, 4: br_c, 5: blev_c}
+    prop_check  = {1: property_value_check, 2: property_value_check,
+                   3: property_value_check, 4: rental_prop_check, 5: property_value_check}
+    liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check, 5: loan_debt_c}
+    tax_check   = {1: new_home_tax_check, 2: new_home_tax_check, 3: new_home_tax_check,
+                   4: property_tax_check, 5: new_home_tax_check}
+
+    _Z10 = 1.2816  # z של האחוזון ה-10
+    _fin_med_f = {t: math.exp(-(track_vol[t] ** 2) / 2 * _horizon) for t in (1, 2, 3, 4, 5)}
+    _prop_med_f = math.exp(-(_RE_VOL ** 2) / 2 * _horizon)
+    fin_med = {t: fin_check[t] * _fin_med_f[t] for t in (1, 2, 3, 4, 5)}
+    prop_med = {t: prop_check[t] * _prop_med_f for t in (1, 2, 3, 4, 5)}
+    fin_p10 = {t: fin_med[t] * math.exp(-_Z10 * track_vol[t] * math.sqrt(_horizon)) for t in (1, 2, 3, 4, 5)}
+    prop_p10 = {t: prop_med[t] * math.exp(-_Z10 * _RE_VOL * math.sqrt(_horizon)) for t in (1, 2, 3, 4, 5)}
+    total_check = {t: fin_med[t] + prop_med[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
+                   for t in (1, 2, 3, 4, 5)}
+    total_p10 = {t: fin_p10[t] + prop_p10[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
+                 for t in (1, 2, 3, 4, 5)}
+    # Money score for the ranking = risk-adjusted: half the typical (median)
+    # outcome, half the bad (p10) outcome. Rewards a high median AND punishes a
+    # bad downside, so a track that looks rich only on average sinks.
+    money_score = {t: 0.5 * total_check[t] + 0.5 * total_p10[t] for t in (1, 2, 3, 4, 5)}
+
     # קרן החירום אינה נספרת במדד הדירוג (רזרבת נזילות לחיים, לא נכס מושקע)
     sa_100 = {
         1: b190_100 + _pension_100_st + _prop_100_own_st - new_home_tax_100 + kids_asset_check[1],
@@ -546,12 +592,16 @@ def render_qa_section(results, user_inputs):
     # track regardless of paper money, so it can never be recommended.
     def _risk_ok(tid):
         return not (tid == 5 and lev_risk_high)
+    # Money score = risk-adjusted net wealth at the checked age (half median, half
+    # the bad p10 scenario) — the same numbers shown on the card. Replaces the old
+    # sa_100 metric so the recommendation rests on the three things the user sees:
+    # longevity (tier), typical wealth (median), and downside (p10).
     tracks_exec = [
-        (1, _sa_rank[1], empty_190, preservation_ratio[1], husn_190, _risk_ok(1)),
-        (2, _sa_rank[2], empty_25,  preservation_ratio[2], husn_25,  _risk_ok(2)),
-        (3, _sa_rank[3], empty_h,   preservation_ratio[3], husn_h,   _risk_ok(3)),
-        (4, _sa_rank[4], empty_r,   preservation_ratio[4], husn_r,   _risk_ok(4)),
-        (5, _sa_rank[5], empty_lev, preservation_ratio[5], husn_lev, _risk_ok(5)),
+        (1, money_score[1], empty_190, preservation_ratio[1], husn_190, _risk_ok(1)),
+        (2, money_score[2], empty_25,  preservation_ratio[2], husn_25,  _risk_ok(2)),
+        (3, money_score[3], empty_h,   preservation_ratio[3], husn_h,   _risk_ok(3)),
+        (4, money_score[4], empty_r,   preservation_ratio[4], husn_r,   _risk_ok(4)),
+        (5, money_score[5], empty_lev, preservation_ratio[5], husn_lev, _risk_ok(5)),
     ]
 
     # -------------------------------------------------------
@@ -730,44 +780,8 @@ def render_qa_section(results, user_inputs):
                        4: (rm_activation_age if rm_activation_age is not None else 120.0),
                        5: empty_lev}
 
-    # Wealth at the checked age — liquid portfolio, property (gross), liabilities
-    fin_check   = {1: b190_c, 2: b25_c, 3: bh_c, 4: br_c, 5: blev_c}
-    prop_check  = {1: property_value_check, 2: property_value_check,
-                   3: property_value_check, 4: rental_prop_check, 5: property_value_check}
-    liab_check  = {1: 0.0, 2: 0.0, 3: 0.0, 4: rm_debt_at_check, 5: loan_debt_c}
-
-    # Future betterment tax on the kept property — a real liability, track 4 only
-    # (track 5 sold the old property, tax already paid via net_sale)
-    tax_check = {1: new_home_tax_check, 2: new_home_tax_check, 3: new_home_tax_check,
-                 4: property_tax_check, 5: new_home_tax_check}
-
-    # --- שווי חציוני לפי מונטה קרלו ---
-    # החישוב הדטרמיניסטי מניח תשואה קבועה ומנפח. החציון של מונטה קרלו נמוך יותר בגלל
-    # דראג התנודתיות (median של lognormal = ממוצע × exp(-σ²/2·t)). מריצים רק על החלקים
-    # התנודתיים, התיק הפיננסי ועליית ערך הנדל"ן. השאר (קצבה, מס, הלוואות) דטרמיניסטי.
-    import math
-    from reports.allocation import implied_vol
-    _rt = user_inputs.get("real_tax_25", {})
-    _a190 = user_inputs.get("amendment_190", {})
-    _track_ret = {
-        1: float(_a190.get("annual_return_190", 0.06)),
-        2: float(_rt.get("annual_return_25", 0.06)),
-        3: float(_rt.get("annual_return_hybrid", 0.06)),
-        4: float(_rt.get("annual_return_25", 0.06)),
-        5: float(user_inputs.get("leverage", {}).get("annual_return_lev", 0.06)),
-    }
-    _RE_VOL = 0.08  # תנודתיות נדל"ן ישראלי, נכס בודד
-    _horizon = max(1.0, check_age - start_age)
-    track_vol = {t: implied_vol(_track_ret[t]) for t in (1, 2, 3, 4, 5)}
-    _fin_med_factor = {t: math.exp(-(track_vol[t] ** 2) / 2 * _horizon) for t in (1, 2, 3, 4, 5)}
-    _prop_med_factor = math.exp(-(_RE_VOL ** 2) / 2 * _horizon)
-    fin_med = {t: fin_check[t] * _fin_med_factor[t] for t in (1, 2, 3, 4, 5)}
-    prop_med = {t: prop_check[t] * _prop_med_factor for t in (1, 2, 3, 4, 5)}
-
-    # kids_asset_check was computed above (also feeds the ranking metric sa_100)
-    # הכרטיסים מציגים את החציון (מונטה קרלו) בתיק ובנדל"ן; השאר דטרמיניסטי
-    total_check = {t: fin_med[t] + prop_med[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
-                   for t in (1, 2, 3, 4, 5)}
+    # fin_check / prop_check / liab_check / tax_check and the median + p10 net
+    # wealth are computed earlier (before the ranking, which now uses them).
 
     # --- Track 5 leverage risk gauge: cash buffer (LTV / drop-tol / MC prob were
     # already computed above the ranking, where the risk vetoes a risky winner) ---
@@ -827,6 +841,7 @@ def render_qa_section(results, user_inputs):
             "tax": _val(f"−{format_shekel(int(tax_c))}", "#c0392b") if tax_c > 0 else _val("—", "#aaa"),
             "kids": _val(f"+{format_shekel(int(kids_a))}", "#1a7a3a") if kids_a > 0 else _val("—", "#aaa"),
             "total": _val(format_shekel(int(total_check[tid])), "#1a1a2e"),
+            "total_p10": _val(format_shekel(int(total_p10[tid])), "#8a7300"),
             "health": get_health_label(is_res, is_pres), "hbg": hbg, "hcolor": hcolor,
             "res": (f"גיל {check_age:.0f}+" if empty_age >= check_age else f"גיל {empty_age:.0f}"),
             "res_color": "#1a7a3a" if empty_age >= check_age else ("#b84c00" if empty_age >= 90 else "#c0392b"),
@@ -876,6 +891,7 @@ def render_qa_section(results, user_inputs):
                 "fin_med": float(fin_med[_t]), "prop_med": float(prop_med[_t]),
                 "liab": float(liab_check[_t]), "tax": float(tax_check[_t]),
                 "kids": float(kids_asset_check[_t]), "total": float(total_check[_t]),
+                "total_p10": float(total_p10[_t]),
                 "lasts_age": float(portfolio_lasts[_t]),
                 "erosion_age": (None if erosion_age[_t] is None else float(erosion_age[_t])),
                 "draw_month": float(draw_retire[_t]),
@@ -907,6 +923,7 @@ def render_qa_section(results, user_inputs):
         "tax": "אומדן מס שבח עתידי על מכירת הנכס (רלוונטי למסלול שכירות ששומר את הנכס). מכויל להערכת יועץ המס ומנוכה מסך הנכסים.",
         "kids": "העזרה לילדים, שצמחה עד הגיל הנבדק בקצב שהוגדר. נספרת כנכס משפחתי רק במסלולי המכירה (הכסף עובד בידי הילדים).",
         "total": "השורה התחתונה, שווי חציוני לפי מונטה קרלו: תיק פיננסי + נדל\"ן − הלוואות − מס שבח + עזרה לילדים. זה מה שסביר שיישאר למשפחה, עם 50% סיכוי לעבור אותו.",
+        "total_p10": "סך הנכסים בתרחיש רע, האחוזון ה-10 של מונטה קרלו. יש כ-90% סיכוי להישאר מעליו. זה 'כמה זה כואב אם השוק מאכזב', והפער מול החציון הוא מחיר הסיכון של המסלול. המינוף בולט כאן כי החוב תופח בעוד התיק יורד.",
         "risk": "מונטה קרלו, מודל ללא מכירה כפויה (בלון שנפרע מהעיזבון): כמה המינוף מוסיף לירושה מול בלי מינוף, בתרחיש האמצעי ובתרחיש הגרוע. 'משתלם' = מוסיף ולא פוגע בתרחיש הגרוע. 'פשרה' = מוסיף בממוצע אך פוגע בגרוע. 'לא משתלם' = לא מוסיף אפילו בממוצע.",
     }
 
@@ -942,7 +959,8 @@ def render_qa_section(results, user_inputs):
     html.append(_row("➖ הלוואות והתחייבויות", "liab"))
     html.append(_row("🧾 מס שבח עתידי", "tax"))
     html.append(_row("🎁 עזרה לילדים (נכס משפחתי)", "kids"))
-    html.append(_row("📊 סך נכסים", "total", strong=True))
+    html.append(_row("📊 סך נכסים (חציון)", "total", strong=True))
+    html.append(_row("↘️ בתרחיש רע (p10)", "total_p10"))
     if 5 in order and lev_outlook is not None:
         html.append(_sec("⚖️ כדאיות המינוף (מונטה קרלו)"))
         html.append(_row("האם משתלם", "risk"))
