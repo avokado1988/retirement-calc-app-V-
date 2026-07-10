@@ -115,12 +115,25 @@ def leverage_estate_outlook(user_inputs, std_ret=GEN_VOL, n_sims=3000):
     up50 = cur["nw_p50"] - b50
     up10 = cur["nw_p10"] - b10
     hurts_downside = up10 < -0.15 * b10  # פגיעה חריפה בתרחיש הגרוע מול בלי מינוף
+    # --- הארביטראז' התיאורטי, שתי זוויות ---
+    # (1) מרווח נקי על ההלוואה = תשואה נטו פחות ריבית. זה מה שהמינוף מוסיף מול בלי
+    #     מינוף (המשיכה למחיה מתקזזת, נטל זהה בשני המקרים).
+    # (2) מרווח כלל התיק מול החוב = תשואה נטו פחות אחוז המשיכה מהתיק פחות ריבית.
+    #     כאן המשיכה נספרת כשחיקה, כמו דמי ניהול. שים לב שהמשיכה סכום שקלי קבוע ולכן
+    #     כאחוז היא נשחקת ככל שהתיק גדל, כך שהמרווח הזה שמרני ומשתפר עם הזמן.
+    P0 = net_for_190 + cur_loan
+    wd_pct = (annual_wd / P0) if P0 > 0 else 0.0
+    spread_loan = mean_ret - loan_rate
+    spread_pot = mean_ret - wd_pct - loan_rate
     return {
         "loan": cur_loan, "b10": b10, "b50": b50,
         "cur_p10": cur["nw_p10"], "cur_p50": cur["nw_p50"],
         "up10": up10, "up50": up50,
         "hurts_downside": hurts_downside,
         "worth": (up50 > 0) and (not hurts_downside),
+        "net_return": mean_ret, "loan_rate": loan_rate, "wd_pct": wd_pct,
+        "spread_loan": spread_loan, "spread_pot": spread_pot,
+        "annual_loan_shekel": spread_loan * cur_loan,
     }
 
 
@@ -226,6 +239,26 @@ def render_monte_carlo(user_inputs):
             f"⚠️ בתרחיש הגרוע, <b>{_f(cur['nw_p10'])}</b> במקום {_f(b10)}, "
             f"שינוי של <b>{'+' if up10>=0 else ''}{_f(up10)}</b>.<br/>"
             f"⚖️ {_verdict}</div>")
+
+        # --- הארביטראז' התיאורטי, שתי זוויות ---
+        _P0 = net_for_190 + cur_loan
+        _wd_pct = (annual_wd / _P0) if _P0 > 0 else 0.0
+        _spread_loan = mean_ret - loan_rate
+        _spread_pot = mean_ret - _wd_pct - loan_rate
+        _annual = _spread_loan * cur_loan
+        _rtl(
+            f"<div style='background:#f5f7fb;border:1px solid #dbe2ef;border-right:4px solid #5a6b8c;"
+            f"border-radius:8px;padding:12px 16px;line-height:1.9;margin-top:8px;color:#2a3346;'>"
+            f"<b>המרווח (ארביטראז') של ההלוואה</b><br/>"
+            f"מרווח נקי על ההלוואה, תשואה נטו {mean_ret*100:.1f}% פחות ריבית {loan_rate*100:.2f}% = "
+            f"<b>{_spread_loan*100:.1f}%</b>, כלומר כ-<b>{_f(_annual)}</b> בשנה על ההלוואה שבחרת. "
+            f"זה מה שהמינוף מוסיף מול בלי מינוף.<br/>"
+            f"מרווח כלל התיק מול החוב, פחות גם אחוז המשיכה מהתיק ({_wd_pct*100:.2f}%) = "
+            f"<b>{_spread_pot*100:.1f}%</b>. כאן המשיכה למחיה נספרת כשחיקה, כמו דמי ניהול. "
+            f"היא סכום שקלי קבוע, ולכן כאחוז נשחקת ככל שהתיק גדל, אז המספר הזה שמרני ומשתפר עם הזמן.<br/>"
+            f"<span style='color:#555;'>המרווח הוא ממוצע. הממומש בפועל, אחרי תנודתיות וזמן, הוא התוספת "
+            f"בחציון ({'+' if up50>=0 else ''}{_f(up50)}) מול הפגיעה בתרחיש הגרוע "
+            f"({'+' if up10>=0 else ''}{_f(up10)}) שלמעלה.</span></div>")
 
     # ============ 2. כמה התיק יכול לרדת ============
     st.divider()

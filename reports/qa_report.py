@@ -860,7 +860,13 @@ def render_qa_section(results, user_inputs):
                ("פשרה" if lev_outlook["up50"] > 0 else "לא משתלם"))
         _lev_stash = {"up50": float(lev_outlook["up50"]), "up10": float(lev_outlook["up10"]),
                       "cur_p50": float(lev_outlook["cur_p50"]), "cur_p10": float(lev_outlook["cur_p10"]),
-                      "verdict": _lv}
+                      "verdict": _lv,
+                      "net_return": float(lev_outlook["net_return"]),
+                      "loan_rate": float(lev_outlook["loan_rate"]),
+                      "wd_pct": float(lev_outlook["wd_pct"]),
+                      "spread_loan": float(lev_outlook["spread_loan"]),
+                      "spread_pot": float(lev_outlook["spread_pot"]),
+                      "annual_loan_shekel": float(lev_outlook["annual_loan_shekel"])}
     st.session_state["qa_exec_summary"] = {
         "meta": {"check_age": float(check_age), "retire_age": float(retire_age),
                  "start_age": float(start_age)},

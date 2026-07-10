@@ -372,9 +372,15 @@ def render_qa_summary_page(results, user_inputs):
         lev = exec_sum.get("leverage")
         if lev and 5 in visible:
             _res.append(
-                f"\n  כדאיות מינוף (מסלול 5): {lev['verdict']}. מול בלי מינוף — "
-                f"תוספת בחציון {'+' if lev['up50']>=0 else ''}{lev['up50']:,.0f} ₪, "
-                f"תרחיש גרוע {'+' if lev['up10']>=0 else ''}{lev['up10']:,.0f} ₪ "
+                f"\n  ── מרווח (ארביטראז') המינוף ──\n"
+                f"    מרווח נקי על ההלוואה : תשואה נטו {lev['net_return']*100:.1f}% פחות ריבית "
+                f"{lev['loan_rate']*100:.2f}% = {lev['spread_loan']*100:.1f}% ≈ "
+                f"{lev['annual_loan_shekel']:,.0f} ₪/שנה (מה שהמינוף מוסיף)\n"
+                f"    מרווח כלל התיק מול חוב: פחות גם משיכה {lev['wd_pct']*100:.2f}% "
+                f"= {lev['spread_pot']*100:.1f}% (המשיכה כשחיקה, סכום קבוע שנשחק כאחוז עם הזמן)\n"
+                f"    ממומש (מונטה קרלו)    : חציון {'+' if lev['up50']>=0 else ''}{lev['up50']:,.0f} ₪ "
+                f"מול גרוע {'+' if lev['up10']>=0 else ''}{lev['up10']:,.0f} ₪\n"
+                f"  כדאיות מינוף (מסלול 5): {lev['verdict']} "
                 f"(עיזבון חציון {lev['cur_p50']:,.0f}, גרוע {lev['cur_p10']:,.0f}).")
         parts.append("\n".join(_res))
     else:
@@ -452,6 +458,8 @@ def render_qa_summary_page(results, user_inputs):
         lev = exec_sum.get("leverage")
         if lev and 5 in visible:
             st.caption(
-                f"כדאיות מינוף (מסלול 5): {lev['verdict']}. תוספת בחציון "
-                f"{format_shekel(lev['up50'])} מול פגיעה של {format_shekel(lev['up10'])} "
-                f"בתרחיש הגרוע, לעומת בלי מינוף.")
+                f"כדאיות מינוף (מסלול 5): {lev['verdict']}. מרווח נקי על ההלוואה "
+                f"{lev['spread_loan']*100:.1f}% (≈{format_shekel(lev['annual_loan_shekel'])}/שנה), "
+                f"מרווח כלל התיק מול החוב {lev['spread_pot']*100:.1f}%. ממומש במונטה קרלו, "
+                f"תוספת בחציון {format_shekel(lev['up50'])} מול פגיעה של "
+                f"{format_shekel(lev['up10'])} בתרחיש הגרוע.")
