@@ -477,12 +477,18 @@ def render_qa_section(results, user_inputs):
                    for t in (1, 2, 3, 4, 5)}
     total_p10 = {t: fin_p10[t] + prop_p10[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
                  for t in (1, 2, 3, 4, 5)}
-    # Money score for the ranking = the MEDIAN net estate (the statistically most
-    # likely outcome). p10 is computed and shown as INFORMATION only, not baked
-    # into the score — a doomsday tail should not drive the recommendation; the
-    # decision rests on the likely case. Volatility still lowers the median itself
-    # via drag, so risk is not ignored, only not double-counted.
-    money_score = {t: total_check[t] for t in (1, 2, 3, 4, 5)}
+    # Money score for the ranking = a CERTAINTY-EQUIVALENT (Sharpe-like): the
+    # median net estate minus a penalty for downside dispersion,
+    #   score = median − λ·(median − p10),   λ = risk aversion.
+    # A track only overtakes the safe 190 if its extra median beats λ times its
+    # extra downside — i.e. the advantage must be MATERIAL, not marginal. At λ=0.3
+    # a risky track must beat 190's median by ~0.3× its extra downside gap; a
+    # small leverage edge with a fat tail no longer wins. p10 also stays on the
+    # card as information. λ is the one dial: 0 = risk-neutral (median only),
+    # higher = more cautious. 0.3 chosen with the user (moderate, fits a retiree).
+    RISK_AVERSION = 0.30
+    money_score = {t: total_check[t] - RISK_AVERSION * (total_check[t] - total_p10[t])
+                   for t in (1, 2, 3, 4, 5)}
 
     # קרן החירום אינה נספרת במדד הדירוג (רזרבת נזילות לחיים, לא נכס מושקע)
     sa_100 = {
@@ -978,6 +984,15 @@ def render_qa_section(results, user_inputs):
         html.append(_row("האם משתלם", "risk"))
     html.append("</div>")
     st.markdown("".join(html), unsafe_allow_html=True)
+
+    st.markdown(
+        "<div style='direction:rtl;text-align:right;color:#666;font-size:0.82em;line-height:1.7;"
+        "background:#f8f9fc;border:1px solid #e6e8f0;border-right:3px solid #8a9bc0;border-radius:8px;"
+        "padding:9px 14px;margin:8px 0;'>"
+        "⚖️ הדירוג <b>מותאם סיכון</b> (שווה־ערך־ודאי, סלידת סיכון מתונה), לא לפי החציון לבד. "
+        "מסלול מנצח את 190 רק אם היתרון שלו בתוחלת <b>מהותי</b> ומצדיק את תוספת הסיכון (הפער מול "
+        "תרחיש ה-p10). לכן מסלול עם חציון גבוה אך זנב שלילי עמוק לא בהכרח ראשון, וזה מכוון.</div>",
+        unsafe_allow_html=True)
 
     if track4_wins_stress is not None and 4 in order and rm_track4_not_viable:
         st.warning("🚫 מסלול השכירות אינו קביל — אין מספיק כסף לכסות את הגרעון עד הגיל הנבדק.")
