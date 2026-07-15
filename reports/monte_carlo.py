@@ -98,7 +98,11 @@ def leverage_estate_outlook(user_inputs, std_ret=GEN_VOL, n_sims=3000):
         return None
     years = max(1, int(round(float(tl.get("check_age", 95)) - float(tl.get("start_age", 65)))))
     loan_rate = float(lev.get("loan_annual_rate", 0.045))
-    mean_ret = float(lev.get("annual_return_lev", GEN_RETURN)) - float(a190.get("management_fee_190", 0.005))
+    _fee = float(a190.get("management_fee_190", 0.005))
+    # תשואת הכסף הממונף = מסלול כללי (חייבים סולידי כי כבר לקחנו סיכון דרך החוב).
+    mean_ret = float(lev.get("annual_return_lev", GEN_RETURN)) - _fee
+    # תשואת החלופה האמיתית = בלי מינוף, ולכן אפשר להטות מנייתית → תשואת ה-190.
+    mean_ret_alt = float(a190.get("annual_return_190", 0.073)) - _fee
     inflation = float(ex.get("expected_inflation", 0.023))
     annual_wd = max(0.0, float(ex.get("current_expenses", 11000))
                     - float(w.get("national_insurance", 2500))
@@ -106,11 +110,12 @@ def leverage_estate_outlook(user_inputs, std_ret=GEN_VOL, n_sims=3000):
     home_appr = float(w.get("property_appreciation", 0.03))
     buffer_cash = float(w.get("emergency_fund", 50000))
 
-    def _run(loan):
-        return _simulate(net_for_190 + loan, loan, loan_rate, mean_ret, std_ret, years, annual_wd,
+    def _run(loan, mret):
+        return _simulate(net_for_190 + loan, loan, loan_rate, mret, std_ret, years, annual_wd,
                          inflation, home0, home_appr, buffer_cash, 0.02, NO_FORCED_SALE, n_sims=n_sims)
 
-    base = _run(0.0); cur = _run(cur_loan)
+    # הבסיס הוא החלופה האמיתית: בלי מינוף, תיק 190 מנייתי בתשואתו שלו (לא מסלול כללי).
+    base = _run(0.0, mean_ret_alt); cur = _run(cur_loan, mean_ret)
     b10, b50 = base["nw_p10"], base["nw_p50"]
     up50 = cur["nw_p50"] - b50
     up10 = cur["nw_p10"] - b10
@@ -131,7 +136,8 @@ def leverage_estate_outlook(user_inputs, std_ret=GEN_VOL, n_sims=3000):
         "up10": up10, "up50": up50,
         "hurts_downside": hurts_downside,
         "worth": (up50 > 0) and (not hurts_downside),
-        "net_return": mean_ret, "loan_rate": loan_rate, "wd_pct": wd_pct,
+        "net_return": mean_ret, "net_return_alt": mean_ret_alt,
+        "loan_rate": loan_rate, "wd_pct": wd_pct,
         "spread_loan": spread_loan, "spread_pot": spread_pot,
         "annual_loan_shekel": spread_loan * cur_loan,
     }
@@ -167,7 +173,10 @@ def render_monte_carlo(user_inputs):
     buffer_cash = float(w.get("emergency_fund", 250000))
     loan_rate = float(lev.get("loan_annual_rate", 0.045))
     gen_return = float(lev.get("annual_return_lev", GEN_RETURN))  # שדה תשואת מסלול כללי
-    mean_ret = gen_return - float(a190.get("management_fee_190", 0.005))
+    _fee190 = float(a190.get("management_fee_190", 0.005))
+    mean_ret = gen_return - _fee190
+    alt_return = float(a190.get("annual_return_190", 0.073))  # תשואת החלופה: 190 מנייתי
+    mean_ret_alt = alt_return - _fee190
     inflation = float(ex.get("expected_inflation", 0.023))
     annual_wd = max(0.0, float(ex.get("current_expenses", 11000))
                     - float(w.get("national_insurance", 2500))
@@ -204,7 +213,10 @@ def render_monte_carlo(user_inputs):
         res = _simulate(net_for_190 + loan, loan, loan_rate, mean_ret, std_ret, years, annual_wd,
                         inflation, home0, home_appr, buffer_cash, 0.02, NO_FORCED_SALE, n_sims=2500)
         rows.append((loan, res))
-    base = rows[0][1]  # ללא מינוף
+    # הבסיס = החלופה האמיתית: בלי מינוף, תיק 190 מנייתי בתשואתו שלו (לא מסלול כללי),
+    # כי בלי חוב אפשר להטות מנייתית. זו הבחירה שבאמת עומדת מול המינוף.
+    base = _simulate(net_for_190, 0.0, loan_rate, mean_ret_alt, std_ret, years, annual_wd,
+                     inflation, home0, home_appr, buffer_cash, 0.02, NO_FORCED_SALE, n_sims=4000)
     b10, b50, b90 = base["nw_p10"], base["nw_p50"], base["nw_p90"]
 
     cur_loan = max(0.0, min(float(lev.get("loan_amount", 0)), loan_cap))
@@ -220,6 +232,7 @@ def render_monte_carlo(user_inputs):
     _c2.metric("חציון (אמצעי)", _m(cur["nw_p50"]), _m(up50))
     _c3.metric("תרחיש טוב (90%)", _m(cur["nw_p90"]), _m(cur["nw_p90"] - b90))
 
+    _alt_lbl = f"בלי מינוף (190 מנייתי {alt_return*100:.1f}%)"
     if cur_loan <= 0:
         _rtl("<div style='background:#eafaf0;border:1px solid #8fd3a8;border-right:4px solid #1a7a3a;"
              "border-radius:8px;padding:12px 16px;color:#14532d;line-height:1.7;margin-top:6px;'>"
@@ -227,38 +240,35 @@ def render_monte_carlo(user_inputs):
     else:
         _worth = up50 > 0 and up10 >= -0.15 * b10  # תוספת חיובית וללא פגיעה חריפה בתרחיש הגרוע
         _bg, _bd, _cl = (("#eafaf0", "#8fd3a8", "#14532d") if _worth else ("#fff8e1", "#f0c86a", "#5a4a1a"))
-        _verdict = ("המינוף מוסיף בממוצע ולא פוגע קשה בתרחיש הגרוע, אז שווה לשקול אותו."
+        _verdict = ("המינוף מוסיף בחציון ולא פוגע קשה בתרחיש הגרוע, אז שווה לשקול אותו."
                     if _worth else
-                    "המינוף מוסיף בממוצע, אבל פוגע בתרחיש הגרוע. זו פשרה, לא ארוחת חינם.")
+                    "המינוף מוסיף בחציון, אבל פוגע בתרחיש הגרוע. זו פשרה, לא ארוחת חינם.")
         _rtl(
             f"<div style='background:{_bg};border:1px solid {_bd};border-right:4px solid {_bd};"
             f"border-radius:8px;padding:12px 16px;color:{_cl};line-height:1.9;margin-top:6px;'>"
-            f"עם הלוואה של <b>{_f(cur_loan)}</b>, לעומת בלי מינוף:<br/>"
+            f"עם הלוואה של <b>{_f(cur_loan)}</b>, לעומת <b>{_alt_lbl}</b>:<br/>"
             f"💰 בתרחיש האמצעי, הירושה <b>{_f(cur['nw_p50'])}</b> במקום {_f(b50)}, "
             f"תוספת של <b>{'+' if up50>=0 else ''}{_f(up50)}</b>.<br/>"
             f"⚠️ בתרחיש הגרוע, <b>{_f(cur['nw_p10'])}</b> במקום {_f(b10)}, "
             f"שינוי של <b>{'+' if up10>=0 else ''}{_f(up10)}</b>.<br/>"
             f"⚖️ {_verdict}</div>")
 
-        # --- הארביטראז' התיאורטי, שתי זוויות ---
-        _P0 = net_for_190 + cur_loan
-        _wd_pct = (annual_wd / _P0) if _P0 > 0 else 0.0
-        _spread_loan = mean_ret - loan_rate
-        _spread_pot = mean_ret - _wd_pct - loan_rate
+        # --- הארביטראז', כולל עלות ההזדמנות של הוויתור על ההטיה המנייתית ---
+        _spread_loan = mean_ret - loan_rate           # מרווח על הכסף המושאל
+        _opp_cost = mean_ret_alt - mean_ret           # פרמיה מנייתית שמוותרים עליה
         _annual = _spread_loan * cur_loan
         _rtl(
             f"<div style='background:#f5f7fb;border:1px solid #dbe2ef;border-right:4px solid #5a6b8c;"
             f"border-radius:8px;padding:12px 16px;line-height:1.9;margin-top:8px;color:#2a3346;'>"
-            f"<b>המרווח (ארביטראז') של ההלוואה</b><br/>"
-            f"מרווח נקי על ההלוואה, תשואה נטו {mean_ret*100:.1f}% פחות ריבית {loan_rate*100:.2f}% = "
-            f"<b>{_spread_loan*100:.1f}%</b>, כלומר כ-<b>{_f(_annual)}</b> בשנה על ההלוואה שבחרת. "
-            f"זה מה שהמינוף מוסיף מול בלי מינוף.<br/>"
-            f"מרווח כלל התיק מול החוב, פחות גם אחוז המשיכה מהתיק ({_wd_pct*100:.2f}%) = "
-            f"<b>{_spread_pot*100:.1f}%</b>. כאן המשיכה למחיה נספרת כשחיקה, כמו דמי ניהול. "
-            f"היא סכום שקלי קבוע, ולכן כאחוז נשחקת ככל שהתיק גדל, אז המספר הזה שמרני ומשתפר עם הזמן.<br/>"
-            f"<span style='color:#555;'>המרווח הוא ממוצע. הממומש בפועל, אחרי תנודתיות וזמן, הוא התוספת "
-            f"בחציון ({'+' if up50>=0 else ''}{_f(up50)}) מול הפגיעה בתרחיש הגרוע "
-            f"({'+' if up10>=0 else ''}{_f(up10)}) שלמעלה.</span></div>")
+            f"<b>המרווח (ארביטראז') של המינוף</b><br/>"
+            f"➕ על הכסף המושאל, תשואת מסלול כללי {mean_ret*100:.1f}% פחות ריבית {loan_rate*100:.2f}% = "
+            f"<b>{_spread_loan*100:.1f}%</b>, כ-<b>{_f(_annual)}</b> בשנה על ההלוואה.<br/>"
+            f"➖ אבל כדי למנף ויתרת על ההטיה המנייתית, ירדת מ-{mean_ret_alt*100:.1f}% (190 מנייתי) "
+            f"ל-{mean_ret*100:.1f}% (כללי), עלות הזדמנות של <b>{_opp_cost*100:.1f}%</b> על ההון הבסיסי.<br/>"
+            f"<span style='color:#555;'>המרווח הוא ממוצע תיאורטי. הממומש בפועל, אחרי תנודתיות, זמן, "
+            f"<u>ובניכוי עלות ההזדמנות</u>, הוא התוספת בחציון "
+            f"(<b>{'+' if up50>=0 else ''}{_f(up50)}</b>) מול {_alt_lbl}, ובתרחיש הגרוע "
+            f"({'+' if up10>=0 else ''}{_f(up10)}), שלמעלה. זה המספר להחלטה.</span></div>")
 
     # ============ 2. כמה התיק יכול לרדת ============
     st.divider()

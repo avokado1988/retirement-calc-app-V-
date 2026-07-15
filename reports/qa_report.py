@@ -477,10 +477,12 @@ def render_qa_section(results, user_inputs):
                    for t in (1, 2, 3, 4, 5)}
     total_p10 = {t: fin_p10[t] + prop_p10[t] - liab_check[t] - tax_check[t] + kids_asset_check[t]
                  for t in (1, 2, 3, 4, 5)}
-    # Money score for the ranking = risk-adjusted: half the typical (median)
-    # outcome, half the bad (p10) outcome. Rewards a high median AND punishes a
-    # bad downside, so a track that looks rich only on average sinks.
-    money_score = {t: 0.5 * total_check[t] + 0.5 * total_p10[t] for t in (1, 2, 3, 4, 5)}
+    # Money score for the ranking = the MEDIAN net estate (the statistically most
+    # likely outcome). p10 is computed and shown as INFORMATION only, not baked
+    # into the score — a doomsday tail should not drive the recommendation; the
+    # decision rests on the likely case. Volatility still lowers the median itself
+    # via drag, so risk is not ignored, only not double-counted.
+    money_score = {t: total_check[t] for t in (1, 2, 3, 4, 5)}
 
     # קרן החירום אינה נספרת במדד הדירוג (רזרבת נזילות לחיים, לא נכס מושקע)
     sa_100 = {
@@ -582,10 +584,12 @@ def render_qa_section(results, user_inputs):
             lev_outlook = leverage_estate_outlook(user_inputs)
         except Exception:
             lev_outlook = None
-    # "High risk" = leverage doesn't clearly pay: no median uplift over no-leverage,
-    # or it materially damages the bad-scenario estate. Barred from #1.
-    lev_risk_high = (lev_outlook is not None) and (
-        lev_outlook["up50"] <= 0 or lev_outlook["hurts_downside"])
+    # "High risk" = leverage doesn't even pay in the MEDIAN vs the real
+    # alternative (unleveraged, equity-tilted). Barred from #1. We no longer veto
+    # merely for a worse downside — the decision rests on the likely case, and the
+    # p10 is shown as information. If leverage adds nothing even in the median,
+    # recommending it #1 would be indefensible, so that case is still gated.
+    lev_risk_high = (lev_outlook is not None) and (lev_outlook["up50"] <= 0)
 
     # 4th field = preservation ratio at check_age (drives the health badge).
     # 6th field = risk_ok: a high-risk leverage track sorts BELOW every other
