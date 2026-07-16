@@ -43,7 +43,9 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
         D = np.where(breach, 0.0, D)
         wd *= (1 + wd_growth)
 
-    home = home0 * (1 + home_appr) ** years
+    # שווי הנדל"ן החציוני — כמו בכרטיס, מורידים דראג תנודתיות (median של lognormal),
+    # כדי שהמספרים המוחלטים בכלי יתלכדו עם כרטיס ההשוואה. RE_VOL זהה לזה שבכרטיס.
+    home = home0 * (1 + home_appr) ** years * float(np.exp(-(RE_VOL ** 2) / 2 * years))
     networth = P + S + home - D
     return {
         "p_margin_call": float(margin_called.mean()),
@@ -55,6 +57,7 @@ def _simulate(P0, loan0, loan_rate, mean_ret, std_ret, years, annual_wd, wd_grow
 
 GEN_RETURN = 0.06    # תשואת מסלול כללי, בסיס צופה פני עתיד (עבר 6.5-7.5%, תכנון 4-6%)
 GEN_VOL    = 0.08    # תנודתיות מסלול כללי
+RE_VOL     = 0.08    # תנודתיות נדל"ן (זהה לכרטיס), לחישוב שווי חציוני של הדירה
 NO_FORCED_SALE = 99.0  # אין מכירה כפויה — לפי מה שהמלווה מסר
 
 
