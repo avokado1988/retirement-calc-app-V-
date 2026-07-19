@@ -258,29 +258,19 @@ def render_allocation_recommender(user_inputs):
         f"<table dir='rtl' style='width:100%;border-collapse:collapse;font-size:0.86em;direction:rtl;'>"
         f"<thead>{header}</thead><tbody>{body}</tbody></table></div>",
         unsafe_allow_html=True)
-    st.markdown(
-        f"<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;'>"
-        f"על בסיס {years} שנים עד הגיל הנבדק. הסבר לכל עמודה בכפתור ❓ שמעל.</div>",
-        unsafe_allow_html=True)
+    st.caption(f"על בסיס {years} שנים עד הגיל הנבדק. הסבר לעמודות בכפתור ❓ שמעל.")
 
     risky = [t for t in order if recs[t].get("at_risk")]
     if risky:
         _best = max(recs[t]["best_success"] for t in risky) * 100
         st.markdown(
             "<div style='direction:rtl;text-align:right;background:#fff8e1;border:1px solid #f0c86a;"
-            "border-right:4px solid #e0a800;border-radius:8px;padding:10px 14px;margin:6px 0;"
-            f"color:#5a4a1a;line-height:1.7;'>⚠️ במסלול שסומן בסיכון בדקנו את כל טווח התמהילים, "
-            f"ממאה אחוז סולידי ועד תקרת המניות, והסיכוי הגבוה ביותר שהצלחנו להגיע אליו הוא "
-            f"כ-{_best:.0f}%, מתחת לרף התשעים אחוז. זה לא בעיה של תמהיל אלא של המשיכה עצמה, "
-            f"שגבוהה מדי ביחס לתיק. שום תערובת לא תפתור זאת, צריך לבחון מחדש הוצאות, הכנסות "
-            f"או גיל בדיקה.</div>", unsafe_allow_html=True)
+            "border-right:4px solid #e0a800;border-radius:8px;padding:9px 14px;margin:6px 0;"
+            f"color:#5a4a1a;line-height:1.6;font-size:0.9em;'>⚠️ מסלול בסיכון, אף תמהיל לא מגיע "
+            f"לרף 90% (המקסימום כ-{_best:.0f}%). הבעיה במשיכה, לא בתמהיל. פרטים בכפתור ❓.</div>",
+            unsafe_allow_html=True)
 
-    st.divider()
-    st.markdown(
-        "<div style='direction:rtl;text-align:right;font-weight:700;'>להחיל את התשואות "
-        "המומלצות על המסלולים? <span style='font-weight:400;color:#777;'>(השדה הידני יישאר "
-        "וניתן לעקוף)</span></div>", unsafe_allow_html=True)
-    if st.button("✅ החל תשואות מומלצות", use_container_width=True, key="alloc_apply_btn"):
+    if st.button("✅ החל תשואות מומלצות על המסלולים", use_container_width=True, key="alloc_apply_btn"):
         # אי אפשר לשנות שדה widget אחרי שנוצר בריצה זו, לכן שומרים בקשה שתוחל
         # בראש app.py לפני יצירת השדות.
         pending = {}
@@ -372,10 +362,6 @@ def render_re_recommender(user_inputs):
             pending[_RE_FIELD_KEY[_k]] = round(val * 100, 1)
         st.session_state["alloc_pending"] = pending
         st.rerun()
-    st.markdown(
-        "<div style='direction:rtl;text-align:right;color:#777;font-size:0.82em;line-height:1.6;'>"
-        "בלחיצה, הערכים הנומינליים (אינפלציה + פרמיה) ייכנסו לשדות הנדל\"ן. השדות הידניים נשארים וניתן לעקוף.</div>",
-        unsafe_allow_html=True)
 
     with st.expander("📚 על מה מבוססות ההמלצות — המחקר מאחורי המספרים"):
         st.markdown(
